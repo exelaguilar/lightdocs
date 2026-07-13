@@ -4,6 +4,9 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 php_bin="${PHP_BIN:-php}"
 
+installer_text="$(< "$root/deploy/native/install.sh")"
+LIGHTDOCS_INSTALLER_TEST_MODE=1 bash -u -c "$installer_text"
+
 # shellcheck source=../deploy/native/install.sh
 source "$root/deploy/native/install.sh"
 

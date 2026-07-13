@@ -93,6 +93,10 @@ main() {
     fi
 }
 
-if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+if [[ "${LIGHTDOCS_INSTALLER_TEST_MODE:-0}" == "1" ]]; then
+    exit 0
+fi
+
+if [[ "${BASH_SOURCE[0]:-$0}" == "$0" ]]; then
     main "$@"
 fi
