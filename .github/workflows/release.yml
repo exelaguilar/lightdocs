@@ -32,6 +32,10 @@ jobs:
           composer docs:validate
           composer docs:test
 
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: test "${GITHUB_REF_NAME#v}" = "$(tr -d '[:space:]' < VERSION)"
+
       - name: Build release bundle
         run: bash deploy/release/build.sh
 
