@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Shell/PHP fixtures intentionally use single-quoted dollar signs.
+# shellcheck disable=SC2016
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 php_bin="${PHP_BIN:-php}"
@@ -7,7 +9,7 @@ php_bin="${PHP_BIN:-php}"
 installer_text="$(< "$root/deploy/native/install.sh")"
 LIGHTDOCS_INSTALLER_TEST_MODE=1 bash -u -c "$installer_text"
 
-# shellcheck source=../deploy/native/install.sh
+# shellcheck source=deploy/native/install.sh
 source "$root/deploy/native/install.sh"
 
 work="$(mktemp -d)"

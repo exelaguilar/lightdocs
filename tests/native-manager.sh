@@ -3,7 +3,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# shellcheck source=../deploy/native/lightdocs
+# shellcheck source=deploy/native/lightdocs
 source "$root/deploy/native/lightdocs"
 
 work_root="$(mktemp -d)"
