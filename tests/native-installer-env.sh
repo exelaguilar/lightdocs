@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # Shell/PHP fixtures intentionally use single-quoted dollar signs.
-# shellcheck disable=SC2016
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 php_bin="${PHP_BIN:-php}"
@@ -15,6 +14,7 @@ source "$root/deploy/native/install.sh"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
+# shellcheck disable=SC2016
 name='My $Docs "Home" \\ Rack'
 tagline='Documentation without the framework tax.'
 password='dollar$ quote" slash\\ value'
@@ -27,6 +27,7 @@ password='dollar$ quote" slash\\ value'
     printf 'DOCS_ADMIN_PASSWORD=%s\n' "$(dotenv_quote "$password")"
 } > "$work/.env"
 
+# shellcheck disable=SC2016
 "$php_bin" -r '
 require $argv[1] . "/vendor/autoload.php";
 Dotenv\Dotenv::createImmutable($argv[2])->load();
@@ -53,6 +54,7 @@ printf '%s\n' \
 
 repair_legacy_env "$work/legacy.env"
 grep -Fxq 'DOCS_TAGLINE="Documentation without the framework tax."' "$work/legacy.env"
+# shellcheck disable=SC2016
 "$php_bin" -r '
 require $argv[1] . "/vendor/autoload.php";
 Dotenv\Dotenv::createImmutable($argv[2], "legacy.env")->load();
