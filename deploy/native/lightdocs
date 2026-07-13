@@ -137,7 +137,7 @@ download_release() {
     expected="$(awk 'NR == 1 {print $1}' "$checksum")"
     [[ "$expected" =~ ^[a-fA-F0-9]{64}$ ]] || die "Release checksum is invalid."
     printf '%s  %s\n' "$expected" "$(basename "$archive")" > "$checksum"
-    (cd "$work" && sha256sum --check "$(basename "$checksum")")
+    (cd "$work" && sha256sum --check --status "$(basename "$checksum")")
     if tar -tzf "$archive" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
         die "Release archive contains an unsafe path."
     fi
@@ -294,18 +294,24 @@ uninstall_lightdocs() {
     echo "Lightdocs application files were removed."
 }
 
-command="${1:-help}"
-shift || true
-case "$command" in
-    doctor) run_docs "$CURRENT_LINK" doctor ;;
-    version) run_docs "$CURRENT_LINK" version ;;
-    update) update_release "${1:-latest}" ;;
-    rollback) rollback_release "${1:-}" ;;
-    backup) create_backup "${1:-}" ;;
-    restore) restore_backup "${1:-}" ;;
-    uninstall) uninstall_lightdocs "${1:-}" ;;
-    help|-h|--help)
-        echo "Usage: lightdocs {doctor|version|update [version]|rollback [version]|backup [path]|restore ARCHIVE|uninstall [--purge]}"
-        ;;
-    *) die "Unknown command: $command" ;;
-esac
+main() {
+    local command="${1:-help}"
+    shift || true
+    case "$command" in
+        doctor) run_docs "$CURRENT_LINK" doctor ;;
+        version) run_docs "$CURRENT_LINK" version ;;
+        update) update_release "${1:-latest}" ;;
+        rollback) rollback_release "${1:-}" ;;
+        backup) create_backup "${1:-}" ;;
+        restore) restore_backup "${1:-}" ;;
+        uninstall) uninstall_lightdocs "${1:-}" ;;
+        help|-h|--help)
+            echo "Usage: lightdocs {doctor|version|update [version]|rollback [version]|backup [path]|restore ARCHIVE|uninstall [--purge]}"
+            ;;
+        *) die "Unknown command: $command" ;;
+    esac
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    main "$@"
+fi
