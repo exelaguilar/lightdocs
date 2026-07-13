@@ -20,7 +20,7 @@ ENV LIGHTDOCS_SITE_DIR=/var/lib/lightdocs \
     APACHE_DOCUMENT_ROOT=/var/www/html/public
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl git libonig-dev libzip-dev unzip \
+    && apt-get install -y --no-install-recommends ca-certificates curl git libonig-dev libsqlite3-dev libzip-dev unzip \
     && docker-php-ext-install -j"$(nproc)" mbstring pdo_sqlite zip \
     && a2enmod headers rewrite \
     && rm -rf /var/lib/apt/lists/*
