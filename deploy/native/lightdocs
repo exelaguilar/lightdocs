@@ -109,7 +109,9 @@ check_http() {
 
 download_release() {
     local requested="${1:-latest}" work="$2"
-    local archive="$work/lightdocs-release.tar.gz" checksum="$archive.sha256" tag
+    local archive checksum tag
+    archive="$work/lightdocs-release.tar.gz"
+    checksum="$archive.sha256"
     if [[ -n "${LIGHTDOCS_ARCHIVE:-}" ]]; then
         cp "$LIGHTDOCS_ARCHIVE" "$archive"
         if [[ -n "${LIGHTDOCS_ARCHIVE_SHA256:-}" ]]; then
