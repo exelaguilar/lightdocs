@@ -100,8 +100,7 @@ reload_services() {
 
 check_http() {
     if ! systemctl is-active --quiet nginx; then return 0; fi
-    local attempt
-    for attempt in {1..10}; do
+    for _ in {1..10}; do
         if curl --fail --silent --show-error http://127.0.0.1/healthz >/dev/null; then return 0; fi
         sleep 1
     done
