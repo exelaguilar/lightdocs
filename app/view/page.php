@@ -1,0 +1,23 @@
+<?php
+$markdownUrl = $page->url === '/' ? '/index.md' : $page->url . '.md';
+$service = $page->service();
+$reviewed = $page->reviewedAt();
+$taskCount = preg_match_all('/type="checkbox"/', $rendered->html);
+?>
+<article class="docs-article page-type-<?= $e($page->type()) ?>" data-page-type="<?= $e($page->type()) ?>">
+  <header class="article-header">
+    <?php if ($page->type() === 'runbook' || $page->isPrivate()): ?><div class="article-kicker"><?php if ($page->type() === 'runbook'): ?><span>Operational runbook</span><span class="runbook-badge">Checklist</span><?php endif; ?><?php if ($page->isPrivate()): ?><span class="privacy-badge">Private</span><?php endif; ?></div><?php endif; ?>
+    <h1><?= $e($page->title) ?></h1>
+    <?php if ($page->description): ?><p class="lead"><?= $e($page->description) ?></p><?php endif; ?>
+    <div class="article-tools"><button type="button" data-copy-markdown data-markdown-url="<?= $e($markdownUrl) ?>"><span class="copy-mini-icon" aria-hidden="true"></span>Copy Markdown</button><a href="<?= $e($markdownUrl) ?>">Open source <span>↗</span></a></div>
+    <?php if ($service || $page->verifiedWith()): ?><div class="operational-badges"><?php if (isset($service['context'])): ?><span><?= $e($service['context']) ?></span><?php endif; ?><?php if (isset($service['id'])): ?><span>CT <?= $e($service['id']) ?></span><?php endif; ?><?php if (isset($service['address'])): ?><span><?= $e($service['address']) ?></span><?php endif; ?><?php foreach ($page->verifiedWith() as $product => $version): ?><span>Verified: <?= $e(ucwords(str_replace('_', ' ', (string) $product))) ?> <?= $e($version) ?></span><?php endforeach; ?></div><?php endif; ?>
+    <div class="article-meta"><span>Updated <?= $e(date('M j, Y', $page->modifiedAt)) ?></span><?php if ($reviewed): ?><span class="meta-separator"></span><span class="review-status <?= $page->isReviewStale() ? 'stale' : '' ?>"><?= $page->isReviewStale() ? 'Review overdue' : 'Reviewed ' . $e(date('M j, Y', $reviewed)) ?></span><?php endif; ?><span class="meta-separator"></span><button type="button" data-copy-link>Copy link</button><?php if ($page->isPrivate()): ?><span class="meta-separator"></span><span>Authenticated view</span><?php endif; ?></div>
+    <?php if ($page->type() === 'runbook' && $taskCount > 0): ?><div class="runbook-progress" data-runbook-progress><div><span>Runbook progress</span><strong data-progress-label>0 of <?= (int) $taskCount ?> complete</strong></div><div class="progress-track"><span data-progress-bar></span></div><div class="runbook-progress-actions"><a href="#runbook-checklist">Open checklist</a><button type="button" data-reset-runbook>Reset</button></div></div><?php endif; ?>
+  </header>
+  <div class="markdown-body"><?= $rendered->html ?></div>
+  <?php if ($related || $backlinks): ?><section class="page-connections"><h2>Connected documentation</h2><div><?php foreach ($related as $connection): ?><a href="<?= $e($connection->url) ?>"><span>Related</span><strong><?= $e($connection->title) ?></strong><i>→</i></a><?php endforeach; ?><?php foreach ($backlinks as $connection): ?><a href="<?= $e($connection->url) ?>"><span>Links here</span><strong><?= $e($connection->title) ?></strong><i>↗</i></a><?php endforeach; ?></div></section><?php endif; ?>
+  <footer class="page-footer">
+    <div class="page-actions"><div><a href="<?= $e($markdownUrl) ?>">View source</a><?php if (!empty($config['editor_enabled'])): ?><a href="/admin?file=<?= rawurlencode($page->relativePath) ?>">Edit page</a><?php endif; ?></div><div class="page-feedback"><span>How is this guide?</span><button type="button" data-feedback="good" aria-pressed="false" aria-label="This guide was helpful">Good</button><button type="button" data-feedback="bad" aria-pressed="false" aria-label="This guide needs improvement">Bad</button></div></div>
+    <nav class="neighbours" aria-label="Adjacent pages"><?php if ($previous): ?><a class="neighbour previous" href="<?= $e($previous->url) ?>"><span>Previous</span><strong><?= $e($previous->title) ?></strong><i aria-hidden="true">←</i></a><?php else: ?><span></span><?php endif; ?><?php if ($next): ?><a class="neighbour next" href="<?= $e($next->url) ?>"><span>Next</span><strong><?= $e($next->title) ?></strong><i aria-hidden="true">→</i></a><?php endif; ?></nav>
+  </footer>
+</article>

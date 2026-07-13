@@ -1,0 +1,6 @@
+services:
+  lightdocs:
+    build:
+      context: .
+      args:
+        LIGHTDOCS_VERSION: ${LIGHTDOCS_VERSION:-development}

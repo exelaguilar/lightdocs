@@ -1,0 +1,5 @@
+name: Lightdocs
+tagline: Documentation without the framework tax.
+base_url: ""
+git_history: false
+git_sync_policy: sanitized

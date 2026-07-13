@@ -1,0 +1,6 @@
+/var/
+/public/uploads/*
+!/public/uploads/.gitkeep
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

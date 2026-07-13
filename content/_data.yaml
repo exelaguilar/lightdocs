@@ -1,0 +1,9 @@
+proxmox:
+  host: pve.example.test
+  version: 9.x
+  media_storage: /mnt/pve/media
+
+containers:
+  immich:
+    id: 103
+    address: 192.0.2.10

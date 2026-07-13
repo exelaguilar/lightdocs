@@ -1,0 +1,9 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Lightdocs\App\Console\Console;
+
+$config = require dirname(__DIR__) . '/bootstrap.php';
+exit((new Console($config))->run($argv));

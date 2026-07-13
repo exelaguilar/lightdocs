@@ -1,0 +1,15 @@
+services:
+  lightdocs:
+    image: ${LIGHTDOCS_IMAGE:-ghcr.io/exelaguilar/lightdocs:latest}
+    ports:
+      - "${LIGHTDOCS_PORT:-8080}:80"
+    environment:
+      LIGHTDOCS_BOOTSTRAP_NAME: ${LIGHTDOCS_NAME:-Lightdocs}
+      LIGHTDOCS_BOOTSTRAP_BASE_URL: ${LIGHTDOCS_BASE_URL:-}
+      LIGHTDOCS_BOOTSTRAP_ADMIN_PASSWORD: ${LIGHTDOCS_ADMIN_PASSWORD:-}
+    volumes:
+      - lightdocs-data:/var/lib/lightdocs
+    restart: unless-stopped
+
+volumes:
+  lightdocs-data:

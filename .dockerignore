@@ -1,0 +1,13 @@
+.git
+.github
+.claude
+.codex
+.env
+build*
+dist
+var
+vendor
+content
+public/uploads
+tests
+*.log

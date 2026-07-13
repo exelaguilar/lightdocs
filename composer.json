@@ -1,0 +1,46 @@
+{
+  "name": "exelaguilar/lightdocs",
+  "description": "A lightweight PHP and Markdown-first documentation platform.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": "^8.4",
+    "ext-dom": "*",
+    "ext-json": "*",
+    "ext-mbstring": "*",
+    "ext-pdo": "*",
+    "ext-pdo_sqlite": "*",
+    "league/commonmark": "^2.8",
+    "symfony/yaml": "^7.3 || ^8.0",
+    "tempest/highlight": "^2.0",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Lightdocs\\System\\Engine\\": "system/engine/",
+      "Lightdocs\\System\\Library\\": "system/library/",
+      "Lightdocs\\App\\Controller\\": "app/controller/",
+      "Lightdocs\\App\\Model\\": "app/model/",
+      "Lightdocs\\App\\Library\\": "app/library/",
+      "Lightdocs\\App\\Service\\": "app/service/",
+      "Lightdocs\\App\\Console\\": "app/console/"
+    },
+    "classmap": [
+      "app/Framework.php",
+      "app/Routes.php"
+    ]
+  },
+  "scripts": {
+    "docs:serve": "php -S 127.0.0.1:8080 -t public router.php",
+    "docs:validate": "php bin/docs validate",
+    "docs:build": "php bin/docs build build",
+    "docs:test": "php tests/smoke.php",
+    "docs:doctor": "php bin/docs doctor",
+    "release:build": "bash deploy/release/build.sh",
+    "release:build-windows": "powershell -ExecutionPolicy Bypass -File deploy/release/build.ps1"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}
