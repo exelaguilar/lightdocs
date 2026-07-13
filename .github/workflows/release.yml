@@ -32,6 +32,7 @@ jobs:
           composer docs:validate
           composer docs:test
           bash tests/native-manager.sh
+          bash tests/native-installer-env.sh
 
       - name: Verify release version
         if: startsWith(github.ref, 'refs/tags/')
