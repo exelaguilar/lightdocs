@@ -13,4 +13,6 @@ download_line="$(grep -nF 'pct_exec curl --fail --silent --show-error --location
 }
 
 grep -Fq 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' "$installer"
+grep -Fq 'agetty --autologin root' "$installer"
+grep -Fq 'create_args+=(--password' "$installer"
 printf 'Proxmox installer bootstrap-order test passed.\n'

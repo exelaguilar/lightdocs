@@ -95,7 +95,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/ma
 The helper will:
 
 1. Select or download the Debian 13 standard template.
-2. Ask for the container ID, hostname, CPU, memory, disk, storage, and network configuration.
+2. Ask for the container ID, hostname, CPU, memory, disk, storage, network configuration, and console access mode.
 3. Create an unprivileged LXC with start-at-boot enabled.
 4. Wait for networking and DNS inside the container.
 5. Install Nginx, PHP-FPM, required PHP extensions, and a checksum-verified Lightdocs release.
@@ -119,6 +119,9 @@ The defaults are intentionally modest:
 | Disk | 8 GiB |
 | Network | DHCP on `vmbr0` |
 | Container type | Unprivileged Debian 13 |
+| Console | `root` auto-login in the Proxmox console |
+
+The default auto-login applies only to the container's Proxmox console. Lightdocs does not install or enable an SSH server. Choose `password` at the console-access prompt if you prefer a conventional `root` password.
 
 ### Customize or automate the LXC
 
@@ -147,6 +150,8 @@ Available overrides include:
 - `LIGHTDOCS_GATEWAY`
 - `LIGHTDOCS_ROOT_STORAGE`
 - `LIGHTDOCS_TEMPLATE_STORAGE`
+- `LIGHTDOCS_CONSOLE_MODE` (`autologin` or `password`)
+- `LIGHTDOCS_ROOT_PASSWORD` (required for noninteractive `password` mode)
 - `LIGHTDOCS_VERSION` to pin a release instead of using `latest`
 
 ### Manage Lightdocs from the Proxmox host
@@ -160,7 +165,13 @@ pct exec 130 -- lightdocs backup
 pct exec 130 -- lightdocs update
 ```
 
-To enter the container:
+Open the container console with automatic `root` login when the default mode was selected:
+
+```bash
+pct console 130
+```
+
+To enter the container directly from the Proxmox host regardless of its console-login mode:
 
 ```bash
 pct enter 130

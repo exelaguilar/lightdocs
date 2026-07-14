@@ -31,6 +31,26 @@ prompt() {
     printf '%s\n' "$result"
 }
 
+prompt_password() {
+    local first second
+    while true; do
+        if command -v whiptail >/dev/null 2>&1 && [[ -t 1 ]]; then
+            first="$(whiptail --title "Lightdocs LXC" --passwordbox "LXC root password" 10 70 3>&1 1>&2 2>&3)" || exit 1
+            second="$(whiptail --title "Lightdocs LXC" --passwordbox "Confirm LXC root password" 10 70 3>&1 1>&2 2>&3)" || exit 1
+        else
+            read -r -s -p "LXC root password: " first
+            printf '\n' >&2
+            read -r -s -p "Confirm LXC root password: " second
+            printf '\n' >&2
+        fi
+        if [[ -n "$first" && "$first" == "$second" ]]; then
+            printf '%s\n' "$first"
+            return 0
+        fi
+        printf 'Passwords must be non-empty and match. Try again.\n' >&2
+    done
+}
+
 choose_storage() {
     local content="$1" default choices result
     mapfile -t choices < <(pvesm status -content "$content" --enabled 1 | awk 'NR > 1 {print $1}')
@@ -54,6 +74,11 @@ swap="${LIGHTDOCS_SWAP:-512}"
 disk="${LIGHTDOCS_DISK_GB:-8}"
 bridge="${LIGHTDOCS_BRIDGE:-vmbr0}"
 network="${LIGHTDOCS_NETWORK:-dhcp}"
+root_password="${LIGHTDOCS_ROOT_PASSWORD:-}"
+console_mode="${LIGHTDOCS_CONSOLE_MODE:-}"
+if [[ -z "$console_mode" ]]; then
+    if [[ -n "$root_password" ]]; then console_mode="password"; else console_mode="autologin"; fi
+fi
 
 if [[ -t 0 ]]; then
     ctid="$(prompt "Container ID" "$ctid")"
@@ -62,11 +87,20 @@ if [[ -t 0 ]]; then
     memory="$(prompt "Memory in MiB" "$memory")"
     disk="$(prompt "Root disk in GiB" "$disk")"
     network="$(prompt "IPv4 configuration (dhcp or CIDR)" "$network")"
+    console_mode="$(prompt "Console access (autologin or password)" "$console_mode")"
+    if [[ "$console_mode" == "password" && -z "$root_password" ]]; then
+        root_password="$(prompt_password)"
+    fi
 fi
 
 [[ "$ctid" =~ ^[1-9][0-9]{2,8}$ ]] || { echo "Invalid CT ID: $ctid" >&2; exit 1; }
 [[ "$hostname" =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,62}$ ]] || { echo "Invalid hostname." >&2; exit 1; }
 for value in "$cores" "$memory" "$swap" "$disk"; do [[ "$value" =~ ^[0-9]+$ ]] || { echo "Numeric resource value required." >&2; exit 1; }; done
+case "$console_mode" in
+    autologin) root_password="" ;;
+    password) [[ -n "$root_password" ]] || { echo "LIGHTDOCS_ROOT_PASSWORD is required when console mode is password." >&2; exit 1; } ;;
+    *) echo "Console access must be autologin or password." >&2; exit 1 ;;
+esac
 if pct status "$ctid" >/dev/null 2>&1; then echo "CT $ctid already exists." >&2; exit 1; fi
 
 root_storage="${LIGHTDOCS_ROOT_STORAGE:-$(choose_storage rootdir)}"
@@ -92,18 +126,21 @@ net0="name=eth0,bridge=$bridge,ip=$network,type=veth"
 [[ -z "$gateway" ]] || net0+=",gw=$gateway"
 
 echo "Creating unprivileged Debian 13 CT $ctid..."
-pct create "$ctid" "$template" \
-    --hostname "$hostname" \
-    --ostype debian \
-    --arch amd64 \
-    --cores "$cores" \
-    --memory "$memory" \
-    --swap "$swap" \
-    --rootfs "$root_storage:$disk" \
-    --net0 "$net0" \
-    --unprivileged 1 \
-    --onboot 1 \
+create_args=(
+    --hostname "$hostname"
+    --ostype debian
+    --arch amd64
+    --cores "$cores"
+    --memory "$memory"
+    --swap "$swap"
+    --rootfs "$root_storage:$disk"
+    --net0 "$net0"
+    --unprivileged 1
+    --onboot 1
     --start 1
+)
+[[ -z "$root_password" ]] || create_args+=(--password "$root_password")
+pct create "$ctid" "$template" "${create_args[@]}"
 
 echo "Waiting for networking inside CT $ctid..."
 ready=0
@@ -116,6 +153,17 @@ done
 echo "Installing bootstrap prerequisites inside CT $ctid..."
 pct_exec DEBIAN_FRONTEND=noninteractive apt-get update
 pct_exec DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl
+
+if [[ "$console_mode" == "autologin" ]]; then
+    pct_exec bash -c 'install -d /etc/systemd/system/container-getty@1.service.d &&
+        printf "%s\n" \
+            "[Service]" \
+            "ExecStart=" \
+            "ExecStart=-/sbin/agetty --autologin root --noclear --keep-baud tty%I 115200,38400,9600 \$TERM" \
+            > /etc/systemd/system/container-getty@1.service.d/override.conf &&
+        systemctl daemon-reload &&
+        systemctl restart container-getty@1.service'
+fi
 
 pct_exec curl --fail --silent --show-error --location "$raw_base/deploy/native/install.sh" --output /root/lightdocs-install.sh
 if ! pct_exec \
@@ -134,3 +182,8 @@ address="$(pct_exec hostname -I | awk '{print $1}')"
 echo
 echo "Lightdocs CT $ctid is ready at http://${address:-unknown}/"
 echo "Manage it with: pct exec $ctid -- lightdocs help"
+if [[ "$console_mode" == "autologin" ]]; then
+    echo "Console access: root auto-login"
+else
+    echo "Console username: root (password configured during setup)"
+fi
