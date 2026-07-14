@@ -2,6 +2,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag to build and publish
+        required: true
+        type: string
+        default: v0.1.11
   push:
     tags:
       - "v*"
@@ -17,6 +23,8 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || inputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -47,19 +55,17 @@ jobs:
           bash tests/proxmox-installer.sh
 
       - name: Verify release version
-        if: startsWith(github.ref, 'refs/tags/')
-        run: test "${GITHUB_REF_NAME#v}" = "$(tr -d '[:space:]' < VERSION)"
+        run: test "${RELEASE_TAG#v}" = "$(tr -d '[:space:]' < VERSION)"
 
       - name: Build release bundle
         run: bash deploy/release/build.sh
 
       - name: Upload GitHub release assets
-        if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || gh release create "${GITHUB_REF_NAME}" --generate-notes
-          gh release upload "${GITHUB_REF_NAME}" dist/*.tar.gz dist/*.zip dist/*.sha256 --clobber
+          gh release view "$RELEASE_TAG" >/dev/null 2>&1 || gh release create "$RELEASE_TAG" --generate-notes
+          gh release upload "$RELEASE_TAG" dist/*.tar.gz dist/*.zip dist/*.sha256 --clobber
 
       - name: Log in to GHCR
         if: startsWith(github.ref, 'refs/tags/')
