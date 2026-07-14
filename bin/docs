@@ -3,7 +3,7 @@
 
 declare(strict_types=1);
 
-use Lightdocs\App\Console\Console;
+use System\Console\Console;
 
-$config = require dirname(__DIR__) . '/bootstrap.php';
+$config = require dirname(__DIR__) . '/upload/system/startup.php';
 exit((new Console($config))->run($argv));

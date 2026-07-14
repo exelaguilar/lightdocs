@@ -43,7 +43,7 @@ Private pages use the site's single administrator session. Lightdocs does not pr
 
 ## Content Studio
 
-When the editor is enabled, `/admin` opens an overview dashboard and `/admin/editor` opens the authoring workspace. The editor has a searchable, collapsible content browser, drag ordering, split preview, frontmatter controls, asset uploads, revisions, and content-health context. **Preview only** expands the rendered preview across the workspace; **Split view** returns to Markdown and preview side by side. Press `/` outside an input to focus the content filter. Drop or paste an image into the Markdown pane to upload it and insert Markdown automatically.
+`/admin` opens an overview dashboard and `/admin/editor` opens the authoring workspace. The editor has a searchable, collapsible content browser, drag ordering, split preview, frontmatter controls, asset uploads, revisions, and content-health context. **Preview only** expands the rendered preview across the workspace; **Split view** returns to Markdown and preview side by side. Press `/` outside an input to focus the content filter. Drop or paste an image into the Markdown pane to upload it and insert Markdown automatically.
 
 New pages can start from Markdown files in `content/_templates/`. The included templates cover blank pages, operational runbooks, Proxmox LXC services, and troubleshooting guides.
 
@@ -77,7 +77,7 @@ Use `contains_secrets: true` only after confirming the page is also `visibility:
 
 Studio Settings writes identity values to `content/_site.yaml`, visual defaults to `content/_theme.yaml`, and matching safe values to the selected environment file so changes take effect on the next request. Local development selects the project `.env`; packaged installs select `/etc/lightdocs/lightdocs.env`. Real server environment variables still win. Credentials remain environment-only.
 
-Git is local version-control software; it does not require GitHub or any other server. With **Enable Local Git** selected, open **Studio → Tools → Local Git** to initialize a repository in the configured persistent site root. Studio can then show content and upload changes, create local commits, and browse history without an account, network access, SSH key, or daemon. Immutable application releases remain outside that repository.
+Git is local version-control software; it does not require GitHub or any other server. Enable the **Local Git** extension, turn on **Git history** in its extension settings, then open **Studio → Tools → Local Git** to initialize a repository in the configured persistent site root. Studio can then show content and upload changes, create local commits, and browse history without an account, network access, SSH key, or daemon. Immutable application releases remain outside that repository.
 
 Initialization creates only `.git/` and local author configuration. It deliberately does not create the first commit, giving the owner a chance to review the working tree. The starter site's `.gitignore` excludes SQLite, caches, revisions, exports, and other runtime state; the environment file is stored outside the site root in native deployments.
 
@@ -115,7 +115,7 @@ Lightdocs writes Git subprocess output to temporary files rather than bounded PH
 
 If a request was already deadlocked before an updated runner was loaded, restart the PHP/web service once, reload Local Git, and retry. On an LXC this normally means restarting PHP-FPM or Apache; on a ServBay development installation, restart PHP or all ServBay services. Do not repeatedly submit commits while an earlier Git writer is still active.
 
-Hosted remote synchronization is not part of the primary workflow. The experimental GitHub concept now lives in the [Maybe section](/maybe/github-remote-sync).
+Local Git is the only version-control integration. Lightdocs never pushes content to a hosted remote; if you want an off-machine copy, use exports or your own Git remote from the command line.
 
 ## Relative links
 

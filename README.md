@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/favicon.svg" width="96" height="96" alt="Lightdocs logo">
+  <img src="favicon.svg" width="96" height="96" alt="Lightdocs logo">
 </p>
 
 <h1 align="center">Lightdocs</h1>
@@ -21,7 +21,7 @@
 
 ---
 
-Lightdocs turns ordinary Markdown files into a polished, searchable documentation site with an optional browser-based Content Studio. It is designed to feel at home in a tiny Proxmox LXC: no Node.js runtime, database server, Redis instance, queue worker, or frontend build service is required.
+Lightdocs turns ordinary Markdown files into a polished, searchable documentation site with a built-in browser-based Content Studio. It is designed to feel at home in a tiny Proxmox LXC: no Node.js runtime, database server, Redis instance, queue worker, or frontend build service is required.
 
 Your Markdown remains the source of truth. Lightdocs adds navigation, full-text search, page relationships, reusable snippets, runbook tools, local revision history, private content controls, and static exports without locking the content into a proprietary database.
 
@@ -96,11 +96,11 @@ The helper will:
 
 1. Select or download the Debian 13 standard template.
 2. Ask for the container ID, hostname, CPU, memory, disk, storage, network configuration, and console access mode.
-3. Ask for the documentation name, tagline, optional canonical URL, and Content Studio access.
+3. Ask for the documentation name, tagline, optional canonical URL, and administrator credentials.
 4. Create an unprivileged LXC with start-at-boot enabled.
 5. Wait for networking and DNS inside the container.
 6. Install Nginx, PHP-FPM, required PHP extensions, and a checksum-verified Lightdocs release.
-7. Generate or securely collect an administrator password when Content Studio is enabled, then print the site URL.
+7. Generate or securely collect the administrator password, then print the site URL and admin URL.
 
 ### Proxmox prerequisites
 
@@ -123,7 +123,7 @@ The defaults are intentionally modest:
 | Console | `root` auto-login in the Proxmox console |
 | Site name | Lightdocs |
 | Canonical URL | Empty for local/private-network use |
-| Content Studio | Enabled with a generated administrator password |
+| Content Studio | Always available at `/admin` with a generated administrator password |
 
 The default auto-login applies only to the container's Proxmox console. Lightdocs does not install or enable an SSH server. Choose `password` at the console-access prompt if you prefer a conventional `root` password.
 
@@ -163,7 +163,6 @@ Available overrides include:
 - `LIGHTDOCS_NAME`
 - `LIGHTDOCS_TAGLINE`
 - `LIGHTDOCS_BASE_URL` (optional canonical external URL)
-- `LIGHTDOCS_ADMIN_ENABLED` (`enabled` or `disabled`)
 - `LIGHTDOCS_ADMIN_PASSWORD_MODE` (`generate` or `password`)
 - `LIGHTDOCS_ADMIN_PASSWORD` (at least 12 characters when password mode is selected)
 - `LIGHTDOCS_VERSION` to pin a release instead of using `latest`
@@ -241,10 +240,10 @@ grep '^DOCS_ADMIN_PASSWORD=' /etc/lightdocs/lightdocs.env
 /opt/lightdocs/current              active release symlink
 /opt/lightdocs/previous             rollback release symlink
 /etc/lightdocs/lightdocs.env        configuration and administrator credential
-/var/lib/lightdocs/content          canonical Markdown and YAML
-/var/lib/lightdocs/public/uploads   uploaded assets
-/var/lib/lightdocs/var              SQLite, cache, revisions, and exports
-/var/backups/lightdocs              portable backups
+/var/lib/lightdocs/content                    canonical Markdown and YAML
+/var/lib/lightdocs/storage/uploads            uploaded assets
+/var/lib/lightdocs/storage                    SQLite, cache, revisions, and exports
+/var/backups/lightdocs                         portable backups
 ```
 
 ### Updates, backups, and recovery
@@ -279,7 +278,7 @@ For a Debian 13 server, the native installer above is the easiest and safest opt
 - DOM, JSON, mbstring, PDO, and PDO SQLite extensions
 - ZIP for browser-created export downloads
 - Apache with `mod_rewrite`, or Nginx with PHP-FPM
-- A web root that can be pointed specifically at Lightdocs' `public/` directory
+- A web root such as `public_html/` or `public/` where the contents of Lightdocs' `upload/` directory can be copied
 
 Download a release that already contains production Composer dependencies:
 
@@ -306,19 +305,19 @@ DOCS_BASE_URL=https://docs.example.com
 DOCS_ADMIN_PASSWORD=replace-with-a-long-random-password
 ```
 
-Allow the PHP service account to write canonical content and runtime data when Content Studio is enabled:
+Allow the PHP service account to write canonical content and runtime data because the administrator console is always available:
 
 ```bash
-chown -R www-data:www-data content public/uploads var
+chown -R www-data:www-data content storage/uploads storage
 chown root:www-data .env
 chmod 0660 .env
 ```
 
-Point the virtual host's document root to the extracted `public/` directory. Never expose the repository or release root directly.
+Copy the contents of the extracted `upload/` directory into the virtual host's document root, usually `public_html/` or `public/`. Never expose the repository or release root directly.
 
-- Apache users can use the included `public/.htaccess` and enable `mod_rewrite`.
+- Apache users can use the included `.htaccess` and enable `mod_rewrite`.
 - Nginx users can adapt [`deploy/nginx.conf`](deploy/nginx.conf).
-- All dynamic requests must ultimately enter through `public/index.php`.
+- All dynamic requests must ultimately enter through `index.php`.
 
 Run the deployment checks as the PHP service account:
 
@@ -334,12 +333,12 @@ Shared hosting works when the provider offers PHP 8.4, PDO SQLite, and control o
 
 1. Download and extract `lightdocs-release.tar.gz` on your computer.
 2. Upload the extracted application outside the public web directory when possible.
-3. Point the domain or subdomain document root to the uploaded `public/` folder.
+3. Copy the contents of the release `upload/` folder into the domain's document root.
 4. Copy `.env.example` to `.env` and set the site name, base URL, and administrator password.
-5. Make `content/`, `public/uploads/`, and `var/` writable by PHP.
+5. Make `content/`, `storage/uploads/`, and `storage/` writable by PHP.
 6. Open `/healthz`, then open the site root.
 
-Do **not** place the complete application inside `public_html` if the provider cannot make `public/` the actual document root. That could expose configuration, Markdown source, revisions, or runtime files. In that situation, use a static export instead.
+Do **not** place the complete repository inside `public_html`. Only copy the contents of `upload/`; keep configuration, Markdown source, revisions, and runtime files outside the web root. If the provider cannot separate those locations, use a static export instead.
 
 ### Static hosting fallback
 
@@ -466,9 +465,9 @@ Deployment paths can be changed independently:
 
 ```dotenv
 LIGHTDOCS_SITE_DIR=/var/lib/lightdocs
-LIGHTDOCS_STATE_DIR=/var/lib/lightdocs/var
+LIGHTDOCS_STATE_DIR=/var/lib/lightdocs/storage
 LIGHTDOCS_CONTENT_DIR=/var/lib/lightdocs/content
-LIGHTDOCS_UPLOAD_DIR=/var/lib/lightdocs/public/uploads
+LIGHTDOCS_UPLOAD_DIR=/var/lib/lightdocs/storage/uploads
 LIGHTDOCS_ENV_FILE=/etc/lightdocs/lightdocs.env
 ```
 
@@ -497,7 +496,7 @@ lightdocs rollback
 
 ## Security model
 
-- Only `public/` should be exposed by the web server.
+- Only the contents of `upload/` should be exposed by the web server.
 - Raw HTML in Markdown is disabled.
 - Unsafe links are rejected by the renderer.
 - Studio writes are path-constrained, CSRF-protected, revisioned, and protected against conflicting edits.

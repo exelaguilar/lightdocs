@@ -99,4 +99,4 @@ The progress bar counts only these task-list items on pages with `type: runbook`
 
 Private and sanitized exports should still be handled as operational records, not posted publicly without review.
 
-Local Git may preserve private operational records and credentials in earlier commits, so review the first snapshot and acknowledge recognized secret history before committing. Hosted synchronization policies are deliberately separated into [Maybe → GitHub Remote Sync](/maybe/github-remote-sync).
+Local Git may preserve private operational records and credentials in earlier commits, so review the first snapshot and acknowledge recognized secret history before committing. Nothing is ever pushed to a hosted remote.

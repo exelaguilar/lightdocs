@@ -1,0 +1,18 @@
+{
+  "name": "storage",
+  "class": "Extension\\Storage\\Extension",
+  "version": "1.0.0",
+  "description": "Optional S3-compatible publication for uploaded assets while keeping a local mirror.",
+  "default_enabled": false,
+  "contexts": ["admin", "public"],
+  "settings": [
+    {"key": "driver", "label": "Storage driver", "type": "text", "default": "s3", "description": "Use s3 for an S3-compatible endpoint. Leave the extension disabled to use local-only assets."},
+    {"key": "endpoint", "label": "Endpoint URL", "type": "url", "default": "", "description": "S3 or S3-compatible endpoint, such as an internal MinIO URL."},
+    {"key": "bucket", "label": "Bucket", "type": "text", "default": "", "description": "Bucket name used for published assets."},
+    {"key": "region", "label": "Region", "type": "text", "default": "us-east-1", "description": "Signing region used by the S3-compatible service."},
+    {"key": "access_key", "label": "Access key", "type": "text", "default": "", "description": "Credential used only for the S3 upload request."},
+    {"key": "secret_key", "label": "Secret key", "type": "password", "default": "", "description": "Leave blank to keep the current secret key."},
+    {"key": "public_base_url", "label": "Public base URL", "type": "url", "default": "", "description": "Optional public URL prefix for published assets."},
+    {"key": "prefix", "label": "Object prefix", "type": "text", "default": "lightdocs", "description": "Folder-like prefix placed before asset names."}
+  ]
+}

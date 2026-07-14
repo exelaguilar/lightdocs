@@ -7,9 +7,9 @@ build*
 dist
 site
 var
-vendor
+upload/vendor
 content
-public/uploads
+storage
 tests
 *.log
 *.sqlite

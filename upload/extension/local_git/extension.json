@@ -1,0 +1,12 @@
+{
+  "name": "local_git",
+  "class": "Extension\\LocalGit\\Extension",
+  "version": "1.0.0",
+  "description": "Local-only Git history and sanitized content preflight.",
+  "default_enabled": true,
+  "contexts": ["admin", "public"],
+  "settings": [
+    {"key": "history_enabled", "label": "Enable Git history", "type": "boolean", "default": true, "description": "Allow Local Git to inspect, initialize, and commit the private repository."}
+  ],
+  "navigation": [{"section": "Tools", "label": "Local Git", "route": "/admin/history", "active": "history", "sort_order": 30}]
+}

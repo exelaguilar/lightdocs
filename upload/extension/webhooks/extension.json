@@ -1,0 +1,14 @@
+{
+  "name": "webhooks",
+  "class": "Extension\\Webhooks\\Extension",
+  "version": "1.0.0",
+  "description": "Optional signed HTTP notifications for framework events.",
+  "default_enabled": false,
+  "contexts": ["admin", "public"],
+  "settings": [
+    {"key": "endpoint_url", "label": "Endpoint URL", "type": "url", "default": "", "description": "HTTPS endpoint that receives JSON event notifications."},
+    {"key": "secret", "label": "Signing secret", "type": "password", "default": "", "description": "Used to create the X-Lightdocs-Signature HMAC header."},
+    {"key": "events", "label": "Events", "type": "text", "default": "content.changed,settings.saved,index.rebuilt", "description": "Comma-separated event names to send."},
+    {"key": "timeout", "label": "Timeout seconds", "type": "number", "default": 5, "min": 1, "max": 30, "description": "Maximum time allowed for each delivery attempt."}
+  ]
+}

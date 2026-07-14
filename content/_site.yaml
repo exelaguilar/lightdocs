@@ -2,7 +2,6 @@ name: Lightdocs
 tagline: 'Documentation without the framework tax.'
 base_url: ''
 github_url: ''
-git_history: true
 git_sync_policy: sanitized
 github_client_id: ''
 git_sync_repository: ''

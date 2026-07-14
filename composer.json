@@ -16,22 +16,25 @@
     "vlucas/phpdotenv": "^5.6"
   },
   "autoload": {
-    "psr-4": {
-      "Lightdocs\\System\\Engine\\": "system/engine/",
-      "Lightdocs\\System\\Library\\": "system/library/",
-      "Lightdocs\\App\\Controller\\": "app/controller/",
-      "Lightdocs\\App\\Model\\": "app/model/",
-      "Lightdocs\\App\\Library\\": "app/library/",
-      "Lightdocs\\App\\Service\\": "app/service/",
-      "Lightdocs\\App\\Console\\": "app/console/"
-    },
+    "psr-4": {},
     "classmap": [
-      "app/Framework.php",
-      "app/Routes.php"
+      "upload/system/framework.php",
+      "upload/admin/startup.php",
+      "upload/frontend/startup.php",
+      "upload/system/vendor.php",
+      "upload/extension",
+      "upload/admin/controller",
+      "upload/frontend/controller",
+      "upload/system/engine",
+      "upload/system/library",
+      "upload/system/model",
+      "upload/system/library/content",
+      "upload/system/library/service",
+      "upload/system/console"
     ]
   },
   "scripts": {
-    "docs:serve": "php -S 127.0.0.1:8080 -t public router.php",
+    "docs:serve": "php -S 127.0.0.1:8080 -t upload upload/router.php",
     "docs:validate": "php bin/docs validate",
     "docs:build": "php bin/docs build build",
     "docs:test": "php tests/smoke.php",
@@ -40,6 +43,7 @@
     "release:build-windows": "powershell -ExecutionPolicy Bypass -File deploy/release/build.ps1"
   },
   "config": {
+    "vendor-dir": "upload/vendor",
     "optimize-autoloader": true,
     "sort-packages": true
   }

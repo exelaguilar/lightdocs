@@ -1,0 +1,18 @@
+{
+  "name": "oidc",
+  "class": "Extension\\Oidc\\Extension",
+  "version": "1.0.0",
+  "description": "Optional OpenID Connect sign-in with explicit external identity linking.",
+  "default_enabled": false,
+  "contexts": ["admin"],
+  "settings": [
+    {"key": "authorization_url", "label": "Authorization URL", "type": "url", "default": "", "description": "HTTPS authorization endpoint supplied by the identity provider."},
+    {"key": "token_url", "label": "Token URL", "type": "url", "default": "", "description": "HTTPS code-exchange endpoint supplied by the identity provider."},
+    {"key": "userinfo_url", "label": "User info URL", "type": "url", "default": "", "description": "HTTPS endpoint that returns the authenticated user's OIDC claims."},
+    {"key": "client_id", "label": "Client ID", "type": "text", "default": "", "description": "OIDC client identifier."},
+    {"key": "client_secret", "label": "Client secret", "type": "password", "default": "", "description": "OIDC client secret. Leave blank when saving to preserve the existing value."},
+    {"key": "scopes", "label": "Scopes", "type": "text", "default": "openid profile email", "description": "Space-separated scopes requested from the provider."},
+    {"key": "auto_provision", "label": "Create new users", "type": "boolean", "default": false, "description": "Create a viewer account when an external identity is not linked yet."},
+    {"key": "default_role", "label": "Provisioned role", "type": "text", "default": "viewer", "description": "Existing local role assigned to newly provisioned external users."}
+  ]
+}

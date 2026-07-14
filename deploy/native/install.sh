@@ -5,14 +5,6 @@ set_command_path() {
     export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 }
 
-normalize_admin_mode() {
-    case "${1,,}" in
-        enabled|enable|yes|true|1) printf 'enabled\n' ;;
-        disabled|disable|no|false|0) printf 'disabled\n' ;;
-        *) return 1 ;;
-    esac
-}
-
 dotenv_quote() {
     local value="${1-}"
     value="${value//\\/\\\\}"
@@ -40,11 +32,6 @@ main() {
     local raw_base="${LIGHTDOCS_RAW_BASE_URL:-https://raw.githubusercontent.com/$repository/$ref}"
     local requested_version="${LIGHTDOCS_VERSION:-latest}"
     local generated_password=""
-    local admin_mode
-    admin_mode="$(normalize_admin_mode "${LIGHTDOCS_ADMIN_ENABLED:-enabled}")" || {
-        echo "LIGHTDOCS_ADMIN_ENABLED must be enabled or disabled." >&2
-        exit 1
-    }
 
     source /etc/os-release
     if [[ "${ID:-}" != "debian" || "${VERSION_ID:-}" != "13" ]]; then
@@ -58,12 +45,10 @@ main() {
         ca-certificates curl git nginx openssl rsync tar \
         php8.4-cli php8.4-curl php8.4-fpm php8.4-mbstring php8.4-sqlite3 php8.4-xml php8.4-zip
 
-    mkdir -p /etc/lightdocs /opt/lightdocs/releases /var/lib/lightdocs/content /var/lib/lightdocs/public/uploads /var/lib/lightdocs/var /var/backups/lightdocs
+    mkdir -p /etc/lightdocs /opt/lightdocs/releases /var/lib/lightdocs/content /var/lib/lightdocs/storage/uploads /var/backups/lightdocs
 
     if [[ ! -f /etc/lightdocs/lightdocs.env ]]; then
-        if [[ "$admin_mode" == "enabled" ]]; then
-            generated_password="${LIGHTDOCS_ADMIN_PASSWORD:-$(openssl rand -hex 24)}"
-        fi
+        generated_password="${LIGHTDOCS_ADMIN_PASSWORD:-$(openssl rand -hex 24)}"
         umask 077
         {
             printf 'APP_ENV=%s\n' "$(dotenv_quote production)"
@@ -110,8 +95,6 @@ main() {
     if [[ -n "$generated_password" ]]; then
         echo "Administrator password: $generated_password"
         echo "The credential is stored in /etc/lightdocs/lightdocs.env."
-    elif [[ "$admin_mode" == "disabled" ]]; then
-        echo "Content Studio: disabled (reader-only site)."
     fi
 }
 

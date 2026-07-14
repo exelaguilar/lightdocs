@@ -36,23 +36,24 @@ rsync -a "$root/" "$stage/" \
     --exclude '/build*/' \
     --exclude '/content/' \
     --exclude '/dist/' \
-    --exclude '/public/uploads/' \
+    --exclude '/storage/' \
+    --exclude '/upload/vendor/' \
     --exclude '/site/' \
     --exclude '/tests/' \
     --exclude '/var/' \
     --exclude '/vendor/'
 
-mkdir -p "$stage/content" "$stage/public/uploads" "$stage/var/cache" "$stage/var/revisions" "$stage/var/exports"
+mkdir -p "$stage/content" "$stage/storage/uploads" "$stage/storage/cache" "$stage/storage/revisions" "$stage/storage/exports"
 cp -a "$root/resources/starter-site/content/." "$stage/content/"
-cp -a "$root/resources/starter-site/public/uploads/." "$stage/public/uploads/"
+cp -a "$root/resources/starter-site/public/uploads/." "$stage/storage/uploads/"
 printf '%s\n' "$version" > "$stage/VERSION"
 chmod 0755 "$stage/bin/docs" "$stage/deploy/docker/entrypoint.sh" "$stage/deploy/docker/install.sh" "$stage/deploy/native/install.sh" "$stage/deploy/native/lightdocs" "$stage/deploy/proxmox/install-lxc.sh" "$stage/deploy/release/build.sh"
 
 composer install --working-dir="$stage" --no-dev --no-interaction --no-progress --prefer-dist --classmap-authoritative
 php "$stage/bin/docs" doctor
 php "$stage/bin/docs" validate
-rm -f "$stage/var/lightdocs.sqlite" "$stage/var/lightdocs.sqlite-shm" "$stage/var/lightdocs.sqlite-wal"
-rm -rf "$stage/var/cache/"*
+rm -f "$stage/storage/lightdocs.sqlite" "$stage/storage/lightdocs.sqlite-shm" "$stage/storage/lightdocs.sqlite-wal"
+rm -rf "$stage/storage/cache/"*
 
 archive="$dist/lightdocs-release.tar.gz"
 versioned="$dist/lightdocs-v$version.tar.gz"

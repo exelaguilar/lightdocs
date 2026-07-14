@@ -2,8 +2,7 @@ FROM composer:2 AS vendor
 
 WORKDIR /app
 COPY composer.json composer.lock ./
-COPY app ./app
-COPY system ./system
+COPY upload ./upload
 RUN composer install \
     --no-dev \
     --no-interaction \
@@ -15,9 +14,9 @@ FROM php:8.4-apache-bookworm
 
 ARG LIGHTDOCS_VERSION=development
 ENV LIGHTDOCS_SITE_DIR=/var/lib/lightdocs \
-    LIGHTDOCS_STATE_DIR=/var/lib/lightdocs/var \
+    LIGHTDOCS_STATE_DIR=/var/lib/lightdocs/storage \
     LIGHTDOCS_ENV_FILE=/var/lib/lightdocs/lightdocs.env \
-    APACHE_DOCUMENT_ROOT=/var/www/html/public
+    APACHE_DOCUMENT_ROOT=/var/www/html
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl git libonig-dev libsqlite3-dev libzip-dev unzip \
@@ -27,14 +26,14 @@ RUN apt-get update \
 
 WORKDIR /var/www/html
 COPY . ./
-COPY --from=vendor /app/vendor ./vendor
+COPY --from=vendor /app/upload/vendor ./upload/vendor
 COPY resources/starter-site /usr/share/lightdocs/starter-site
 COPY deploy/docker/apache-site.conf /etc/apache2/sites-available/000-default.conf
 COPY deploy/docker/entrypoint.sh /usr/local/bin/lightdocs-entrypoint
 
 RUN version="${LIGHTDOCS_VERSION#v}" && printf '%s\n' "$version" > VERSION \
-    && rm -rf content var public/uploads \
-    && mkdir -p /var/lib/lightdocs/var /var/lib/lightdocs/public/uploads \
+    && rm -rf content storage \
+    && mkdir -p /var/lib/lightdocs/storage/uploads \
     && chown -R www-data:www-data /var/lib/lightdocs \
     && chmod 0755 /usr/local/bin/lightdocs-entrypoint
 

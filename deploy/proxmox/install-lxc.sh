@@ -79,7 +79,6 @@ console_mode="${LIGHTDOCS_CONSOLE_MODE:-}"
 docs_name="${LIGHTDOCS_NAME:-Lightdocs}"
 docs_tagline="${LIGHTDOCS_TAGLINE:-Documentation without the framework tax.}"
 docs_base_url="${LIGHTDOCS_BASE_URL:-}"
-admin_mode="${LIGHTDOCS_ADMIN_ENABLED:-enabled}"
 admin_password="${LIGHTDOCS_ADMIN_PASSWORD:-}"
 admin_password_mode="${LIGHTDOCS_ADMIN_PASSWORD_MODE:-}"
 if [[ -z "$console_mode" ]]; then
@@ -103,12 +102,9 @@ if [[ -t 0 ]]; then
     docs_name="$(prompt "Documentation site name" "$docs_name")"
     docs_tagline="$(prompt "Documentation site tagline" "$docs_tagline")"
     docs_base_url="$(prompt "Canonical external URL (optional)" "$docs_base_url")"
-    admin_mode="$(prompt "Browser Content Studio (enabled or disabled)" "$admin_mode")"
-    if [[ "$admin_mode" == "enabled" ]]; then
-        admin_password_mode="$(prompt "Administrator password (generate or password)" "$admin_password_mode")"
-        if [[ "$admin_password_mode" == "password" && -z "$admin_password" ]]; then
-            admin_password="$(prompt_password "Lightdocs administrator password" 12)"
-        fi
+    admin_password_mode="$(prompt "Administrator password (generate or password)" "$admin_password_mode")"
+    if [[ "$admin_password_mode" == "password" && -z "$admin_password" ]]; then
+        admin_password="$(prompt_password "Lightdocs administrator password" 12)"
     fi
 fi
 
@@ -127,16 +123,10 @@ if [[ -n "$docs_base_url" && ! "$docs_base_url" =~ ^https?://[^[:space:]]+$ ]]; 
     echo "Canonical external URL must be an absolute http:// or https:// URL." >&2
     exit 1
 fi
-case "$admin_mode" in
-    enabled)
-        case "$admin_password_mode" in
-            generate) admin_password="" ;;
-            password) [[ ${#admin_password} -ge 12 ]] || { echo "The administrator password must be at least 12 characters." >&2; exit 1; } ;;
-            *) echo "Administrator password mode must be generate or password." >&2; exit 1 ;;
-        esac
-        ;;
-    disabled) admin_password="" ;;
-    *) echo "Browser Content Studio must be enabled or disabled." >&2; exit 1 ;;
+case "$admin_password_mode" in
+    generate) admin_password="" ;;
+    password) [[ ${#admin_password} -ge 12 ]] || { echo "The administrator password must be at least 12 characters." >&2; exit 1; } ;;
+    *) echo "Administrator password mode must be generate or password." >&2; exit 1 ;;
 esac
 if pct status "$ctid" >/dev/null 2>&1; then echo "CT $ctid already exists." >&2; exit 1; fi
 
@@ -214,7 +204,6 @@ if ! pct_exec \
     LIGHTDOCS_NAME="$docs_name" \
     LIGHTDOCS_TAGLINE="$docs_tagline" \
     LIGHTDOCS_BASE_URL="$docs_base_url" \
-    LIGHTDOCS_ADMIN_ENABLED="$admin_mode" \
     LIGHTDOCS_ADMIN_PASSWORD="$admin_password" \
     bash /root/lightdocs-install.sh; then
     echo "Installation failed inside CT $ctid. The container was preserved for diagnosis." >&2
@@ -228,7 +217,7 @@ echo "Lightdocs CT $ctid is ready at http://${address:-unknown}/"
 echo "Manage it with: pct exec $ctid -- lightdocs help"
 echo "Site name: $docs_name"
 echo "Canonical URL: ${docs_base_url:-not configured}"
-echo "Content Studio: $admin_mode"
+echo "Content Studio: enabled at /admin"
 if [[ "$console_mode" == "autologin" ]]; then
     echo "Console access: root auto-login"
 else

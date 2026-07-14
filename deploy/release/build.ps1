@@ -40,9 +40,9 @@ New-Item -ItemType Directory -Path $stage | Out-Null
 function Test-ReleaseExcluded([string]$RelativePath) {
     $relative = $RelativePath.Replace('\', '/').TrimStart('/')
     $first = $relative.Split('/', 2)[0]
-    if ($first -in @('.git', '.github', '.claude', '.codex', 'content', 'dist', 'site', 'tests', 'var', 'vendor')) { return $true }
+    if ($first -in @('.git', '.github', '.claude', '.codex', 'content', 'dist', 'site', 'tests', 'var', 'storage', 'vendor')) { return $true }
     if ($first -like 'build*') { return $true }
-    if ($relative -eq '.env' -or $relative -eq 'public/uploads' -or $relative.StartsWith('public/uploads/')) { return $true }
+    if ($relative -eq '.env' -or $relative -eq 'upload/vendor' -or $relative.StartsWith('upload/vendor/')) { return $true }
     return $false
 }
 
@@ -56,8 +56,8 @@ try {
     }
 
     $content = Join-Path $stage 'content'
-    $uploads = Join-Path $stage 'public\uploads'
-    New-Item -ItemType Directory -Path $content,$uploads,(Join-Path $stage 'var\cache'),(Join-Path $stage 'var\revisions'),(Join-Path $stage 'var\exports') -Force | Out-Null
+    $uploads = Join-Path $stage 'storage\uploads'
+    New-Item -ItemType Directory -Path $content,$uploads,(Join-Path $stage 'storage\cache'),(Join-Path $stage 'storage\revisions'),(Join-Path $stage 'storage\exports') -Force | Out-Null
     Copy-Item -Path (Join-Path $root 'resources\starter-site\content\*') -Destination $content -Recurse -Force
     Copy-Item -Path (Join-Path $root 'resources\starter-site\public\uploads\*') -Destination $uploads -Recurse -Force
     [System.IO.File]::WriteAllText((Join-Path $stage 'VERSION'), "$Version`n", [System.Text.UTF8Encoding]::new($false))
@@ -69,8 +69,8 @@ try {
     & php (Join-Path $stage 'bin\docs') validate
     if ($LASTEXITCODE -ne 0) { throw 'Release validation failed.' }
 
-    Get-ChildItem -LiteralPath (Join-Path $stage 'var') -Filter 'lightdocs.sqlite*' -File -ErrorAction SilentlyContinue | Remove-Item -Force
-    Get-ChildItem -LiteralPath (Join-Path $stage 'var\cache') -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+    Get-ChildItem -LiteralPath (Join-Path $stage 'storage') -Filter 'lightdocs.sqlite*' -File -ErrorAction SilentlyContinue | Remove-Item -Force
+    Get-ChildItem -LiteralPath (Join-Path $stage 'storage\cache') -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
     $archive = Join-Path $dist 'lightdocs-release.tar.gz'
     & tar -C $stage -czf $archive .

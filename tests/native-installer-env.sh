@@ -45,7 +45,7 @@ password='dollar$ quote" slash\\ value'
 
 # shellcheck disable=SC2016
 "$php_bin" -r '
-require $argv[1] . "/vendor/autoload.php";
+require $argv[1] . "/upload/vendor/autoload.php";
 Dotenv\Dotenv::createImmutable($argv[2])->load();
 $expected = [
     "DOCS_NAME" => $argv[3],
@@ -72,7 +72,7 @@ repair_legacy_env "$work/legacy.env"
 grep -Fxq 'DOCS_TAGLINE="Documentation without the framework tax."' "$work/legacy.env"
 # shellcheck disable=SC2016
 "$php_bin" -r '
-require $argv[1] . "/vendor/autoload.php";
+require $argv[1] . "/upload/vendor/autoload.php";
 Dotenv\Dotenv::createImmutable($argv[2], "legacy.env")->load();
 if (($_ENV["DOCS_TAGLINE"] ?? null) !== "Documentation without the framework tax.") {
     fwrite(STDERR, "Legacy DOCS_TAGLINE repair did not parse correctly.\n");

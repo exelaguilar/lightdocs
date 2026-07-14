@@ -16,7 +16,7 @@ Add a `.md` file under `content/` and it becomes a page. Studio modifies those s
 ## Start here
 
 :::cards
-:::card title="Getting started" href="/getting-started"
+:::card title="Getting started" href="/guides/getting-started"
 Install dependencies, run the local server, and publish your first page.
 :::
 :::card title="Authoring content" href="/guides/authoring"
@@ -33,14 +33,14 @@ Explore sections, components, SQLite search, redirects, runbooks, and Studio int
 - A compact script progressively enhances search, tabs, theme selection, and mobile navigation.
 - Rendered Markdown is cached on disk and relational metadata is rebuilt into local SQLite.
 - Static export uses the same rendering pipeline.
-- The admin editor can be disabled completely.
+- The admin editor is always available at `/admin`.
 - No Node.js build, database server, queue, or daemon is required.
 
 ## Deployment choices
 
 :::tabs
 :::tab label="Dynamic PHP"
-Point Apache or Nginx at `public/`. PHP renders cached pages and can optionally host the editor.
+Point Apache or Nginx at `project root`. PHP renders cached pages and can optionally host the editor.
 :::
 :::tab label="Static export"
 Run the build command and upload the generated directory to any static host.

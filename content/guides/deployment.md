@@ -7,11 +7,13 @@ keywords: [deployment, lxc, nginx, php-fpm, sqlite, security]
 
 # Deployment
 
-The public web root must be the `public/` directory. Do not expose `content/`, `config/`, `vendor/`, or `var/` directly.
+The public web root is normally `public_html/` or `public/`. Copy only the contents of the repository's `upload/` directory into that web root. Do not expose the repository, `content/`, `.env`, `upload/vendor/`, or `storage/` as independently writable locations.
 
-When Studio is enabled, the PHP service account needs write access to `var/`, `public/uploads`, the Markdown content directory, and `.env` if browser-managed Settings should update safe runtime values. Keep `var/exports` outside the public web root because private archives may contain credentials.
+When Studio is enabled, the PHP service account needs write access to `storage/`, `storage/uploads`, the Markdown content directory, and `.env` if browser-managed Settings should update safe runtime values. Keep `storage/exports` outside the public web root because private archives may contain credentials.
 
-Local Git is optional and needs only the small `git` executable. It runs inside the installation and requires no network access, account, SSH key, Git server, or daemon. Hosted remote experiments are documented separately under [Maybe → GitHub Remote Sync](/maybe/github-remote-sync).
+Local Git is optional and needs only the small `git` executable. It runs inside the installation and requires no network access, account, SSH key, Git server, or daemon.
+
+The optional Media, Storage, Webhooks, OIDC, and Remote sync extensions are also disabled by default. Media requires the PHP GD extension for image processing. Storage requires an S3-compatible endpoint and credentials, Webhooks requires an HTTPS endpoint and signing secret, OIDC requires HTTPS provider endpoints and a registered callback URL, and Remote sync requires a Git executable plus a configured repository URL. Configure each integration from **Admin → Extensions → Settings**; do not place secrets in canonical Markdown or commit them to the repository.
 
 For browser-managed commits, PHP must permit `proc_open`, the service account must be able to write `.git/`, and PHP's system temporary directory must be writable. Lightdocs redirects Git stdout and stderr into short-lived temporary files to avoid web-request pipe deadlocks, then removes those files after the command finishes. If PHP-FPM, Apache, or a local PHP-CGI manager is restarted during a commit, allow the old worker to exit before retrying.
 
@@ -82,11 +84,13 @@ composer release:build-windows
 
 ## Apache
 
-Enable `mod_rewrite`, allow `.htaccess` overrides for the public directory, and point the virtual host document root at `public/`. A production `.htaccess` is included.
+Enable `mod_rewrite`, allow `.htaccess` overrides for the public directory, and copy `upload/.htaccess` into the web root. The virtual host document root remains `public_html/` or `public/`.
+
+The same rule applies to every deployment: the repository's `upload/` directory is a packaging boundary, not an extra URL segment. A shared host should receive the contents of `upload/` directly in `public_html/`; a container or VM may keep the release at `/opt/lightdocs/current/upload` and point the web server there. In both cases, the repository root and its private state remain outside the document root.
 
 ## Nginx and PHP-FPM
 
-Set the Nginx document root to the project's `public/` directory. Send existing assets directly and route all other paths to `public/index.php` using `try_files $uri $uri/ /index.php?$query_string`. Reject requests for hidden files and avoid exposing the project root.
+Set the Nginx document root to the directory containing the contents of `upload/`. Send existing assets directly and route all other paths to `index.php` using `try_files $uri $uri/ /index.php?$query_string`. Reject requests for hidden files and avoid exposing the repository root.
 
 `router.php` is only for PHP's built-in development server. It is not a public URL and must not be used as the Nginx entry point. Open the site at `/`, not `/router.php`.
 
@@ -114,7 +118,7 @@ Static sanitized exports and GitHub mirror preflight use the same redaction serv
 
 ### Export from Content Studio
 
-Authenticated administrators can open **Studio → Export** to build the same public, sanitized, or private profiles and download them as ZIP archives. Private exports require an explicit credential warning acknowledgement. Generated archives are stored outside `public/` and removed after their authenticated one-time download.
+Authenticated administrators can open **Studio → Export** to build the same public, sanitized, or private profiles and download them as ZIP archives. Private exports require an explicit credential warning acknowledgement. Generated archives are stored outside `system/` and removed after their authenticated one-time download.
 
 If the PHP ZIP extension is unavailable, the Export screen continues to show the exact CLI commands and explains why browser downloads are disabled.
 

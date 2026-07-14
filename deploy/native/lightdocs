@@ -6,7 +6,7 @@ RELEASES_DIR="$APP_ROOT/releases"
 CURRENT_LINK="$APP_ROOT/current"
 PREVIOUS_LINK="$APP_ROOT/previous"
 SITE_DIR="${LIGHTDOCS_SITE_DIR:-/var/lib/lightdocs}"
-STATE_DIR="${LIGHTDOCS_STATE_DIR:-$SITE_DIR/var}"
+STATE_DIR="${LIGHTDOCS_STATE_DIR:-$SITE_DIR/storage}"
 ENV_FILE="${LIGHTDOCS_ENV_FILE:-/etc/lightdocs/lightdocs.env}"
 BACKUP_DIR="${LIGHTDOCS_BACKUP_DIR:-/var/backups/lightdocs}"
 REPOSITORY="${LIGHTDOCS_REPOSITORY:-exelaguilar/lightdocs}"
@@ -40,7 +40,7 @@ die() { echo "Error: $*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die "This command must run as root."; }
 
 ensure_layout() {
-    mkdir -p "$RELEASES_DIR" "$SITE_DIR/content" "$SITE_DIR/public/uploads" "$STATE_DIR/cache" "$STATE_DIR/revisions" "$STATE_DIR/exports" "$BACKUP_DIR" "$(dirname "$ENV_FILE")"
+    mkdir -p "$RELEASES_DIR" "$SITE_DIR/content" "$SITE_DIR/storage/uploads" "$STATE_DIR/cache" "$STATE_DIR/revisions" "$STATE_DIR/exports" "$BACKUP_DIR" "$(dirname "$ENV_FILE")"
     chown -R www-data:www-data "$SITE_DIR"
     chown root:www-data "$(dirname "$ENV_FILE")"
     chmod 0770 "$(dirname "$ENV_FILE")"
@@ -68,8 +68,8 @@ seed_site() {
     if [[ ! -f "$SITE_DIR/.gitignore" ]]; then
         cp "$release/resources/starter-site/.gitignore" "$SITE_DIR/.gitignore"
     fi
-    if [[ ! -f "$SITE_DIR/public/uploads/.gitkeep" ]]; then
-        cp "$release/resources/starter-site/public/uploads/.gitkeep" "$SITE_DIR/public/uploads/.gitkeep"
+    if [[ ! -f "$SITE_DIR/storage/uploads/.gitkeep" ]]; then
+        cp "$release/resources/starter-site/public/uploads/.gitkeep" "$SITE_DIR/storage/uploads/.gitkeep"
     fi
     chown -R www-data:www-data "$SITE_DIR"
 }
@@ -222,9 +222,9 @@ create_backup() {
     local destination="${1:-$BACKUP_DIR/lightdocs-$(date -u +%Y%m%dT%H%M%SZ).tar.gz}" stage
     ensure_layout
     stage="$(mktemp -d)"
-    mkdir -p "$stage/site/public" "$stage/config"
+    mkdir -p "$stage/site/storage" "$stage/config"
     rsync -a "$SITE_DIR/content/" "$stage/site/content/"
-    rsync -a "$SITE_DIR/public/uploads/" "$stage/site/public/uploads/"
+    rsync -a "$SITE_DIR/storage/uploads/" "$stage/site/storage/uploads/"
     [[ ! -d "$SITE_DIR/.git" ]] || rsync -a "$SITE_DIR/.git/" "$stage/site/.git/"
     [[ ! -f "$SITE_DIR/.gitignore" ]] || cp "$SITE_DIR/.gitignore" "$stage/site/.gitignore"
     [[ ! -f "$ENV_FILE" ]] || cp "$ENV_FILE" "$stage/config/lightdocs.env"
@@ -264,8 +264,8 @@ restore_backup() {
         systemctl stop php8.4-fpm
     fi
     rsync -a --delete "$work/site/content/" "$SITE_DIR/content/"
-    mkdir -p "$SITE_DIR/public/uploads"
-    rsync -a --delete "$work/site/public/uploads/" "$SITE_DIR/public/uploads/"
+    mkdir -p "$SITE_DIR/storage/uploads"
+    rsync -a --delete "$work/site/storage/uploads/" "$SITE_DIR/storage/uploads/"
     if [[ -d "$work/site/.git" ]]; then rsync -a --delete "$work/site/.git/" "$SITE_DIR/.git/"; fi
     if [[ -f "$work/site/.gitignore" ]]; then cp "$work/site/.gitignore" "$SITE_DIR/.gitignore"; fi
     if [[ -f "$work/config/lightdocs.env" ]]; then install -o root -g www-data -m 0660 "$work/config/lightdocs.env" "$ENV_FILE"; fi
