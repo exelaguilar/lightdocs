@@ -15,4 +15,7 @@ download_line="$(grep -nF 'pct_exec curl --fail --silent --show-error --location
 grep -Fq 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' "$installer"
 grep -Fq 'agetty --autologin root' "$installer"
 grep -Fq 'create_args+=(--password' "$installer"
+grep -Fq 'Canonical external URL (optional)' "$installer"
+grep -Fq 'LIGHTDOCS_ADMIN_ENABLED=' "$installer"
+grep -Fq 'LIGHTDOCS_ADMIN_PASSWORD=' "$installer"
 printf 'Proxmox installer bootstrap-order test passed.\n'

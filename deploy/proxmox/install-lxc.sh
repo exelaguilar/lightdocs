@@ -32,22 +32,22 @@ prompt() {
 }
 
 prompt_password() {
-    local first second
+    local label="$1" minimum="${2:-1}" first second
     while true; do
         if command -v whiptail >/dev/null 2>&1 && [[ -t 1 ]]; then
-            first="$(whiptail --title "Lightdocs LXC" --passwordbox "LXC root password" 10 70 3>&1 1>&2 2>&3)" || exit 1
-            second="$(whiptail --title "Lightdocs LXC" --passwordbox "Confirm LXC root password" 10 70 3>&1 1>&2 2>&3)" || exit 1
+            first="$(whiptail --title "Lightdocs LXC" --passwordbox "$label" 10 70 3>&1 1>&2 2>&3)" || exit 1
+            second="$(whiptail --title "Lightdocs LXC" --passwordbox "Confirm $label" 10 70 3>&1 1>&2 2>&3)" || exit 1
         else
-            read -r -s -p "LXC root password: " first
+            read -r -s -p "$label: " first
             printf '\n' >&2
-            read -r -s -p "Confirm LXC root password: " second
+            read -r -s -p "Confirm $label: " second
             printf '\n' >&2
         fi
-        if [[ -n "$first" && "$first" == "$second" ]]; then
+        if [[ ${#first} -ge minimum && "$first" == "$second" ]]; then
             printf '%s\n' "$first"
             return 0
         fi
-        printf 'Passwords must be non-empty and match. Try again.\n' >&2
+        printf 'Passwords must match and contain at least %s characters. Try again.\n' "$minimum" >&2
     done
 }
 
@@ -76,8 +76,17 @@ bridge="${LIGHTDOCS_BRIDGE:-vmbr0}"
 network="${LIGHTDOCS_NETWORK:-dhcp}"
 root_password="${LIGHTDOCS_ROOT_PASSWORD:-}"
 console_mode="${LIGHTDOCS_CONSOLE_MODE:-}"
+docs_name="${LIGHTDOCS_NAME:-Lightdocs}"
+docs_tagline="${LIGHTDOCS_TAGLINE:-Documentation without the framework tax.}"
+docs_base_url="${LIGHTDOCS_BASE_URL:-}"
+admin_mode="${LIGHTDOCS_ADMIN_ENABLED:-enabled}"
+admin_password="${LIGHTDOCS_ADMIN_PASSWORD:-}"
+admin_password_mode="${LIGHTDOCS_ADMIN_PASSWORD_MODE:-}"
 if [[ -z "$console_mode" ]]; then
     if [[ -n "$root_password" ]]; then console_mode="password"; else console_mode="autologin"; fi
+fi
+if [[ -z "$admin_password_mode" ]]; then
+    if [[ -n "$admin_password" ]]; then admin_password_mode="password"; else admin_password_mode="generate"; fi
 fi
 
 if [[ -t 0 ]]; then
@@ -89,7 +98,17 @@ if [[ -t 0 ]]; then
     network="$(prompt "IPv4 configuration (dhcp or CIDR)" "$network")"
     console_mode="$(prompt "Console access (autologin or password)" "$console_mode")"
     if [[ "$console_mode" == "password" && -z "$root_password" ]]; then
-        root_password="$(prompt_password)"
+        root_password="$(prompt_password "LXC root password")"
+    fi
+    docs_name="$(prompt "Documentation site name" "$docs_name")"
+    docs_tagline="$(prompt "Documentation site tagline" "$docs_tagline")"
+    docs_base_url="$(prompt "Canonical external URL (optional)" "$docs_base_url")"
+    admin_mode="$(prompt "Browser Content Studio (enabled or disabled)" "$admin_mode")"
+    if [[ "$admin_mode" == "enabled" ]]; then
+        admin_password_mode="$(prompt "Administrator password (generate or password)" "$admin_password_mode")"
+        if [[ "$admin_password_mode" == "password" && -z "$admin_password" ]]; then
+            admin_password="$(prompt_password "Lightdocs administrator password" 12)"
+        fi
     fi
 fi
 
@@ -100,6 +119,24 @@ case "$console_mode" in
     autologin) root_password="" ;;
     password) [[ -n "$root_password" ]] || { echo "LIGHTDOCS_ROOT_PASSWORD is required when console mode is password." >&2; exit 1; } ;;
     *) echo "Console access must be autologin or password." >&2; exit 1 ;;
+esac
+[[ -n "$docs_name" && ${#docs_name} -le 80 ]] || { echo "Documentation site name must be 1-80 characters." >&2; exit 1; }
+[[ -n "$docs_tagline" && ${#docs_tagline} -le 180 ]] || { echo "Documentation tagline must be 1-180 characters." >&2; exit 1; }
+docs_base_url="${docs_base_url%/}"
+if [[ -n "$docs_base_url" && ! "$docs_base_url" =~ ^https?://[^[:space:]]+$ ]]; then
+    echo "Canonical external URL must be an absolute http:// or https:// URL." >&2
+    exit 1
+fi
+case "$admin_mode" in
+    enabled)
+        case "$admin_password_mode" in
+            generate) admin_password="" ;;
+            password) [[ ${#admin_password} -ge 12 ]] || { echo "The administrator password must be at least 12 characters." >&2; exit 1; } ;;
+            *) echo "Administrator password mode must be generate or password." >&2; exit 1 ;;
+        esac
+        ;;
+    disabled) admin_password="" ;;
+    *) echo "Browser Content Studio must be enabled or disabled." >&2; exit 1 ;;
 esac
 if pct status "$ctid" >/dev/null 2>&1; then echo "CT $ctid already exists." >&2; exit 1; fi
 
@@ -174,6 +211,11 @@ if ! pct_exec \
     LIGHTDOCS_VERSION="$version" \
     LIGHTDOCS_RAW_BASE_URL="$raw_base" \
     LIGHTDOCS_RELEASE_BASE_URL="$release_base" \
+    LIGHTDOCS_NAME="$docs_name" \
+    LIGHTDOCS_TAGLINE="$docs_tagline" \
+    LIGHTDOCS_BASE_URL="$docs_base_url" \
+    LIGHTDOCS_ADMIN_ENABLED="$admin_mode" \
+    LIGHTDOCS_ADMIN_PASSWORD="$admin_password" \
     bash /root/lightdocs-install.sh; then
     echo "Installation failed inside CT $ctid. The container was preserved for diagnosis." >&2
     exit 1
@@ -184,6 +226,9 @@ address="$(pct_exec hostname -I | awk '{print $1}')"
 echo
 echo "Lightdocs CT $ctid is ready at http://${address:-unknown}/"
 echo "Manage it with: pct exec $ctid -- lightdocs help"
+echo "Site name: $docs_name"
+echo "Canonical URL: ${docs_base_url:-not configured}"
+echo "Content Studio: $admin_mode"
 if [[ "$console_mode" == "autologin" ]]; then
     echo "Console access: root auto-login"
 else

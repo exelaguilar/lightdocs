@@ -11,6 +11,13 @@ LIGHTDOCS_INSTALLER_TEST_MODE=1 bash -u -c "$installer_text"
 # shellcheck source=deploy/native/install.sh
 source "$root/deploy/native/install.sh"
 
+[[ "$(normalize_admin_mode yes)" == "enabled" ]]
+[[ "$(normalize_admin_mode disabled)" == "disabled" ]]
+if normalize_admin_mode maybe >/dev/null; then
+    printf 'Invalid administrator mode was accepted.\n' >&2
+    exit 1
+fi
+
 original_path="$PATH"
 PATH="/usr/bin:/bin"
 set_command_path
