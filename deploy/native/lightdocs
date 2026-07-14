@@ -25,11 +25,16 @@ cleanup() {
 }
 trap cleanup EXIT
 
+explicit_repository="${LIGHTDOCS_REPOSITORY:-}"
+explicit_release_base="${LIGHTDOCS_RELEASE_BASE_URL:-}"
 if [[ -f /etc/lightdocs/installer.conf ]]; then
     # This file is root-owned installer configuration, never user content.
     # shellcheck disable=SC1091
     source /etc/lightdocs/installer.conf
 fi
+# An explicit environment variable always beats the recorded install-time value.
+[[ -z "$explicit_repository" ]] || REPOSITORY="$explicit_repository"
+[[ -z "$explicit_release_base" ]] || LIGHTDOCS_RELEASE_BASE_URL="$explicit_release_base"
 
 die() { echo "Error: $*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die "This command must run as root."; }

@@ -12,6 +12,11 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 if ($Version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$') {
     throw "VERSION must be semantic; received: $Version"
 }
+foreach ($tool in @('php', 'composer', 'tar')) {
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) {
+        throw "$tool is required on PATH to build a release."
+    }
+}
 if ([string]::IsNullOrWhiteSpace($DistDirectory)) {
     $DistDirectory = Join-Path $root 'dist'
 }

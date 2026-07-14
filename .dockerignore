@@ -5,9 +5,13 @@
 .env
 build*
 dist
+site
 var
 vendor
 content
 public/uploads
 tests
 *.log
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
