@@ -204,6 +204,7 @@ if ! pct_exec \
     LIGHTDOCS_NAME="$docs_name" \
     LIGHTDOCS_TAGLINE="$docs_tagline" \
     LIGHTDOCS_BASE_URL="$docs_base_url" \
+    LIGHTDOCS_ADMIN_ENABLED=1 \
     LIGHTDOCS_ADMIN_PASSWORD="$admin_password" \
     bash /root/lightdocs-install.sh; then
     echo "Installation failed inside CT $ctid. The container was preserved for diagnosis." >&2
