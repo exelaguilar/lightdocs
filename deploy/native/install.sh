@@ -5,6 +5,23 @@ set_command_path() {
     export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 }
 
+normalize_admin_mode() {
+    local mode="${1:-}"
+
+    case "${mode,,}" in
+        1|enabled|enable|true|yes|on)
+            printf 'enabled'
+            ;;
+        0|disabled|disable|false|no|off)
+            printf 'disabled'
+            ;;
+        *)
+            printf 'Unsupported administrator mode: %s\n' "$mode" >&2
+            return 1
+            ;;
+    esac
+}
+
 dotenv_quote() {
     local value="${1-}"
     value="${value//\\/\\\\}"
