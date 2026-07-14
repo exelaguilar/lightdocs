@@ -168,6 +168,15 @@ pct enter 130
 
 If installation fails, the helper deliberately leaves the LXC in place so the error can be inspected. It does not destroy a container that may contain useful diagnostics.
 
+To resume a failed installation in an existing container, replace `130` with its ID:
+
+```bash
+pct exec 130 -- env LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive \
+  bash -c 'apt-get update && apt-get install -y ca-certificates curl'
+pct exec 130 -- env LC_ALL=C LANG=C \
+  bash -c 'curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/native/install.sh -o /root/lightdocs-install.sh && bash /root/lightdocs-install.sh'
+```
+
 ## Install on Debian 13
 
 Use this method for an existing Debian 13 VM, VPS, physical server, or LXC. Run as `root`:

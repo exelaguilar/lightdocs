@@ -12,6 +12,10 @@ raw_base="${LIGHTDOCS_RAW_BASE_URL:-https://raw.githubusercontent.com/$repositor
 version="${LIGHTDOCS_VERSION:-latest}"
 release_base="${LIGHTDOCS_RELEASE_BASE_URL:-https://github.com/$repository/releases}"
 
+pct_exec() {
+    pct exec "$ctid" -- env LC_ALL=C LANG=C "$@"
+}
+
 prompt() {
     local label="$1" default="$2" result
     if command -v whiptail >/dev/null 2>&1 && [[ -t 1 ]]; then
@@ -100,13 +104,17 @@ pct create "$ctid" "$template" \
 echo "Waiting for networking inside CT $ctid..."
 ready=0
 for _ in {1..60}; do
-    if pct exec "$ctid" -- bash -c 'ip route | grep -q default && getent hosts raw.githubusercontent.com >/dev/null'; then ready=1; break; fi
+    if pct_exec bash -c 'ip route | grep -q default && getent hosts raw.githubusercontent.com >/dev/null'; then ready=1; break; fi
     sleep 2
 done
 [[ $ready -eq 1 ]] || { echo "CT $ctid was created, but networking did not become ready. It was left running for diagnosis." >&2; exit 1; }
 
-pct exec "$ctid" -- curl --fail --silent --show-error --location "$raw_base/deploy/native/install.sh" --output /root/lightdocs-install.sh
-if ! pct exec "$ctid" -- env \
+echo "Installing bootstrap prerequisites inside CT $ctid..."
+pct_exec DEBIAN_FRONTEND=noninteractive apt-get update
+pct_exec DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl
+
+pct_exec curl --fail --silent --show-error --location "$raw_base/deploy/native/install.sh" --output /root/lightdocs-install.sh
+if ! pct_exec \
     LIGHTDOCS_REPOSITORY="$repository" \
     LIGHTDOCS_REF="$ref" \
     LIGHTDOCS_VERSION="$version" \
@@ -116,9 +124,9 @@ if ! pct exec "$ctid" -- env \
     echo "Installation failed inside CT $ctid. The container was preserved for diagnosis." >&2
     exit 1
 fi
-pct exec "$ctid" -- rm -f /root/lightdocs-install.sh
+pct_exec rm -f /root/lightdocs-install.sh
 
-address="$(pct exec "$ctid" -- hostname -I | awk '{print $1}')"
+address="$(pct_exec hostname -I | awk '{print $1}')"
 echo
 echo "Lightdocs CT $ctid is ready at http://${address:-unknown}/"
 echo "Manage it with: pct exec $ctid -- lightdocs help"
