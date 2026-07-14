@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+set_command_path() {
+    export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+}
+
 dotenv_quote() {
     local value="${1-}"
     value="${value//\\/\\\\}"
@@ -21,6 +25,7 @@ repair_legacy_env() {
 
 main() {
     [[ $EUID -eq 0 ]] || { echo "Run this installer as root." >&2; exit 1; }
+    set_command_path
 
     local repository="${LIGHTDOCS_REPOSITORY:-exelaguilar/lightdocs}"
     local ref="${LIGHTDOCS_REF:-main}"
@@ -75,12 +80,12 @@ main() {
     fi
 
     rm -f /etc/nginx/sites-enabled/default
-    lightdocs update "$requested_version"
+    /usr/local/sbin/lightdocs update "$requested_version"
 
     systemctl enable php8.4-fpm nginx
-    nginx -t
+    /usr/sbin/nginx -t
     systemctl restart php8.4-fpm nginx
-    lightdocs doctor
+    /usr/local/sbin/lightdocs doctor
 
     local address
     address="$(hostname -I | awk '{print $1}')"

@@ -171,9 +171,12 @@ If installation fails, the helper deliberately leaves the LXC in place so the er
 To resume a failed installation in an existing container, replace `130` with its ID:
 
 ```bash
-pct exec 130 -- env LC_ALL=C LANG=C DEBIAN_FRONTEND=noninteractive \
+pct exec 130 -- env LC_ALL=C LANG=C \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+  DEBIAN_FRONTEND=noninteractive \
   bash -c 'apt-get update && apt-get install -y ca-certificates curl'
 pct exec 130 -- env LC_ALL=C LANG=C \
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
   bash -c 'curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/native/install.sh -o /root/lightdocs-install.sh && bash /root/lightdocs-install.sh'
 ```
 

@@ -11,6 +11,15 @@ LIGHTDOCS_INSTALLER_TEST_MODE=1 bash -u -c "$installer_text"
 # shellcheck source=deploy/native/install.sh
 source "$root/deploy/native/install.sh"
 
+original_path="$PATH"
+PATH="/usr/bin:/bin"
+set_command_path
+[[ ":$PATH:" == *:/usr/local/sbin:* && ":$PATH:" == *:/usr/sbin:* ]] || {
+    printf 'Native installer did not restore the required system command paths.\n' >&2
+    exit 1
+}
+PATH="$original_path"
+
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 

@@ -13,7 +13,11 @@ version="${LIGHTDOCS_VERSION:-latest}"
 release_base="${LIGHTDOCS_RELEASE_BASE_URL:-https://github.com/$repository/releases}"
 
 pct_exec() {
-    pct exec "$ctid" -- env LC_ALL=C LANG=C "$@"
+    pct exec "$ctid" -- env \
+        LC_ALL=C \
+        LANG=C \
+        PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+        "$@"
 }
 
 prompt() {

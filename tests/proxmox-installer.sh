@@ -12,6 +12,5 @@ download_line="$(grep -nF 'pct_exec curl --fail --silent --show-error --location
     exit 1
 }
 
-# shellcheck disable=SC2016
-grep -Fq 'pct exec "$ctid" -- env LC_ALL=C LANG=C "$@"' "$installer"
+grep -Fq 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' "$installer"
 printf 'Proxmox installer bootstrap-order test passed.\n'
