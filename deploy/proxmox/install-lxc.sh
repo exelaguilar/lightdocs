@@ -155,6 +155,8 @@ pct_exec DEBIAN_FRONTEND=noninteractive apt-get update
 pct_exec DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates curl
 
 if [[ "$console_mode" == "autologin" ]]; then
+    # The inner shell must write a literal $TERM into the systemd override.
+    # shellcheck disable=SC2016
     pct_exec bash -c 'install -d /etc/systemd/system/container-getty@1.service.d &&
         printf "%s\n" \
             "[Service]" \
