@@ -14,7 +14,7 @@ Lightdocs is a PHP and Markdown documentation application. Markdown files under 
 
 - PHP 8.4 or newer
 - PDO SQLite
-- DOM and mbstring PHP extensions
+- DOM, JSON, mbstring, and ZIP PHP extensions
 - Composer for local development
 
 The production server does not need Node.js, a database server, Redis, a worker, or a background daemon.
@@ -28,7 +28,7 @@ composer install
 cp .env.example .env
 ```
 
-Set `DOCS_ADMIN_PASSWORD` in `.env` before opening the Content Studio. Keep `.env` outside the deployed web root.
+Set `DOCS_ADMIN_PASSWORD` in `.env` before the first request. A fresh installation seeds the initial `admin` account from that value; the Content Studio is always enabled. Keep `.env` outside the deployed web root.
 
 Start the development server:
 
@@ -36,7 +36,7 @@ Start the development server:
 composer docs:serve
 ```
 
-Open `/` for the public documentation and `/admin` for the Content Studio.
+Open `/` for the public documentation and `/admin` for the Content Studio. Use `/admin/profile` to update your account and `/admin/users` to manage additional accounts when your role includes user management.
 
 ## Create a page
 
@@ -69,15 +69,17 @@ The editor writes to those same Markdown files. It also creates revisions and re
 
 Only the contents of `upload/` belong in a hosting provider's `public_html/` or `public/` directory. Keep the repository root and runtime state outside that document root.
 
-## Optional extensions and events
+## Extensions and events
 
-Open `/admin/extensions` to enable or disable discovered extensions. Open `/admin/events` to inspect core and extension listeners or define a custom event name. A custom event is a named signal; code still needs to dispatch it:
+Open `/admin/extensions` to enable or disable discovered extensions. Each extension can expose its own navigation and settings page at `/admin/extensions/{name}/settings`. Open `/admin/events` to inspect core and extension listeners or define a custom event name. A custom event is a named signal; code still needs to dispatch it:
 
 ```php
 $this->events->dispatch('content.published', ['file' => $file]);
 ```
 
-Optional integrations are configured independently from site settings. Local Git provides private repository history; Audit records selected framework events; Backup creates private ZIP archives; Media resizes supported image uploads; Storage can publish uploads to an S3-compatible endpoint; Webhooks sends signed HTTPS event notifications; OIDC adds optional SSO; and Remote sync provides manual repository import, pull, and push actions. Enable only the extensions needed by this deployment, then open that extension's **Settings** page. Remote sync can import a configured remote into a site without a local repository, push remains disabled until explicitly enabled, and OIDC does not create new local users unless auto-provisioning is enabled.
+The shipped extensions are modular and are not hardcoded into the base UI: Local Git provides private repository history and is enabled by default; Audit records selected framework events; Backup creates private recovery ZIP archives; Media resizes supported image uploads; Storage can publish uploads to an S3-compatible endpoint; Webhooks sends signed HTTPS event notifications; OIDC adds optional external sign-in; and Remote sync provides manual repository import, pull, and explicitly enabled push actions. Enable only the extensions needed by this deployment, then configure each from its own **Settings** page. Remote sync never runs on a schedule, and OIDC does not create new local users unless auto-provisioning is enabled.
+
+Events are synchronous and in-process. Declaring a custom event in the admin UI only documents the signal; application or extension code must dispatch it and register a listener. Disabling an extension removes its services, navigation, startups, and listeners on the next request. Developer Tools at `/admin/developer` provides safe cache clearing, forced index rebuilds, and admin-session reset.
 
 See the [architecture guide](architecture.md) for the MVC request flow, extension contract, event lifecycle, database schema, and deployment boundaries.
 

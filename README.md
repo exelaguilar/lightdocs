@@ -25,6 +25,8 @@ Lightdocs turns ordinary Markdown files into a polished, searchable documentatio
 
 Your Markdown remains the source of truth. Lightdocs adds navigation, full-text search, page relationships, reusable snippets, runbook tools, local revision history, private content controls, and static exports without locking the content into a proprietary database.
 
+The current release is [v0.1.11](https://github.com/exelaguilar/lightdocs/releases/tag/v0.1.11). The recommended production install is the checksum-verified Proxmox LXC helper or native Debian installer; pin `LIGHTDOCS_VERSION=0.1.11` when you want a repeatable deployment.
+
 ## Why Lightdocs?
 
 | Benefit | What it means |
@@ -56,6 +58,9 @@ Your Markdown remains the source of truth. Lightdocs adds navigation, full-text 
 - Automatic revisions with comparison and restore
 - Reusable templates and snippet management
 - One-hour signed draft previews
+- Built-in accounts with Administrator, Editor, and Viewer roles
+- A modular Extension Manager with per-extension settings pages
+- Synchronous lifecycle events with enable/disable controls and custom event definitions
 
 ### Runbooks and homelab documentation
 
@@ -67,7 +72,7 @@ Your Markdown remains the source of truth. Lightdocs adds navigation, full-text 
 
 ### Privacy, history, and exports
 
-- Single-administrator private pages hidden from public readers and exports
+- Authenticated private pages hidden from public readers and exports, with role-based Studio permissions
 - Optional local Git history with no remote account or network dependency
 - Public, private, and sanitized static export profiles
 - Secret redaction for common assignments, command arguments, access tokens, and private-key blocks
@@ -89,7 +94,7 @@ Your Markdown remains the source of truth. Lightdocs adds navigation, full-text 
 This is the recommended installation for a homelab. Run the following command in the **Proxmox host shell as `root`**, not inside an existing container:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/proxmox/install-lxc.sh)"
+LIGHTDOCS_VERSION=0.1.11 bash -c "$(curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/proxmox/install-lxc.sh)"
 ```
 
 The helper will:
@@ -251,13 +256,16 @@ grep '^DOCS_ADMIN_PASSWORD=' /etc/lightdocs/lightdocs.env
 ```bash
 lightdocs doctor
 lightdocs version
-lightdocs backup
-lightdocs update
-lightdocs rollback
-lightdocs restore /var/backups/lightdocs/lightdocs-TIMESTAMP.tar.gz
+lightdocs backup /var/backups/lightdocs/pre-update.tar.gz
+cp -a /var/lib/lightdocs/storage/lightdocs.sqlite \
+  /var/backups/lightdocs/lightdocs.sqlite.pre-update
+lightdocs update 0.1.11
+lightdocs doctor
 ```
 
 `lightdocs update` downloads and verifies the release checksum, validates the new application, builds its index, switches an atomic symlink, and performs an HTTP health check. If the health check fails, the previous release is restored automatically.
+
+The native `lightdocs backup` archive preserves canonical Markdown, uploads, optional local Git history, and the environment file. It intentionally does not include SQLite because the content index can be rebuilt. SQLite also contains accounts, roles, extension enablement and settings, event state, and audit records, so copy `storage/lightdocs.sqlite` separately before an upgrade or migration when those records must be preserved. A Proxmox or VM snapshot is still the safest full-machine recovery point.
 
 Back up before major changes:
 
@@ -304,6 +312,8 @@ DOCS_NAME="My Docs"
 DOCS_BASE_URL=https://docs.example.com
 DOCS_ADMIN_PASSWORD=replace-with-a-long-random-password
 ```
+
+The administrator account is seeded on the first request when `DOCS_ADMIN_PASSWORD` is set. The admin application is always enabled; an empty password is not a read-only mode for a fresh installation. After the first account is created, manage additional accounts and roles from `/admin/users` and update your own display name or password from `/admin/profile`.
 
 Allow the PHP service account to write canonical content and runtime data because the administrator console is always available:
 
@@ -459,7 +469,7 @@ DOCS_ADMIN_PASSWORD=choose-a-strong-password
 DOCS_ACCENT=#7c3aed
 ```
 
-Leave `DOCS_ADMIN_PASSWORD` empty for a read-only site with no browser editor. Real environment variables take precedence over `.env` values.
+Set `DOCS_ADMIN_PASSWORD` before the first request on a new installation. Existing installations keep their database-backed accounts, while real server environment variables still take precedence over `.env` values.
 
 Deployment paths can be changed independently:
 
@@ -494,6 +504,23 @@ lightdocs update
 lightdocs rollback
 ```
 
+## Admin, extensions, and events
+
+The Content Studio is always available at `/admin`. The sidebar provides the editor, settings, users, extensions, events, developer tools, exports, and extension-owned pages. The account menu contains profile settings and sign out.
+
+- `/admin/users` manages local accounts and the built-in Administrator, Editor, and Viewer roles.
+- `/admin/profile` updates the signed-in user's display name and password.
+- `/admin/extensions` discovers extensions from `upload/extension/*/extension.json`, then enables or disables them without hardcoding extension behavior into the base application.
+- `/admin/extensions/{name}/settings` configures an enabled extension on its own page.
+- `/admin/events` manages declared listener states and documents custom event names. Defining an event does not execute PHP; application or extension code must dispatch it and register a listener.
+- `/admin/developer` provides safe cache clearing, index rebuilds, and session reset. These actions do not delete canonical content or uploads.
+
+Local Git, Audit, Backup, Media, Remote sync, Storage, Webhooks, and OIDC are optional extensions. Local Git is enabled by default; the others are opt-in and should be configured only when needed. Extension settings and event state live in SQLite and should be included in database-level backups.
+
+## Contributing and maintenance
+
+Keep framework changes consistent with [`CODING_STANDARD.md`](CODING_STANDARD.md): lowercase underscore filenames, tabs in PHP and JavaScript, two-space indentation in templates, 1TBS braces, camelCase class methods, and snake_case variables/helpers. Before opening a change, run `composer docs:doctor`, `composer docs:validate`, and `composer docs:test`; release work should also run the appropriate release builder.
+
 ## Security model
 
 - Only the contents of `upload/` should be exposed by the web server.
@@ -502,7 +529,7 @@ lightdocs rollback
 - Studio writes are path-constrained, CSRF-protected, revisioned, and protected against conflicting edits.
 - Uploads are restricted by detected MIME type.
 - Private pages require an authenticated Studio session and are excluded from public navigation, search, raw Markdown, sitemaps, static builds, and LLM exports.
-- Lightdocs is a single-administrator documentation system, not a multi-tenant authorization platform.
+- Lightdocs provides local accounts with built-in roles and permissions for one documentation installation. It is not a multi-tenant authorization platform.
 
 ## License
 

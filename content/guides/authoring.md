@@ -37,8 +37,8 @@ Use `draft: true` to remove a page from production routing and navigation. Use `
 
 Use `visibility: private` for material that should only be available during an authenticated Content Studio session. Private pages are omitted from public search, sitemap, Markdown, static, and LLM output.
 
-:::callout type="warning" title="Private is intentionally simple"
-Private pages use the site's single administrator session. Lightdocs does not provide per-user permissions or public account management.
+:::callout type="info" title="Private pages use Studio permissions"
+Private pages require an authenticated Content Studio account with content-read permission. Administrator, Editor, and Viewer roles are managed from `/admin/users`; private pages never appear in public navigation, search, exports, or LLM output.
 :::
 
 ## Content Studio
@@ -77,7 +77,7 @@ Use `contains_secrets: true` only after confirming the page is also `visibility:
 
 Studio Settings writes identity values to `content/_site.yaml`, visual defaults to `content/_theme.yaml`, and matching safe values to the selected environment file so changes take effect on the next request. Local development selects the project `.env`; packaged installs select `/etc/lightdocs/lightdocs.env`. Real server environment variables still win. Credentials remain environment-only.
 
-Git is local version-control software; it does not require GitHub or any other server. Enable the **Local Git** extension, turn on **Git history** in its extension settings, then open **Studio → Tools → Local Git** to initialize a repository in the configured persistent site root. Studio can then show content and upload changes, create local commits, and browse history without an account, network access, SSH key, or daemon. Immutable application releases remain outside that repository.
+Git is local version-control software; it does not require GitHub or any other server. The **Local Git** extension is enabled by default. Turn on **Git history** in its extension settings, then open **Studio → Tools → Local Git** to initialize a repository in the configured persistent site root. Studio can then show content and upload changes, create local commits, and browse history without a hosted account, network access, SSH key, or daemon. Immutable application releases remain outside that repository.
 
 Initialization creates only `.git/` and local author configuration. It deliberately does not create the first commit, giving the owner a chance to review the working tree. The starter site's `.gitignore` excludes SQLite, caches, revisions, exports, and other runtime state; the environment file is stored outside the site root in native deployments.
 
@@ -115,7 +115,7 @@ Lightdocs writes Git subprocess output to temporary files rather than bounded PH
 
 If a request was already deadlocked before an updated runner was loaded, restart the PHP/web service once, reload Local Git, and retry. On an LXC this normally means restarting PHP-FPM or Apache; on a ServBay development installation, restart PHP or all ServBay services. Do not repeatedly submit commits while an earlier Git writer is still active.
 
-Local Git is the only version-control integration. Lightdocs never pushes content to a hosted remote; if you want an off-machine copy, use exports or your own Git remote from the command line.
+Local Git remains the default local-first workflow. If the **Remote sync** extension is enabled and configured, administrators can manually import, pull, or explicitly enabled-push to a configured repository. Remote sync never runs on a schedule and never embeds credentials in the remote URL. Use exports or a separate Git remote when you need an off-machine copy.
 
 ## Relative links
 

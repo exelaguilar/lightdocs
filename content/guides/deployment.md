@@ -9,11 +9,11 @@ keywords: [deployment, lxc, nginx, php-fpm, sqlite, security]
 
 The public web root is normally `public_html/` or `public/`. Copy only the contents of the repository's `upload/` directory into that web root. Do not expose the repository, `content/`, `.env`, `upload/vendor/`, or `storage/` as independently writable locations.
 
-When Studio is enabled, the PHP service account needs write access to `storage/`, `storage/uploads`, the Markdown content directory, and `.env` if browser-managed Settings should update safe runtime values. Keep `storage/exports` outside the public web root because private archives may contain credentials.
+The Content Studio is always part of the application and is available at `/admin`. The PHP service account needs write access to `storage/`, `storage/uploads`, the Markdown content directory, and `.env` if browser-managed Settings should update safe runtime values. Keep `storage/exports` outside the public web root because private archives may contain credentials.
 
 Local Git is optional and needs only the small `git` executable. It runs inside the installation and requires no network access, account, SSH key, Git server, or daemon.
 
-The optional Media, Storage, Webhooks, OIDC, and Remote sync extensions are also disabled by default. Media requires the PHP GD extension for image processing. Storage requires an S3-compatible endpoint and credentials, Webhooks requires an HTTPS endpoint and signing secret, OIDC requires HTTPS provider endpoints and a registered callback URL, and Remote sync requires a Git executable plus a configured repository URL. Configure each integration from **Admin → Extensions → Settings**; do not place secrets in canonical Markdown or commit them to the repository.
+The optional Media, Storage, Webhooks, OIDC, and Remote sync extensions are disabled by default. Media requires the PHP GD extension for image processing. Storage requires an S3-compatible endpoint and credentials, Webhooks requires an HTTPS endpoint and signing secret, OIDC requires HTTPS provider endpoints and a registered callback URL, and Remote sync requires a Git executable plus a configured repository URL. Configure each integration from **Admin → Extensions → the extension's Settings page**; do not place secrets in canonical Markdown or commit them to the repository.
 
 For browser-managed commits, PHP must permit `proc_open`, the service account must be able to write `.git/`, and PHP's system temporary directory must be writable. Lightdocs redirects Git stdout and stderr into short-lived temporary files to avoid web-request pipe deadlocks, then removes those files after the command finishes. If PHP-FPM, Apache, or a local PHP-CGI manager is restarted during a commit, allow the old worker to exit before retrying.
 
@@ -27,7 +27,7 @@ Run the helper from the Proxmox host as root:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/proxmox/install-lxc.sh)"
 ```
 
-It creates an unprivileged container, prompts for Proxmox resources and networking, installs a checksum-verified release, and prints the URL and generated administrator credential. Override `LIGHTDOCS_REPOSITORY` when deploying from a fork.
+It creates an unprivileged container, prompts for Proxmox resources and networking, installs a checksum-verified release, and prints the URL and generated administrator credential. Set `LIGHTDOCS_VERSION=0.1.11` before the command when you want to pin the current release. Override `LIGHTDOCS_REPOSITORY` when deploying from a fork.
 
 The runtime remains small because the [micro-MVC architecture](architecture.md) uses explicit PHP classes and a disposable local index instead of an application server, ORM daemon, or frontend toolchain. The architecture guide also identifies which directories must be writable and which generated state may be safely rebuilt.
 
@@ -52,6 +52,16 @@ lightdocs uninstall
 ```
 
 Application releases are immutable below `/opt/lightdocs/releases`. Configuration is stored at `/etc/lightdocs/lightdocs.env`; canonical content, uploads, optional Git history, and disposable runtime state live below `/var/lib/lightdocs`. Update validates a new release before atomically changing `/opt/lightdocs/current` and automatically restores the previous symlink if the HTTP health check fails.
+
+Before an upgrade, run `lightdocs doctor` and create a native backup. The portable backup includes canonical content, uploads, optional local Git history, and environment metadata, but it intentionally excludes `lightdocs.sqlite`. SQLite also contains administrator accounts, roles, extension enablement and settings, event state, and audit records. Copy `/var/lib/lightdocs/storage/lightdocs.sqlite` separately, or take a VM/LXC snapshot, when those records must survive an upgrade. A typical pinned upgrade is:
+
+```bash
+lightdocs doctor
+lightdocs backup /var/backups/lightdocs/pre-update.tar.gz
+cp -a /var/lib/lightdocs/storage/lightdocs.sqlite /var/backups/lightdocs/lightdocs.sqlite.pre-update
+lightdocs update 0.1.11
+lightdocs doctor
+```
 
 ## Docker Compose
 

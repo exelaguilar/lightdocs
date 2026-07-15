@@ -40,9 +40,15 @@ For lifecycle hooks, prefer a namespace/action/stage name such as public/content
 
 Developer Tools provides safe cache clearing, forced content-index rebuilds, and admin-session reset. These actions do not remove canonical content, uploads, revisions, extensions, or local Git history.
 
-### Modularity roadmap
+## Admin accounts and permissions
 
-Not every class should become an extension. Routing, request handling, canonical content indexing, cache invalidation, and safe developer maintenance are framework responsibilities because the application cannot operate without them. The useful optional boundaries are:
+The Content Studio is not an optional module. The first native, Docker, or local installation seeds an `admin` account from `DOCS_ADMIN_PASSWORD`; packaged installers generate a password when one is not supplied. Administrators manage accounts and roles at `/admin/users` and their own profile at `/admin/profile`.
+
+The built-in Administrator, Editor, and Viewer roles map to explicit permissions such as `content.read`, `content.write`, `content.publish`, `extensions.manage`, `events.manage`, `settings.manage`, `users.manage`, and `developer.manage`. Account and extension state is stored in SQLite, so preserve the database separately when taking a backup for migration or recovery.
+
+### Shipped optional boundaries
+
+Not every class should become an extension. Routing, request handling, canonical content indexing, cache invalidation, and safe developer maintenance are framework responsibilities because the application cannot operate without them. The following optional boundaries are already shipped and can be enabled independently:
 
 - **Directive Registry:** move custom Markdown directive handlers behind a registration contract so an extension can add a directive without editing `DirectiveProcessor`.
 - **Audit extension:** listen to content, index, and settings changes and write an optional local audit trail. It is discovered disabled by default and appears in Developer Tools when enabled.
@@ -166,7 +172,7 @@ Lightdocs-specific reusable code lives under `system/library/content/`:
 - `GitHistory` owns the optional Local Git workflow.
 - `GitSyncPreflight` and `SecretRedactor` implement the shared secret-safety policy used by Local Git commits and sanitized exports.
 
-There is intentionally no `helper/` directory in either tree. The only genuinely repeated stateless logic—HTML escaping—was centralized in the view engine, and the path-safety checks stay local to `ContentEditor`, `ExportService`, and the repository because each guards its own security boundary.
+`system/helper/` is reserved for small stateless helpers shared across contexts. Stateful services, filesystem workflows, and security boundaries remain in `system/library/` or `system/model/`; this keeps helpers easy to reuse without turning them into hidden application services.
 
 ## Canonical files versus SQLite
 
@@ -259,17 +265,24 @@ Static export uses the same repository, renderer, templates, and privacy rules t
 ```text
 system/                   Reusable, Lightdocs-agnostic framework code
   engine/                 Framework execution mechanics
-    Application.php       Runtime, session, dispatch, and error boundary
-    Controller.php        Base controller with rendering and CSRF checks
-    Model.php             Base PDO/event model with transactions
-    Action.php             Native MVC action parsing`n    Front.php              Controller action dispatch
-    Request.php           Captured HTTP input
-    Response.php          Typed responses and security headers
-    Event.php   Synchronous application events
+    application.php       Runtime, session, dispatch, and error boundary
+    controller.php        Base controller with rendering and CSRF checks
+    model.php             Base PDO/event model with transactions
+    action.php             Native MVC action parsing
+    front.php              Controller action dispatch
+    request.php           Captured HTTP input
+    response.php          Typed responses and security headers
+    event.php              Synchronous application events
+    extension_manager.php Extension discovery and lifecycle
   library/                Reusable infrastructure
-    DB.php          Generic SQLite connection and pragmas
-    View.php              PHP view loader and shared HTML escaper
-    FileCache.php         Fingerprinted disposable file cache
+    db.php                 Generic SQLite connection and pragmas
+    view.php               PHP view loader and shared HTML escaper
+    file_cache.php         Fingerprinted disposable file cache
+  config/                  PHP configuration and trusted custom directives
+  helper/                  Stateless shared helpers
+  library/content/         Markdown and content-domain components
+  library/service/         Cross-cutting workflows
+  model/                   Shared SQLite schema, index, and search
 admin/
   controller/             Admin controllers grouped by route domain
   model/                  Admin-specific models
@@ -283,14 +296,7 @@ frontend/
   view/template/            Public templates grouped by route domain
   view/javascript/          Public JavaScript
   view/stylesheet/          Public CSS
-system/
-  config/                   PHP configuration and trusted custom directives
-  engine/                   Runtime engine and route dispatcher
-  helper/                   Stateless shared helpers
-  library/content/          Markdown and content-domain components
-  library/service/           Cross-cutting workflows
-  model/                    Shared SQLite schema, index, and search
-  storage/                  Runtime database, cache, revisions, exports, and uploads
+storage/                   Runtime database, cache, revisions, exports, and uploads
 content/                  Canonical Markdown, YAML, snippets, and templates
 bin/docs                  CLI entry point
 tests/smoke.php           End-to-end application smoke coverage
@@ -301,7 +307,7 @@ system/startup.php        Composer/config bootstrap
 router.php                PHP development-server router only
 ```
 
-Composer maps the shared engine and model directories to `System\Engine`, `System\Library`, and `System\Model`. Application libraries, services, and console commands remain under `system/` during this migration, while admin and frontend controllers are classmapped from their context directories. The layout uses lowercase underscore filenames and deploys identically on case-sensitive Linux filesystems.
+Composer maps the shared engine, library, and model directories to `System\Engine`, `System\Library`, and `System\Model`. Admin and frontend controllers are classmapped from their context directories, while extension classes are discovered from their manifests. The layout uses lowercase underscore filenames and deploys identically on case-sensitive Linux filesystems.
 
 ## Important files
 
@@ -314,7 +320,7 @@ Composer maps the shared engine and model directories to `System\Engine`, `Syste
 | `system/engine/controller.php` | Shared controller rendering and CSRF helpers |
 | `system/engine/model.php` | Shared PDO, events, and transaction behavior for models |
 | `system/engine/event.php` | Synchronous listener registration and dispatch |
-| `upload/system/library/db.php` | Generic SQLite connection and runtime pragmas |
+| `system/library/db.php` | Generic SQLite connection and runtime pragmas |
 | `system/library/view.php` | Template resolution and the shared `$e` HTML escaper |
 | `frontend/controller/common/reader.php` | Public documentation endpoints |
 | `admin/controller/editor/editor.php` | Markdown authoring, preview, uploads, revisions, and note history |
@@ -322,18 +328,18 @@ Composer maps the shared engine and model directories to `System\Engine`, `Syste
 | `admin/controller/history/history.php` | Local Git repository workflow |
 | `system/model/schema.php` | Lightdocs tables, indexes, migration records, and optional FTS5 setup |
 | `system/model/content_index.php` | Canonical-file-to-SQLite synchronization and relationships |
-| `system/library/content/ContentRepository.php` | Filesystem discovery, routing, hierarchy, and page lookup |
-| `system/library/content/ContentEditor.php` | Safe Markdown writes, revisions, uploads, and reordering |
-| `system/library/content/MarkdownRenderer.php` | Markdown, directives, interpolation, highlighting, anchors, and plain text |
-| `system/library/content/SearchService.php` | Search contract used by dynamic and static search implementations |
-| `system/library/service/StaticSiteBuilder.php` | Validation and complete static export shared by CLI and Studio |
-| `system/library/service/ExportService.php` | Authenticated archive creation and one-time delivery |
-| `system/library/service/GitHistory.php` | Optional local repository status, commits, and note snapshots |
+| `system/library/content/content_repository.php` | Filesystem discovery, routing, hierarchy, and page lookup |
+| `system/library/content/content_editor.php` | Safe Markdown writes, revisions, uploads, and reordering |
+| `system/library/content/markdown_renderer.php` | Markdown, directives, interpolation, highlighting, anchors, and plain text |
+| `system/library/content/search_service.php` | Search contract used by dynamic and static search implementations |
+| `system/library/service/static_site_builder.php` | Validation and complete static export shared by CLI and Studio |
+| `system/library/service/export_service.php` | Authenticated archive creation and one-time delivery |
+| `system/library/service/git_history.php` | Optional local repository status, commits, and note snapshots |
 | `admin/view/template/editor.php` | Studio authoring workspace markup |
 | `admin/view/javascript/admin.js` | Progressive Studio interactions |
 | `frontend/view/javascript/app.js` | Reader navigation, search, themes, runbooks, tabs, and copy actions |
 | `frontend/view/stylesheet/app.css` | Reader and Studio design system without a build step |
-| `system/console/Console.php` | Validation, doctor, indexing, cache, and build command dispatch |
+| `system/console/console.php` | Validation, doctor, indexing, cache, and build command dispatch |
 
 ## Adding a feature without breaking the boundaries
 
@@ -354,4 +360,4 @@ Avoid adding database-only document fields, hidden background requirements, or a
 
 The strongest parts of the design are its source-of-truth boundary and recognizable filesystem. Content remains inspectable and recoverable even if every cache and the entire SQLite database disappear. The `system/engine` versus `system/library` versus `system/` split makes framework mechanics, reusable infrastructure, and Lightdocs behavior individually distinct, while explicit constructor wiring in `Framework.php` keeps every dependency visible.
 
-`Editor` remains the largest controller because editing, preview, revision, and upload operations share one authoring workspace, and its collaborators all arrive through the constructor. Saves post asynchronously to `/admin/save` and update the workspace in place; the same form still degrades to a full POST without JavaScript. The experimental hosted GitHub sync was removed entirely—Local Git is the only version-control integration, which keeps every write local and auditable. Dependency construction (`Framework.php`) and native action dispatch (`Action.php` and `Front.php`) are separate files with single jobs. The correct evolution remains focused first-party classes—not an ORM, opaque plugin container, or enterprise framework.
+`Editor` remains the largest controller because editing, preview, revision, and upload operations share one authoring workspace, and its collaborators all arrive through the constructor. Saves post asynchronously to `/admin/save` and update the workspace in place; the same form still degrades to a full POST without JavaScript. Local Git remains the local-first version-control integration. The optional Remote sync extension adds manual import, pull, and explicitly enabled push workflows without making hosted Git a core dependency. Dependency construction (`system/framework.php`) and native action dispatch (`action.php` and `front.php`) are separate files with single jobs. The correct evolution remains focused first-party classes—not an ORM, opaque plugin container, or enterprise framework.
