@@ -41,4 +41,28 @@ final class AssetRepository
 
 		return $assets;
 	}
+
+	public function rename(string $name, string $new_name): void
+	{
+		$source = $this->safePath($name);
+		$target_name = trim($new_name);
+		if (!preg_match('/^[a-zA-Z0-9._-]{1,160}$/', $target_name)) throw new \RuntimeException('Use a simple filename without folders or special characters.');
+		$target = $this->safePath($target_name);
+		if (!is_file($source)) throw new \RuntimeException('The asset was not found.');
+		if (is_file($target)) throw new \RuntimeException('An asset with that name already exists.');
+		if (!rename($source, $target)) throw new \RuntimeException('The asset could not be renamed.');
+	}
+
+	public function delete(string $name): void
+	{
+		$path = $this->safePath($name);
+		if (!is_file($path)) throw new \RuntimeException('The asset was not found.');
+		if (!unlink($path)) throw new \RuntimeException('The asset could not be deleted.');
+	}
+
+	private function safePath(string $name): string
+	{
+		if ($name === '' || basename($name) !== $name || str_contains($name, '..')) throw new \RuntimeException('Invalid asset path.');
+		return rtrim($this->root, '/\\') . DIRECTORY_SEPARATOR . $name;
+	}
 }

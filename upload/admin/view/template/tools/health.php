@@ -23,8 +23,8 @@ $severity_summary = implode(' · ', array_filter([
 <header><div><p class="panel-eyebrow">Review queue</p><h2>Content health</h2></div><span class="status-pill <?= $severity_counts['error'] ? 'is-disabled' : '' ?>"><?= $health['issues'] ? count($health['issues']) . ' found' : 'All clear' ?></span></header>
 <?php if (!$health['issues']): ?><div class="table-empty">No broken internal links, missing uploaded assets, or metadata warnings were found.</div><?php else: ?>
 <div class="admin-table-wrap table-borderless"><table class="admin-table"><thead><tr><th>Message</th><th>File</th><th>Line</th><th>Severity</th></tr></thead><tbody>
-<?php foreach ($health['issues'] as $issue): $editable = str_ends_with($issue['file'], '.md'); ?>
-<tr><td><?php if ($editable): ?><a href="/admin/editor?file=<?= rawurlencode($issue['file']) ?>"><strong><?= $e($issue['message']) ?></strong></a><?php else: ?><strong><?= $e($issue['message']) ?></strong><?php endif; ?></td><td><code><?= $e($issue['file']) ?></code></td><td><?= (int) $issue['line'] ?></td><td><span class="severity-badge severity-<?= $e($issue['severity']) ?>"><?= $e(ucfirst($issue['severity'])) ?></span></td></tr>
+<?php foreach ($health['issues'] as $issue): $editable = str_ends_with($issue['file'], '.md'); $asset = str_starts_with($issue['file'], 'storage/uploads/'); ?>
+<tr><td><?php if ($editable): ?><a href="/admin/editor?file=<?= rawurlencode($issue['file']) ?>"><strong><?= $e($issue['message']) ?></strong></a><?php elseif ($asset): ?><a href="/admin/media"><strong><?= $e($issue['message']) ?></strong></a><?php else: ?><strong><?= $e($issue['message']) ?></strong><?php endif; ?></td><td><code><?= $e($issue['file']) ?></code></td><td><?= (int) $issue['line'] ?></td><td><span class="severity-badge severity-<?= $e($issue['severity']) ?>"><?= $e(ucfirst($issue['severity'])) ?></span></td></tr>
 <?php endforeach; ?>
 </tbody></table></div>
 <?php endif; ?>

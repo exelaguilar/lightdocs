@@ -18,6 +18,8 @@
 			<p>Synchronous signals that let the core and extensions react to application changes.</p>
 		</div>
 	</header>
+	<?php if (!empty($message)): ?><p class="form-success" role="status"><?= $e($message) ?></p><?php endif; ?>
+	<?php if (!empty($error)): ?><p class="form-error" role="alert"><?= $e($error) ?></p><?php endif; ?>
 	<div class="management-layout">
 		<section class="dashboard-panel management-panel">
 			<header>
@@ -50,6 +52,7 @@
 		<header><div><p class="panel-eyebrow">Custom event</p><h2>Define a signal for your application</h2></div></header>
 		<form method="post" class="event-create-form"><input type="hidden" name="csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="create"><label><span>Event name</span><input name="event_name" pattern="[a-z][a-z0-9_.-]{2,80}" placeholder="content.published" required><small>Use a stable lowercase name. Code must dispatch this name before listeners can run.</small></label><label><span>Description</span><input name="description" maxlength="180" placeholder="Runs after a page becomes publishable."></label><button class="button" type="submit">Add event</button></form>
 	</section>
+	<section class="dashboard-panel event-create-panel"><header><div><p class="panel-eyebrow">Developer diagnostic</p><h2>Test an event</h2><p>Dispatch a registered event synchronously with a JSON payload. This is useful for verifying listeners and webhooks.</p></div></header><form method="post" class="event-create-form"><input type="hidden" name="csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="test"><label><span>Event code</span><select name="event" required><option value="">Choose an event</option><?php foreach ($events as $event): ?><option value="<?= $e($event['code']) ?>" <?= empty($event['loaded']) && $event['extension'] !== 'core' ? 'disabled' : '' ?>><?= $e($event['code']) ?></option><?php endforeach; ?></select></label><label><span>Payload JSON</span><input name="payload" value="{}" pattern="\{.*\}" required></label><button class="button" type="submit">Dispatch test event</button></form></section>
 </main>
 </body>
 </html>

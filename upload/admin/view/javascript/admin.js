@@ -1,14 +1,116 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+const toastRegion = document.createElement('div');
+toastRegion.className = 'ui-toast-region';
+toastRegion.setAttribute('aria-live', 'polite');
+toastRegion.setAttribute('aria-atomic', 'true');
+document.body.append(toastRegion);
+let toastTimer = 0;
+function showAdminToast(message, type = 'success') {
+	clearTimeout(toastTimer);
+	toastRegion.replaceChildren();
+	const toast = document.createElement('div');
+	toast.className = `ui-toast is-${type}`;
+	toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+	toast.textContent = message;
+	toastRegion.append(toast);
+	requestAnimationFrame(() => toast.classList.add('is-visible'));
+	toastTimer = setTimeout(() => {
+		toast.classList.remove('is-visible');
+		setTimeout(() => toast.remove(), 180);
+	}, 2600);
+}
+
+const tooltip = document.createElement('div');
+tooltip.className = 'ui-tooltip';
+tooltip.id = 'admin-ui-tooltip';
+tooltip.setAttribute('role', 'tooltip');
+tooltip.hidden = true;
+document.body.append(tooltip);
+let tooltipTarget = null;
+function hideTooltip() {
+	tooltip.hidden = true;
+	tooltipTarget?.removeAttribute('aria-describedby');
+	tooltipTarget = null;
+}
+function showTooltip(target) {
+	const text = target.dataset.tooltip || target.getAttribute('aria-label');
+	if (!text || target.closest('[hidden]')) return;
+	tooltipTarget = target;
+	tooltip.textContent = text;
+	tooltip.hidden = false;
+	target.setAttribute('aria-describedby', tooltip.id);
+	const bounds = target.getBoundingClientRect();
+	const tooltipBounds = tooltip.getBoundingClientRect();
+	const gap = 8;
+	const leftPlacement = target.dataset.tooltipPlacement === 'left';
+	tooltip.classList.toggle('is-left', leftPlacement);
+	if (leftPlacement) {
+		tooltip.style.top = `${Math.min(innerHeight - gap - tooltipBounds.height / 2, Math.max(gap + tooltipBounds.height / 2, bounds.top + bounds.height / 2))}px`;
+		tooltip.style.left = `${Math.max(gap + tooltipBounds.width, bounds.left - gap)}px`;
+		return;
+	}
+	const top =
+		bounds.bottom + gap + tooltipBounds.height <= innerHeight - gap
+			? bounds.bottom + gap
+			: Math.max(gap, bounds.top - gap - tooltipBounds.height);
+	const left = Math.min(
+		innerWidth - gap - tooltipBounds.width / 2,
+		Math.max(gap + tooltipBounds.width / 2, bounds.left + bounds.width / 2),
+	);
+	tooltip.style.top = `${top}px`;
+	tooltip.style.left = `${left}px`;
+}
+$$('[data-tooltip],button[aria-label]').forEach((target) => {
+	target.addEventListener('mouseenter', () => showTooltip(target));
+	target.addEventListener('mouseleave', hideTooltip);
+	target.addEventListener('focus', () => showTooltip(target));
+	target.addEventListener('blur', hideTooltip);
+});
+addEventListener('scroll', hideTooltip, { passive: true });
+addEventListener('resize', hideTooltip);
+
+document.addEventListener('submit', (event) => {
+	const form = event.target;
+	if (!(form instanceof HTMLFormElement) || !form.dataset.confirm) return;
+	if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+});
+
 $$('[data-table-filter]').forEach((input) => {
 	const table = document.querySelector(`[data-table="${input.dataset.tableFilter}"]`);
 	if (!table) return;
-	input.addEventListener('input', () => {
+	const rows = $$('tbody tr', table);
+	const emptyRow = document.createElement('tr');
+	emptyRow.className = 'table-filter-empty';
+	emptyRow.hidden = true;
+	const emptyCell = document.createElement('td');
+	emptyCell.colSpan = Math.max(1, $$('thead th', table).length);
+	emptyCell.textContent = 'No rows match this filter.';
+	emptyRow.append(emptyCell);
+	table.querySelector('tbody')?.append(emptyRow);
+	const status = document.createElement('span');
+	status.className = 'table-filter-status';
+	status.setAttribute('role', 'status');
+	const toolbar = input.closest('.table-toolbar');
+	if (toolbar) toolbar.insertBefore(status, input);
+	const filter = () => {
 		const query = input.value.trim().toLowerCase();
-		table.querySelectorAll('tbody tr').forEach((row) => {
+		let visible = 0;
+		rows.forEach((row) => {
 			row.hidden = query !== '' && !row.textContent.toLowerCase().includes(query);
+			if (!row.hidden) visible++;
 		});
+		emptyRow.hidden = query === '' || visible > 0;
+		status.textContent = query === '' ? `${rows.length} total` : `${visible} of ${rows.length} shown`;
+	};
+	input.addEventListener('input', filter);
+	filter();
+});
+
+$('[data-permissions-select-all]')?.addEventListener('click', () => {
+	$$('[data-role-permission]').forEach((permission) => {
+		permission.checked = true;
 	});
 });
 
@@ -214,6 +316,7 @@ let navigatingAway = false;
 function flashStatus(text, isError) {
 	const main = $('.editor-main');
 	if (!main) return;
+	showAdminToast(text, isError ? 'error' : 'success');
 	$$('[data-flash]', main).forEach((note) => note.remove());
 	const note = document.createElement('p');
 	note.className = isError ? 'form-error' : 'form-success';
@@ -308,6 +411,8 @@ function syncFrontmatter() {
 		'type',
 		'reviewed',
 		'review_after',
+		'status',
+		'publish_at',
 		'draft',
 		'nav',
 		'contains_secrets',
@@ -339,7 +444,9 @@ function syncFrontmatter() {
 		Number(fields.review_after) && Number(fields.review_after) !== 180
 			? `review_after: ${Number(fields.review_after)}`
 			: '',
-		fields.draft ? 'draft: true' : '',
+		fields.status && fields.status !== 'published' ? `status: ${fields.status}` : '',
+		fields.publish_at ? `publish_at: ${quote(fields.publish_at)}` : '',
+		fields.status === 'draft' || (!fields.status && fields.draft) ? 'draft: true' : '',
 		fields.nav ? '' : 'nav: false',
 		fields.contains_secrets ? 'contains_secrets: true' : '',
 		fields.ai_exclude ? 'ai_exclude: true' : '',
@@ -411,6 +518,7 @@ textarea?.addEventListener('input', () => {
 	markDirty();
 	updateCount();
 	schedulePreview();
+	if (/(^|\s)@image\s*$/.test(textarea.value.slice(0, textarea.selectionStart))) openAssetPicker();
 });
 form?.addEventListener('submit', (event) => {
 	const submitter = event.submitter;
@@ -447,6 +555,59 @@ function insertMarkdown(markdown) {
 	textarea.dispatchEvent(new Event('input'));
 	textarea.focus();
 }
+
+const assetPicker = $('[data-asset-picker]');
+const assetPickerSearch = $('[data-asset-picker-search]');
+const assetPickerItems = $$('[data-asset-picker-item]');
+let assetPickerSelection = null;
+
+function openAssetPicker() {
+	if (!assetPicker || assetPicker.open) return;
+	if (textarea) {
+		assetPickerSelection = {
+			start: textarea.selectionStart,
+			end: textarea.selectionEnd,
+		};
+	}
+	assetPicker.showModal();
+	assetPickerSearch?.focus();
+}
+
+function insertImage(url, name) {
+	if (!textarea || url === '') return;
+	const selectionStart = assetPickerSelection?.start ?? textarea.selectionStart;
+	const selectionEnd = assetPickerSelection?.end ?? textarea.selectionEnd;
+	const before = textarea.value.slice(0, selectionStart);
+	const trigger = before.match(/(^|\s)@image\s*$/);
+	const markdown = `![${name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ')}](${url})`;
+	if (trigger) {
+		const start = selectionStart - trigger[0].length + trigger[1].length;
+		textarea.setRangeText(markdown, start, selectionEnd, 'end');
+	} else {
+		textarea.setRangeText(markdown, selectionStart, selectionEnd, 'end');
+	}
+	textarea.dispatchEvent(new Event('input'));
+	textarea.focus();
+	assetPicker?.close();
+}
+
+$('[data-open-asset-picker]')?.addEventListener('click', openAssetPicker);
+$('[data-close-asset-picker]')?.addEventListener('click', () => assetPicker?.close());
+assetPicker?.addEventListener('click', (event) => {
+	if (event.target === assetPicker) assetPicker.close();
+});
+assetPicker?.addEventListener('close', () => {
+	assetPickerSelection = null;
+});
+assetPickerSearch?.addEventListener('input', () => {
+	const query = assetPickerSearch.value.trim().toLowerCase();
+	assetPickerItems.forEach((item) => {
+		item.hidden = query !== '' && !String(item.dataset.assetSearch || '').includes(query);
+	});
+});
+assetPickerItems.forEach((item) => {
+	item.addEventListener('click', () => insertImage(item.dataset.assetUrl || '', item.dataset.assetName || 'Image'));
+});
 const directiveTemplates = {
 	callout: ':::callout type="info" title="Note"\nWrite the note here.\n:::',
 	banner: ':::banner type="info"\nImportant information.\n:::',

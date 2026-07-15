@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS documents (
 	id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, url TEXT NOT NULL UNIQUE,
 	title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', keywords TEXT NOT NULL DEFAULT '',
 	visibility TEXT NOT NULL DEFAULT 'public', draft INTEGER NOT NULL DEFAULT 0,
-	nav INTEGER NOT NULL DEFAULT 1, type TEXT NOT NULL DEFAULT 'article',
+	nav INTEGER NOT NULL DEFAULT 1, type TEXT NOT NULL DEFAULT 'article', status TEXT NOT NULL DEFAULT 'published', publish_at INTEGER,
 	frontmatter_json TEXT NOT NULL, content_hash TEXT NOT NULL, plain_text TEXT NOT NULL,
 	modified_at INTEGER NOT NULL, indexed_at INTEGER NOT NULL
 );
@@ -95,18 +95,45 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 	id INTEGER PRIMARY KEY, event TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'core', payload_json TEXT NOT NULL DEFAULT '{}', created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS audit_logs_created_idx ON audit_logs(created_at DESC);
+CREATE TABLE IF NOT EXISTS page_feedback (
+	page_path TEXT NOT NULL, visitor_hash TEXT NOT NULL, vote TEXT NOT NULL CHECK(vote IN ('good', 'bad')),
+	created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(page_path, visitor_hash)
+);
+CREATE INDEX IF NOT EXISTS page_feedback_path_idx ON page_feedback(page_path);
+CREATE TABLE IF NOT EXISTS login_attempts (
+	username TEXT NOT NULL, ip_address TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+	first_attempt_at INTEGER NOT NULL, last_attempt_at INTEGER NOT NULL,
+	PRIMARY KEY(username, ip_address)
+);
+CREATE TABLE IF NOT EXISTS admin_sessions (
+	session_id TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+	ip_address TEXT NOT NULL DEFAULT '', user_agent TEXT NOT NULL DEFAULT '',
+	created_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, revoked INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS admin_sessions_user_idx ON admin_sessions(user_id, revoked, last_seen_at DESC);
 SQL);
-		try {
-			$this->db->exec("ALTER TABLE extension_events ADD COLUMN description TEXT NOT NULL DEFAULT ''");
+	try {
+		$this->db->exec("ALTER TABLE extension_events ADD COLUMN description TEXT NOT NULL DEFAULT ''");
 		} catch (PDOException) {
 			// The column already exists on current installations.
 		}
-		try {
-			$this->db->exec("CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, description, keywords, plain_text, content='documents', content_rowid='id', tokenize='unicode61 remove_diacritics 2')");
-		} catch (PDOException) {
-			// Search falls back to indexed LIKE queries when FTS5 is unavailable.
-		}
-		$statement = $this->db->prepare('INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (:version, :applied_at)');
-		foreach ([2, 3] as $version) $statement->execute(['version' => $version, 'applied_at' => gmdate(DATE_ATOM)]);
+	try {
+		$this->db->exec("CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, description, keywords, plain_text, content='documents', content_rowid='id', tokenize='unicode61 remove_diacritics 2')");
+	} catch (PDOException) {
+		// Search falls back to indexed LIKE queries when FTS5 is unavailable.
+	}
+	try {
+		$this->db->exec("ALTER TABLE documents ADD COLUMN status TEXT NOT NULL DEFAULT 'published'");
+	} catch (PDOException) {
+		// The column already exists on current installations.
+	}
+	try {
+		$this->db->exec('ALTER TABLE documents ADD COLUMN publish_at INTEGER');
+	} catch (PDOException) {
+		// The column already exists on current installations.
+	}
+	$this->db->exec("UPDATE documents SET status = CASE WHEN draft = 1 THEN 'draft' ELSE 'published' END WHERE status = 'published' AND publish_at IS NULL");
+	$statement = $this->db->prepare('INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (:version, :applied_at)');
+	foreach ([2, 3] as $version) $statement->execute(['version' => $version, 'applied_at' => gmdate(DATE_ATOM)]);
 	}
 }

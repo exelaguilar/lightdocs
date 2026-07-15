@@ -1,0 +1,175 @@
+{
+  "captured_at": "2026-07-13",
+  "method": "Read-only inspection through pct exec",
+  "scheduled_backup_coverage": "Unverified: the documentation API token receives HTTP 403 from the cluster backup-jobs endpoint.",
+  "containers": {
+    "101": {
+      "version": "AdGuard Home v0.107.77",
+      "services": [{"unit": "AdGuardHome.service", "state": "active", "role": "DNS filtering and web administration"}],
+      "ports": [{"listen": "53/tcp+udp", "scope": "All interfaces", "purpose": "DNS"}, {"listen": "80/tcp", "scope": "All interfaces", "purpose": "Web administration"}],
+      "data_paths": ["/opt/AdGuardHome/AdGuardHome.yaml", "/opt/AdGuardHome/data", "/opt/AdGuardHome/agh-backup"],
+      "backup": ["Back up the LXC root filesystem with Proxmox.", "Preserve AdGuardHome.yaml and the data directory together; stop AdGuard Home or use an application-consistent snapshot before copying the live databases."],
+      "observations": ["The AdGuard Home application tree uses approximately 316 MiB."]
+    },
+    "102": {
+      "version": "Plex Media Server 1.43.2.10687-563d026ea",
+      "services": [{"unit": "plexmediaserver.service", "state": "active", "role": "Media server"}],
+      "ports": [{"listen": "32400/tcp", "scope": "All interfaces", "purpose": "Plex web and client API"}],
+      "data_paths": ["/var/lib/plexmediaserver/Library", "/media_storage (bind mount)"],
+      "backup": ["Back up the LXC root filesystem to preserve Plex metadata and configuration.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents.", "For the cleanest metadata backup, stop plexmediaserver.service while copying /var/lib/plexmediaserver."],
+      "observations": ["Plex metadata uses approximately 993 MiB.", "Intel render and card devices are mapped for hardware transcoding; preserve and revalidate the documented GIDs after restore."]
+    },
+    "103": {
+      "version": "Pangolin manifest 0.0.0; Newt 1.8.1; Traefik 3.6.5",
+      "services": [{"unit": "pangolin.service", "state": "active", "role": "Pangolin application"}, {"unit": "gerbil.service", "state": "active", "role": "Tunnel data plane"}, {"unit": "newt.service", "state": "active", "role": "Private connector"}, {"unit": "traefik.service", "state": "active", "role": "HTTP/HTTPS edge router"}],
+      "ports": [{"listen": "80/tcp, 443/tcp", "scope": "All interfaces", "purpose": "Traefik HTTP/HTTPS"}, {"listen": "8080/tcp", "scope": "All interfaces", "purpose": "Traefik service"}, {"listen": "3000-3002/tcp", "scope": "All interfaces", "purpose": "Pangolin Node services"}, {"listen": "3004/tcp, 8443/tcp", "scope": "All interfaces", "purpose": "Gerbil"}, {"listen": "2112/tcp", "scope": "Loopback", "purpose": "Newt metrics"}],
+      "data_paths": ["/opt/pangolin/config/config.yml", "/opt/pangolin/config/db/db.sqlite", "/opt/pangolin/config/traefik/traefik_config.yml", "/opt/pangolin/config/traefik/dynamic_config.yml", "/etc/systemd/system/newt.service"],
+      "backup": ["Back up the LXC root filesystem with Proxmox.", "Before a file-level backup, stop Pangolin briefly or use a consistent snapshot so db.sqlite and configuration agree.", "Protect the Newt unit and Pangolin configuration as secrets; recovery requires their credentials as well as the SQLite database."],
+      "observations": ["The Pangolin tree uses approximately 2.6 GiB.", "The Pangolin package manifest reports 0.0.0, so an exact Pangolin release cannot be proven from the installed artifact.", "The Newt credential is embedded in its systemd launch arguments and must never be copied into public documentation."]
+    },
+    "104": {
+      "version": "qBittorrent v5.2.2",
+      "services": [{"unit": "qbittorrent-nox.service", "state": "active", "role": "Torrent client"}],
+      "ports": [{"listen": "8090/tcp", "scope": "All interfaces", "purpose": "qBittorrent Web UI"}, {"listen": "16304/tcp+udp", "scope": "192.168.1.104", "purpose": "Torrent peer traffic"}],
+      "data_paths": ["/root/.config/qBittorrent/qBittorrent.conf", "/root/.config/qBittorrent/qBittorrent-data.conf", "/media_storage (bind mount)"],
+      "backup": ["Back up the LXC root filesystem to preserve qBittorrent configuration.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents.", "Stop qbittorrent-nox.service before copying its configuration so queue and resume data are flushed."],
+      "observations": ["The default route is CT 112 at 192.168.1.249; loss of that gateway should stop forwarded traffic because CT 112 has a default-drop forwarding policy.", "The current Proxmox search-domain value is 1.1.1.1 and appears to belong in the nameserver field instead."]
+    },
+    "105": {
+      "version": "Anchor server/web 0.13.0; PostgreSQL 17.9",
+      "services": [{"unit": "anchor-server.service", "state": "active", "role": "Anchor API"}, {"unit": "anchor-web.service", "state": "active", "role": "Anchor web interface"}, {"unit": "postgresql@17-main.service", "state": "active", "role": "Application database"}],
+      "ports": [{"listen": "3000/tcp", "scope": "All interfaces", "purpose": "Anchor web interface"}, {"listen": "3001/tcp", "scope": "All interfaces", "purpose": "Anchor API"}, {"listen": "5432/tcp", "scope": "Loopback", "purpose": "PostgreSQL"}],
+      "data_paths": ["/opt/anchor", "/opt/anchor/.env", "/var/lib/postgresql/17"],
+      "backup": ["Create a PostgreSQL dump before application-level recovery or take a consistent snapshot with Anchor stopped.", "Back up /opt/anchor, including the private .env file, together with the PostgreSQL data or dump.", "Keep the .env file private because it contains application credentials."],
+      "observations": ["The Anchor tree uses approximately 1.1 GiB and PostgreSQL approximately 42 MiB."]
+    },
+    "106": {
+      "version": "Apache 2.4.66; PHP 8.4.16; MariaDB 11.8.6; BIND 9.20.21; Samba 4.22.8; Webmin 2.630; Usermin 2.530",
+      "services": [{"unit": "apache2.service", "state": "active", "role": "HTTP/HTTPS"}, {"unit": "php8.4-fpm.service", "state": "active", "role": "PHP runtime"}, {"unit": "mariadb.service", "state": "active", "role": "Database"}, {"unit": "named.service", "state": "active", "role": "DNS"}, {"unit": "smbd.service", "state": "active", "role": "SMB file service"}, {"unit": "webmin.service", "state": "active", "role": "Webmin"}, {"unit": "usermin.service", "state": "active", "role": "Usermin"}],
+      "ports": [{"listen": "80/tcp, 443/tcp", "scope": "All interfaces", "purpose": "Apache"}, {"listen": "10000/tcp", "scope": "All interfaces", "purpose": "Webmin"}, {"listen": "20000/tcp", "scope": "All interfaces", "purpose": "Usermin"}, {"listen": "3306/tcp", "scope": "All interfaces", "purpose": "MariaDB"}, {"listen": "53/tcp+udp", "scope": "LAN and loopback", "purpose": "BIND DNS"}, {"listen": "139/tcp, 445/tcp", "scope": "All interfaces", "purpose": "Samba"}, {"listen": "25/tcp, 465/tcp, 587/tcp", "scope": "All interfaces", "purpose": "Mail transport/submission"}],
+      "data_paths": ["/var/www", "/etc/apache2", "/var/lib/mysql", "/etc/webmin", "/etc/usermin", "/etc/bind", "/etc/samba"],
+      "backup": ["Create a MariaDB logical dump and preserve /var/lib/mysql only as a secondary physical recovery source.", "Back up /var/www and the Apache, PHP, BIND, Samba, Webmin, Usermin, mail, and firewall configuration trees.", "Test restores for the current virtual hosts: tiny.exel.dev, exel.dev, nevernote.exel.dev, and belen.exel.dev."],
+      "observations": ["MariaDB data uses approximately 5.1 GiB.", "MariaDB currently listens on all interfaces at port 3306; confirm host and network firewall restrictions.", "This LXC is a multi-role server, so a single web-root backup is not a complete recovery plan."]
+    },
+    "107": {
+      "version": "Immich 3.0.1; PostgreSQL 16.11; Redis 8.0.2",
+      "services": [{"unit": "immich-web.service", "state": "active", "role": "Immich API/web"}, {"unit": "immich-ml.service", "state": "active", "role": "Machine learning"}, {"unit": "postgresql@16-main.service", "state": "active", "role": "Application database"}, {"unit": "redis-server.service", "state": "active", "role": "Cache/queue"}],
+      "ports": [{"listen": "2283/tcp", "scope": "All interfaces", "purpose": "Immich web/API"}, {"listen": "3003/tcp", "scope": "All interfaces", "purpose": "Immich machine learning"}, {"listen": "5432/tcp", "scope": "Loopback", "purpose": "PostgreSQL"}, {"listen": "6379/tcp", "scope": "Loopback", "purpose": "Redis"}],
+      "data_paths": ["/opt/immich/.env", "/opt/immich/app", "/var/lib/postgresql/16", "/var/lib/redis", "/media_storage (bind mount)"],
+      "backup": ["Create a PostgreSQL dump and preserve /opt/immich/.env; the database and environment must be restored together.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents.", "Treat Redis as rebuildable runtime state unless a tested application-specific procedure requires it; the authoritative data is PostgreSQL plus media."],
+      "observations": ["The Immich tree uses approximately 8.0 GiB and PostgreSQL approximately 268 MiB.", "Intel render and card devices are mapped; preserve and revalidate the documented GIDs after restore."]
+    },
+    "108": {
+      "version": "Installed Radarr 6.2.1.10461; running process started as 6.0.4.10291",
+      "services": [{"unit": "radarr.service", "state": "active", "role": "Movie automation"}],
+      "ports": [{"listen": "7878/tcp", "scope": "All interfaces", "purpose": "Radarr web/API"}],
+      "data_paths": ["/var/lib/radarr/config.xml", "/var/lib/radarr/radarr.db", "/var/lib/radarr/Backups", "/media_storage (bind mount)"],
+      "backup": ["Use Radarr's built-in backup or stop radarr.service before copying /var/lib/radarr.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents."],
+      "observations": ["The installed binary is newer than the running process; verify an intentional maintenance window and restart after reviewing release changes.", "Application data uses approximately 262 MiB."]
+    },
+    "109": {
+      "version": "Installed Prowlarr 2.4.0.5397; running process started as 2.3.0.5236",
+      "services": [{"unit": "prowlarr.service", "state": "active", "role": "Indexer management"}],
+      "ports": [{"listen": "9696/tcp", "scope": "All interfaces", "purpose": "Prowlarr web/API"}],
+      "data_paths": ["/var/lib/prowlarr/config.xml", "/var/lib/prowlarr/prowlarr.db", "/var/lib/prowlarr/Backups"],
+      "backup": ["Use Prowlarr's built-in backup or stop prowlarr.service before copying /var/lib/prowlarr.", "Preserve config.xml and prowlarr.db together because they contain indexer and application integration state."],
+      "observations": ["The installed binary is newer than the running process; verify an intentional maintenance window and restart after reviewing release changes.", "Application data uses approximately 29 MiB."]
+    },
+    "110": {
+      "version": "wireguard-tools 1.0.20210914",
+      "services": [],
+      "ports": [],
+      "data_paths": ["/etc/wireguard/wg0.conf", "Active interface wg0"],
+      "backup": ["Back up /etc/wireguard/wg0.conf as a secret and restrict access to the backup.", "Preserve the forwarding/NAT rules and verify them after restore before routing CT 111 through this gateway."],
+      "observations": ["IPv4 forwarding is enabled.", "The FORWARD chain defaults to drop, permits eth0-to-wg0 traffic, and permits established/related return traffic.", "Masquerading is applied on wg0, providing the documented forwarding kill switch for CT 111."]
+    },
+    "111": {
+      "version": "Chromium 143.0.7499.169; TigerVNC 1.15.0; noVNC 1.6.0; websockify 0.12.0",
+      "services": [{"unit": "vpn-browser.service", "state": "active", "role": "Primary browser/VNC stack"}, {"unit": "lightdm.service", "state": "active", "role": "Display manager"}, {"unit": "vnc.service", "state": "activating/restart loop", "role": "Duplicate VNC unit"}, {"unit": "novnc.service", "state": "activating/restart loop", "role": "Duplicate noVNC unit"}],
+      "ports": [{"listen": "6080/tcp", "scope": "All interfaces", "purpose": "noVNC/WebSocket access"}, {"listen": "5901/tcp", "scope": "Loopback", "purpose": "TigerVNC"}],
+      "data_paths": ["/home/vpnuser/start-vpn-browser.sh", "/home/vpnuser/.vnc/xstartup", "/etc/systemd/system/vpn-browser.service", "/etc/systemd/system/vnc.service", "/etc/systemd/system/novnc.service"],
+      "backup": ["Back up /home/vpnuser and the three custom systemd units.", "Restore and verify the default route through CT 110 before opening the browser workload."],
+      "observations": ["The default route is CT 110 at 192.168.1.248.", "vpn-browser.service already owns ports 5901 and 6080; separately enabled vnc.service and novnc.service repeatedly fail with address-in-use errors.", "The browser user's home directory uses approximately 601 MiB."]
+    },
+    "112": {
+      "version": "wireguard-tools 1.0.20210914",
+      "services": [],
+      "ports": [],
+      "data_paths": ["/etc/wireguard/wg0.conf", "Active interface wg0"],
+      "backup": ["Back up /etc/wireguard/wg0.conf as a secret and restrict access to the backup.", "Preserve the forwarding/NAT rules and verify them after restore before routing CT 104 through this gateway."],
+      "observations": ["IPv4 forwarding is enabled.", "The FORWARD chain defaults to drop, permits eth0-to-wg0 traffic, and permits established/related return traffic.", "Masquerading is applied on wg0, providing the documented forwarding kill switch for qBittorrent CT 104."]
+    },
+    "113": {
+      "version": "n8n 2.22.4; Node.js 24.15.0",
+      "services": [{"unit": "n8n.service", "state": "active", "role": "Workflow automation"}],
+      "ports": [{"listen": "5678/tcp", "scope": "All interfaces", "purpose": "n8n web/API"}, {"listen": "5679/tcp", "scope": "Loopback", "purpose": "n8n internal service"}],
+      "data_paths": ["/.n8n/database.sqlite", "/.n8n/config", "/.n8n/nodes", "/opt/n8n.env"],
+      "backup": ["Stop n8n.service or use SQLite's online backup mechanism before copying /.n8n/database.sqlite and its WAL/SHM files.", "Preserve /.n8n/config and /opt/n8n.env as secrets; encrypted credentials may be unrecoverable without the matching encryption configuration."],
+      "observations": ["n8n data uses approximately 49 MiB.", "The system service starts with working directory /, so the default n8n state directory is /.n8n rather than /root/.n8n."]
+    },
+    "114": {
+      "version": "Open WebUI 0.10.2",
+      "services": [{"unit": "open-webui.service", "state": "active", "role": "AI web interface"}],
+      "ports": [{"listen": "8080/tcp", "scope": "All interfaces", "purpose": "Open WebUI"}],
+      "data_paths": ["/root/.open-webui/webui.db", "/root/.open-webui/vector_db/chroma.sqlite3", "/root/.open-webui/uploads", "/root/.env"],
+      "backup": ["Stop open-webui.service or use SQLite-aware backups for webui.db and chroma.sqlite3.", "Back up /root/.open-webui and the private /root/.env file together."],
+      "observations": ["Open WebUI data uses approximately 8.9 MiB.", "Intel render and card devices are mapped; preserve and revalidate their documented GIDs after restore."]
+    },
+    "115": {
+      "version": "Jellyfin.Server 12.0.0.0; package build 2026062906+ubu2404",
+      "services": [{"unit": "jellyfin.service", "state": "active", "role": "Media server"}],
+      "ports": [{"listen": "8096/tcp", "scope": "All interfaces", "purpose": "Jellyfin HTTP"}],
+      "data_paths": ["/var/lib/jellyfin/data/jellyfin.db", "/var/lib/jellyfin/metadata", "/etc/jellyfin", "/media_storage (bind mount)"],
+      "backup": ["Stop jellyfin.service or use application-consistent SQLite backups before copying /var/lib/jellyfin.", "Back up /etc/jellyfin with the application database and metadata.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents."],
+      "observations": ["Jellyfin data uses approximately 760 MiB.", "Intel render and card devices are mapped for hardware transcoding; preserve and revalidate the documented GIDs after restore."]
+    },
+    "116": {
+      "version": "SABnzbd 5.0.4",
+      "services": [{"unit": "sabnzbd.service", "state": "active", "role": "Usenet downloader"}],
+      "ports": [{"listen": "7777/tcp", "scope": "All interfaces", "purpose": "SABnzbd web UI"}],
+      "data_paths": ["/root/.sabnzbd", "/root/.sabnzbd/admin/history1.db", "/opt/sabnzbd", "/media_storage (bind mount)"],
+      "backup": ["Pause downloads and stop sabnzbd.service before copying /root/.sabnzbd.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents."],
+      "observations": ["SABnzbd configuration/history uses approximately 1.6 MiB; the application tree uses approximately 67 MiB."]
+    },
+    "117": {
+      "version": "Bazarr release not embedded in the installed source tree",
+      "services": [{"unit": "bazarr.service", "state": "active", "role": "Subtitle management"}],
+      "ports": [{"listen": "6767/tcp", "scope": "IPv4 and IPv6 all interfaces", "purpose": "Bazarr web/API"}],
+      "data_paths": ["/opt/bazarr/data/config/config.yaml", "/opt/bazarr/data/db/bazarr.db", "/media_storage (bind mount)"],
+      "backup": ["Use Bazarr's application backup or stop bazarr.service before copying /opt/bazarr/data.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents."],
+      "observations": ["The Bazarr tree uses approximately 396 MiB.", "The installed build does not expose a reliable release string through its source tree or service environment; record the UI-reported version during the next manual review."]
+    },
+    "118": {
+      "version": "Seerr 3.3.0",
+      "services": [{"unit": "seerr.service", "state": "active", "role": "Media requests"}],
+      "ports": [{"listen": "5055/tcp", "scope": "All interfaces", "purpose": "Seerr web/API"}],
+      "data_paths": ["/opt/seerr/config/db/db.sqlite3", "/opt/seerr/config", "/opt/seerr/.env (if present)"],
+      "backup": ["Stop seerr.service or use SQLite's online backup mechanism before copying db.sqlite3 and related configuration.", "Back up the complete /opt/seerr/config directory and any private environment file."],
+      "observations": ["The Seerr tree uses approximately 1.3 GiB."]
+    },
+    "119": {
+      "version": "Lidarr 3.1.0.4875",
+      "services": [{"unit": "lidarr.service", "state": "active", "role": "Music automation"}],
+      "ports": [{"listen": "8686/tcp", "scope": "All interfaces", "purpose": "Lidarr web/API"}],
+      "data_paths": ["/var/lib/lidarr/config.xml", "/var/lib/lidarr/lidarr.db", "/var/lib/lidarr/Backups", "/media_storage (bind mount)"],
+      "backup": ["Use Lidarr's built-in backup or stop lidarr.service before copying /var/lib/lidarr.", "Back up /mnt/pve/media_storage separately; Proxmox vzdump does not include bind-mount contents."],
+      "observations": ["Application data uses approximately 71 MiB."]
+    },
+    "120": {
+      "version": "Not collected: CT 120 was stopped",
+      "services": [],
+      "ports": [],
+      "data_paths": [],
+      "backup": ["Verify Ollama model and configuration locations after the container is intentionally started.", "Back up the LXC root filesystem and any model directory identified during that review."],
+      "observations": ["Runtime inspection was intentionally skipped because the container was stopped.", "Intel render and card devices are configured in Proxmox but could not be verified inside the stopped LXC."]
+    },
+    "121": {
+      "version": "LeafWiki release not embedded in the stripped Go binary",
+      "services": [{"unit": "leafwiki.service", "state": "active", "role": "Markdown wiki"}],
+      "ports": [{"listen": "8080/tcp", "scope": "All interfaces", "purpose": "LeafWiki web service"}],
+      "data_paths": ["/opt/leafwiki/data", "/opt/leafwiki/data/users.db", "/opt/leafwiki/data/search.db", "/opt/leafwiki/data/sessions.db", "/etc/leafwiki/.env"],
+      "backup": ["Stop leafwiki.service or use SQLite-aware backups before copying /opt/leafwiki/data.", "Preserve /etc/leafwiki/.env as a secret because it supplies authentication and signing configuration.", "If LeafWiki's optional Git backup is enabled later, document the remote, key path, and restore test without exposing the private key."],
+      "observations": ["LeafWiki data uses approximately 292 KiB.", "The stripped binary exposes a build ID but no reliable semantic version; record the release during the next upgrade."]
+    }
+  }
+}

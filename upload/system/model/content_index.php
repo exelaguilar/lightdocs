@@ -74,7 +74,7 @@ final class ContentIndex extends Model
 		if ($query === '') {
 			return [];
 		}
-		$privacy = $include_private ? '' : " AND d.visibility = 'public' AND d.draft = 0";
+		$privacy = $include_private ? '' : " AND d.visibility = 'public' AND d.status = 'published' AND (d.publish_at IS NULL OR d.publish_at <= " . time() . ')';
 		if ($this->hasFts()) {
 			$terms = array_values(array_filter(preg_split('/[^\pL\pN_-]+/u', $query) ?: []));
 			$match = implode(' AND ', array_map(static fn (string $term): string => '"' . str_replace('"', '""', $term) . '"*', $terms));
@@ -102,7 +102,7 @@ final class ContentIndex extends Model
 	public function records(bool $include_private = false): array
 	{
 		$this->sync();
-		$privacy = $include_private ? '' : "WHERE d.visibility = 'public' AND d.draft = 0";
+		$privacy = $include_private ? '' : "WHERE d.visibility = 'public' AND d.status = 'published' AND (d.publish_at IS NULL OR d.publish_at <= " . time() . ')';
 		$documents = $this->pdo->query("SELECT d.url, d.title, d.description, d.type, d.keywords, d.plain_text AS text FROM documents d {$privacy} ORDER BY d.title")->fetchAll();
 		$records = [];
 		foreach ($documents as $document) {
@@ -112,7 +112,7 @@ final class ContentIndex extends Model
 			$records[] = $document;
 		}
 		$sql = "SELECT d.url AS page, d.title AS description, h.anchor, h.title, h.level, d.type, d.keywords
-				FROM headings h JOIN documents d ON d.id = h.document_id " . ($include_private ? '' : "WHERE d.visibility = 'public' AND d.draft = 0 ") . 'ORDER BY d.title, h.position';
+				FROM headings h JOIN documents d ON d.id = h.document_id " . ($include_private ? '' : "WHERE d.visibility = 'public' AND d.status = 'published' AND (d.publish_at IS NULL OR d.publish_at <= " . time() . ') ') . 'ORDER BY d.title, h.position';
 		foreach ($this->pdo->query($sql)->fetchAll() as $heading) {
 			$records[] = [
 				'kind' => 'heading', 'page' => $heading['page'], 'url' => $heading['page'] . '#' . $heading['anchor'],
@@ -143,12 +143,12 @@ final class ContentIndex extends Model
 	private function indexPage(Page $page): void
 	{
 		$rendered = $this->renderer->render($page);
-		$statement = $this->pdo->prepare('INSERT INTO documents(path,url,title,description,keywords,visibility,draft,nav,type,frontmatter_json,content_hash,plain_text,modified_at,indexed_at)
-			VALUES(:path,:url,:title,:description,:keywords,:visibility,:draft,:nav,:type,:frontmatter,:hash,:plain,:modified,:indexed)');
+		$statement = $this->pdo->prepare('INSERT INTO documents(path,url,title,description,keywords,visibility,draft,nav,type,status,publish_at,frontmatter_json,content_hash,plain_text,modified_at,indexed_at)
+			VALUES(:path,:url,:title,:description,:keywords,:visibility,:draft,:nav,:type,:status,:publish_at,:frontmatter,:hash,:plain,:modified,:indexed)');
 		$statement->execute([
 			'path' => $page->relative_path, 'url' => $page->url, 'title' => $page->title, 'description' => $page->description,
 			'keywords' => implode(',', $page->keywords()), 'visibility' => $page->isPrivate() ? 'private' : 'public',
-			'draft' => (int) $page->isDraft(), 'nav' => (int) $page->isInNavigation(), 'type' => $page->type(),
+			'draft' => (int) $page->isDraft(), 'nav' => (int) $page->isInNavigation(), 'type' => $page->type(), 'status' => $page->status(), 'publish_at' => $page->publishAt(),
 			'frontmatter' => json_encode($page->meta, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
 			'hash' => hash('sha256', $page->markdown), 'plain' => $rendered->plain_text, 'modified' => $page->modified_at, 'indexed' => time(),
 		]);

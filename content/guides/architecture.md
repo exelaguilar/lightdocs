@@ -20,7 +20,7 @@ The Content Studio uses native MVC actions rather than a route-definition page. 
 
 ## Extensions and events
 
-Extensions live below `upload/extension/{name}/` and are discovered from an `extension.json` manifest. The manifest names the extension class, version, default state, navigation entries, and declared event codes. The class receives an `ExtensionContext`, then registers only the services, navigation, and listeners it owns:
+Extensions live below `upload/extension/{name}/` and are discovered from an `extension.json` manifest. The manifest names the extension class, version, default state, navigation entries, and declared event codes. The conventional class file is `extension.php` beside the manifest, so a trusted ZIP installed through Studio is discoverable on the next request without rebuilding Composer's optimized classmap. The class receives an `ExtensionContext`, then registers only the services, navigation, and listeners it owns:
 
 ```php
 $extensions->service('example.search', $search);
@@ -44,7 +44,9 @@ Developer Tools provides safe cache clearing, forced content-index rebuilds, and
 
 The Content Studio is not an optional module. The first native, Docker, or local installation seeds an `admin` account from `DOCS_ADMIN_PASSWORD`; packaged installers generate a password when one is not supplied. Administrators manage accounts and roles at `/admin/users` and their own profile at `/admin/profile`.
 
-The built-in Administrator, Editor, and Viewer roles map to explicit permissions such as `content.read`, `content.write`, `content.publish`, `extensions.manage`, `events.manage`, `settings.manage`, `users.manage`, and `developer.manage`. Account and extension state is stored in SQLite, so preserve the database separately when taking a backup for migration or recovery.
+The built-in Administrator, Editor, and Viewer roles map to explicit permissions such as `content.read`, `content.write`, `content.publish`, `extensions.manage`, `events.manage`, `settings.manage`, `users.manage`, and `developer.manage`. Administrators can add or adjust roles from `/admin/roles`; the final enabled administrator cannot be demoted or disabled. Local authentication rate-limits repeated username/IP failures, and `admin_sessions` makes it possible to revoke other active browser sessions from the profile screen.
+
+Account and extension state is stored in SQLite. The Backup extension can include that database in a browser-created recovery archive; it checkpoints SQLite first, creates a pre-restore archive before a restore, and retains the replaced database as a timestamped sibling. Native lifecycle backups remain deliberately portable content archives, so use the Backup extension or a VM/LXC snapshot when the complete administrative state must be recoverable.
 
 ### Shipped optional boundaries
 
@@ -52,7 +54,7 @@ Not every class should become an extension. Routing, request handling, canonical
 
 - **Directive Registry:** move custom Markdown directive handlers behind a registration contract so an extension can add a directive without editing `DirectiveProcessor`.
 - **Audit extension:** listen to content, index, and settings changes and write an optional local audit trail. It is discovered disabled by default and appears in Developer Tools when enabled.
-- **Backup providers:** the optional Backup extension provides a private recovery ZIP containing editable content, uploads, and optional revisions; exports remain publishable static bundles. Object-storage providers can implement the same contract without changing the base.
+- **Backup providers:** the optional Backup extension provides a private recovery ZIP containing editable content, uploads, optional revisions, and optionally the SQLite and environment state. It can restore its current archive format after preserving the previous state; exports remain publishable static bundles. Object-storage providers can implement the same contract without changing the base.
 - **Integration providers:** webhook, analytics, mail, and remote-repository interfaces are available for opt-in extensions. No network SDK or remote behavior is enabled by default because those features introduce privacy and deployment concerns.
 - **Media processing:** the optional Media extension can resize supported image uploads with GD before publication. It is disabled by default and does not change documents when disabled.
 - **External asset storage:** the optional Storage extension publishes uploads to an S3-compatible endpoint while retaining the local mirror used by the editor. It is disabled by default and requires explicit credentials and a public base URL.

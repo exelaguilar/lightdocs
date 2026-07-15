@@ -20,7 +20,31 @@ final readonly class Page
 
 	public function isDraft(): bool
 	{
-		return (bool) ($this->meta['draft'] ?? false);
+		if ((bool) ($this->meta['draft'] ?? false)) return true;
+		if ($this->status() !== 'published') return true;
+		$publish_at = $this->publishAt();
+		return $publish_at !== null && $publish_at > time();
+	}
+
+	public function status(): string
+	{
+		$status = strtolower(trim((string) ($this->meta['status'] ?? '')));
+		if ($status === '') return !empty($this->meta['draft']) ? 'draft' : 'published';
+		return in_array($status, ['draft', 'review', 'published', 'archived'], true) ? $status : 'draft';
+	}
+
+	public function publishAt(): ?int
+	{
+		$value = trim((string) ($this->meta['publish_at'] ?? ''));
+		if ($value === '') return null;
+		$time = strtotime($value);
+		return $time === false ? null : $time;
+	}
+
+	public function isScheduled(): bool
+	{
+		$publish_at = $this->publishAt();
+		return $this->status() === 'published' && $publish_at !== null && $publish_at > time();
 	}
 
 	public function isPrivate(): bool

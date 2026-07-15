@@ -25,7 +25,9 @@ final class History extends Admin
 		if (!$this->history || !$this->git_preflight) {
 			$this->render('history/history', ['config' => $this->config, 'active_nav' => 'history', 'history' => ['available' => false, 'commits' => [], 'changes' => []], 'csrf' => $_SESSION['csrf'], 'message' => '', 'error' => '', 'preflight' => ['available' => false, 'replacements' => 0]]);
 		}
-		$message = $error = '';
+		$flash = $this->consumeFlash('history');
+		$message = $flash['message'];
+		$error = $flash['error'];
 		$preflight = $this->git_preflight->inspect('sanitized');
 		if ($request->method === 'POST') {
 			$this->csrf($request);
@@ -44,6 +46,7 @@ final class History extends Admin
 			} catch (Throwable $exception) {
 				$error = $exception->getMessage();
 			}
+			$this->redirectWithFlash('/admin/history', 'history', $message, $error);
 		}
 		$this->render('history/history', [
 			'config' => $this->config, 'active_nav' => 'history', 'history' => $this->history->inspect(),

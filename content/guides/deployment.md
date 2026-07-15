@@ -53,7 +53,7 @@ lightdocs uninstall
 
 Application releases are immutable below `/opt/lightdocs/releases`. Configuration is stored at `/etc/lightdocs/lightdocs.env`; canonical content, uploads, optional Git history, and disposable runtime state live below `/var/lib/lightdocs`. Update validates a new release before atomically changing `/opt/lightdocs/current` and automatically restores the previous symlink if the HTTP health check fails.
 
-Before an upgrade, run `lightdocs doctor` and create a native backup. The portable backup includes canonical content, uploads, optional local Git history, and environment metadata, but it intentionally excludes `lightdocs.sqlite`. SQLite also contains administrator accounts, roles, extension enablement and settings, event state, and audit records. Copy `/var/lib/lightdocs/storage/lightdocs.sqlite` separately, or take a VM/LXC snapshot, when those records must survive an upgrade. A typical pinned upgrade is:
+Before an upgrade, run `lightdocs doctor` and create a native backup. The portable backup includes canonical content, uploads, optional local Git history, and environment metadata, but it intentionally excludes `lightdocs.sqlite`. SQLite also contains administrator accounts, roles, extension enablement and settings, event state, and audit records. Copy `/var/lib/lightdocs/storage/lightdocs.sqlite` separately, create a full recovery archive from **Admin → Backups** with **Include database** enabled, or take a VM/LXC snapshot when those records must survive an upgrade. A typical pinned upgrade is:
 
 ```bash
 lightdocs doctor

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Frontend\Controller;
 
 use System\Library\Content\ContentRepository;
+use System\Library\Feedback;
 use System\Library\FileCache;
 use System\Library\Content\MarkdownRenderer;
 use System\Library\Content\Page;
@@ -26,6 +27,7 @@ final class Reader extends Controller
 		private readonly MarkdownRenderer $renderer,
 		private readonly FileCache $cache,
 		private readonly SqliteSearchService $search,
+		private readonly Feedback $feedback,
 	) {
 		parent::__construct($config, $view, $events);
 	}
@@ -64,9 +66,10 @@ final class Reader extends Controller
 		[$previous, $next] = $this->repository->neighbours($page, $private_access);
 		$backlinks = $this->repository->backlinks($page, $private_access);
 		$related = $this->repository->relatedPages($page, $private_access);
+		$feedback = $this->feedback->summary($page->url);
 		$config = $this->config;
 		$config['private_access'] = $private_access;
-		$content = $this->view->render('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'config'));
+		$content = $this->view->render('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'feedback', 'config'));
 		$this->render('common/layout', [
 			'config' => $config, 'title' => $page->title, 'description' => $page->description,
 			'canonical_path' => $page->url, 'tree' => $this->repository->tree(false, $private_access),
@@ -94,6 +97,50 @@ final class Reader extends Controller
 	public function searchIndex(): never
 	{
 		Response::json($this->search->read());
+	}
+
+	public function feedback(Request $request): never
+	{
+		if ($request->method !== 'POST') {
+			Response::text('Method not allowed.', 405);
+		}
+
+		$path = (string) $request->input('path');
+		$page = $this->repository->find($path, false, $this->privateAccess());
+		if (!$page || $path !== $page->url) {
+			Response::json(['error' => 'The documentation page was not found.'], 404);
+		}
+
+		try {
+			$summary = $this->feedback->vote(
+				$page->url,
+				(string) $request->input('token'),
+				(string) $request->input('vote'),
+			);
+		} catch (\RuntimeException $exception) {
+			Response::json(['error' => $exception->getMessage()], 422);
+		}
+
+		Response::json(['summary' => $summary]);
+	}
+
+	public function asset(Request $request): never
+	{
+		$relative = rawurldecode(substr($request->path, strlen('/uploads/')));
+		if ($relative === '' || str_contains($relative, '..') || !preg_match('#^[a-zA-Z0-9._/-]+$#', $relative)) {
+			$this->notFound();
+		}
+		$root = realpath((string) $this->config['upload_dir']);
+		$path = $root === false ? false : realpath($root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative));
+		if ($path === false || !str_starts_with(strtolower($path), strtolower($root . DIRECTORY_SEPARATOR)) || !is_file($path)) {
+			$this->notFound();
+		}
+		$type = (new \finfo(FILEINFO_MIME_TYPE))->file($path) ?: 'application/octet-stream';
+		$allowed = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf', 'text/plain'];
+		if (!in_array($type, $allowed, true)) {
+			$this->notFound();
+		}
+		Response::file($path, $type);
 	}
 
 	public function sitemap(): never

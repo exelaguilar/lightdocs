@@ -20,7 +20,7 @@ Content follows ordinary filesystem routing. `index.md` represents its containin
 
 ## Frontmatter
 
-Supported page fields include `title`, `description`, `nav_title`, `slug`, `aliases`, `keywords`, `icon`, `order`, `draft`, `nav`, `visibility`, `type`, `reviewed`, `review_after`, `verified_with`, `service`, `related`, `contains_secrets`, and `ai_exclude`.
+Supported page fields include `title`, `description`, `nav_title`, `slug`, `aliases`, `keywords`, `icon`, `order`, `draft`, `status`, `publish_at`, `nav`, `visibility`, `type`, `reviewed`, `review_after`, `verified_with`, `service`, `related`, `contains_secrets`, and `ai_exclude`.
 
 ```yaml
 title: Installation
@@ -33,7 +33,7 @@ keywords: [installation, setup]
 aliases: [/old-install]
 ```
 
-Use `draft: true` to remove a page from production routing and navigation. Use `nav: false` for a published page that should remain outside the sidebar.
+Use `draft: true` to remove a page from production routing and navigation. `status` is the newer lifecycle field: use `draft`, `review`, `published`, or `archived`. A page with a future `publish_at` timestamp remains unavailable publicly until that time. Use `nav: false` for a published page that should remain outside the sidebar.
 
 Use `visibility: private` for material that should only be available during an authenticated Content Studio session. Private pages are omitted from public search, sitemap, Markdown, static, and LLM output.
 

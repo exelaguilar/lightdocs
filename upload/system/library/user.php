@@ -8,6 +8,17 @@ use PDO;
 
 final class User
 {
+	private const PERMISSIONS = [
+		'dashboard.view' => ['label' => 'View the dashboard', 'description' => 'Open the Studio overview and see publishing, health, and activity summaries.'],
+		'content.read' => ['label' => 'Read private content', 'description' => 'Open private documentation and use the editor without changing source files.'],
+		'content.write' => ['label' => 'Edit content and media', 'description' => 'Create, edit, upload, organize, and import Markdown and uploaded assets.'],
+		'content.publish' => ['label' => 'Publish content', 'description' => 'Change page visibility, lifecycle status, and scheduled publication details.'],
+		'extensions.manage' => ['label' => 'Manage extensions', 'description' => 'Enable, configure, install, and remove trusted extension packages.'],
+		'events.manage' => ['label' => 'Manage events', 'description' => 'Inspect, enable, disable, document, and test registered event listeners.'],
+		'settings.manage' => ['label' => 'Manage site settings', 'description' => 'Change site identity, theme, and other shared application settings.'],
+		'users.manage' => ['label' => 'Manage users and roles', 'description' => 'Create and update accounts, assign roles, and define what each role can access.'],
+		'developer.manage' => ['label' => 'Use developer tools', 'description' => 'Run backups, review audits, rebuild indexes, clear cache, and manage integrations.'],
+	];
 	private PDO $db;
 
 	public function __construct(DB $database, string $bootstrap_password)
@@ -43,14 +54,81 @@ final class User
 		}
 	}
 
-	public function authenticate(string $username, string $password): ?array
+	public function authenticate(string $username, string $password, string $ip_address = ''): ?array
 	{
+		$username = trim($username);
+		if ($this->isRateLimited($username, $ip_address)) return null;
 		$statement = $this->db->prepare('SELECT * FROM users WHERE username = :username AND enabled = 1');
-		$statement->execute(['username' => trim($username)]);
+		$statement->execute(['username' => $username]);
 		$user = $statement->fetch();
-		if (!$user || !password_verify($password, (string) $user['password_hash'])) return null;
+		if (!$user || !password_verify($password, (string) $user['password_hash'])) {
+			$this->recordFailedLogin($username, $ip_address);
+			return null;
+		}
+		$this->clearFailedLogin($username, $ip_address);
 		$this->db->prepare('UPDATE users SET last_login = :last_login WHERE id = :id')->execute(['last_login' => time(), 'id' => $user['id']]);
 		return $this->find((int) $user['id']);
+	}
+
+	public function isRateLimited(string $username, string $ip_address): bool
+	{
+		$statement = $this->db->prepare('SELECT attempts, first_attempt_at, last_attempt_at FROM login_attempts WHERE username = :username AND ip_address = :ip_address');
+		$statement->execute(['username' => trim($username), 'ip_address' => $ip_address]);
+		$row = $statement->fetch();
+		if (!$row) return false;
+		if ((int) $row['last_attempt_at'] < time() - 900) {
+			$this->clearFailedLogin($username, $ip_address);
+			return false;
+		}
+		return (int) $row['attempts'] >= 5;
+	}
+
+	public function registerSession(int $user_id, string $session_id, string $ip_address, string $user_agent): void
+	{
+		$now = time();
+		$this->db->prepare('INSERT OR REPLACE INTO admin_sessions (session_id, user_id, ip_address, user_agent, created_at, last_seen_at, revoked) VALUES (:session_id, :user_id, :ip_address, :user_agent, :created_at, :last_seen_at, 0)')->execute(['session_id' => $session_id, 'user_id' => $user_id, 'ip_address' => $ip_address, 'user_agent' => substr($user_agent, 0, 255), 'created_at' => $now, 'last_seen_at' => $now]);
+	}
+
+	public function sessionIsValid(string $session_id, int $user_id): bool
+	{
+		$statement = $this->db->prepare('SELECT revoked FROM admin_sessions WHERE session_id = :session_id AND user_id = :user_id');
+		$statement->execute(['session_id' => $session_id, 'user_id' => $user_id]);
+		$row = $statement->fetch();
+		if (!$row) {
+			$this->registerSession($user_id, $session_id, '', '');
+			return true;
+		}
+		if ((bool) $row['revoked']) return false;
+		$this->db->prepare('UPDATE admin_sessions SET last_seen_at = :last_seen_at WHERE session_id = :session_id')->execute(['last_seen_at' => time(), 'session_id' => $session_id]);
+		return true;
+	}
+
+	public function sessions(int $user_id): array
+	{
+		$statement = $this->db->prepare('SELECT session_id, ip_address, user_agent, created_at, last_seen_at FROM admin_sessions WHERE user_id = :user_id AND revoked = 0 ORDER BY last_seen_at DESC');
+		$statement->execute(['user_id' => $user_id]);
+		return $statement->fetchAll();
+	}
+
+	public function revokeSession(string $session_id, int $user_id): void
+	{
+		$this->db->prepare('UPDATE admin_sessions SET revoked = 1 WHERE session_id = :session_id AND user_id = :user_id')->execute(['session_id' => $session_id, 'user_id' => $user_id]);
+	}
+
+	public function revokeOtherSessions(string $session_id, int $user_id): void
+	{
+		$this->db->prepare('UPDATE admin_sessions SET revoked = 1 WHERE user_id = :user_id AND session_id <> :session_id')->execute(['user_id' => $user_id, 'session_id' => $session_id]);
+	}
+
+	private function recordFailedLogin(string $username, string $ip_address): void
+	{
+		$now = time();
+		$this->db->prepare('INSERT INTO login_attempts (username, ip_address, attempts, first_attempt_at, last_attempt_at) VALUES (:username, :ip_address, 1, :now, :now) ON CONFLICT(username, ip_address) DO UPDATE SET attempts = attempts + 1, last_attempt_at = excluded.last_attempt_at')->execute(['username' => trim($username), 'ip_address' => $ip_address, 'now' => $now]);
+	}
+
+	private function clearFailedLogin(string $username, string $ip_address): void
+	{
+		$this->db->prepare('DELETE FROM login_attempts WHERE username = :username AND ip_address = :ip_address')->execute(['username' => trim($username), 'ip_address' => $ip_address]);
 	}
 
 	public function authenticateExternal(string $provider, string $subject, string $username, string $display_name, bool $provision, string $role_name = 'viewer'): ?array
@@ -115,7 +193,53 @@ final class User
 
 	public function roles(): array
 	{
-		return $this->db->query('SELECT name, label, description FROM roles ORDER BY id')->fetchAll();
+		$sql = 'SELECT roles.name, roles.label, roles.description, COUNT(role_permissions.permission) AS permission_count
+			FROM roles
+			LEFT JOIN role_permissions ON role_permissions.role_id = roles.id
+			GROUP BY roles.id, roles.name, roles.label, roles.description
+			ORDER BY roles.id';
+		return $this->db->query($sql)->fetchAll();
+	}
+
+	public function role(string $name): ?array
+	{
+		$statement = $this->db->prepare('SELECT id, name, label, description FROM roles WHERE name = :name');
+		$statement->execute(['name' => $name]);
+		$role = $statement->fetch();
+		if (!$role) return null;
+		$permissions = $this->db->prepare('SELECT permission FROM role_permissions WHERE role_id = :role_id ORDER BY permission');
+		$permissions->execute(['role_id' => $role['id']]);
+		$role['permissions'] = array_column($permissions->fetchAll(), 'permission');
+		return $role;
+	}
+
+	public function availablePermissions(): array
+	{
+		return self::PERMISSIONS;
+	}
+
+	public function saveRole(string $name, string $label, string $description, array $permissions): void
+	{
+		$name = strtolower(trim($name));
+		if (!preg_match('/^[a-z][a-z0-9_-]{2,40}$/', $name)) throw new \RuntimeException('Role names must use lowercase letters, numbers, dashes, or underscores.');
+		if (trim($label) === '') throw new \RuntimeException('Role label is required.');
+		$permissions = array_values(array_intersect(array_keys(self::PERMISSIONS), array_map('strval', $permissions)));
+		if ($name === 'administrator' && (!in_array('users.manage', $permissions, true) || !in_array('developer.manage', $permissions, true))) throw new \RuntimeException('Administrator must retain account and developer permissions.');
+		$this->db->beginTransaction();
+		try {
+			$statement = $this->db->prepare('INSERT INTO roles (name, label, description) VALUES (:name, :label, :description) ON CONFLICT(name) DO UPDATE SET label = excluded.label, description = excluded.description');
+			$statement->execute(['name' => $name, 'label' => trim($label), 'description' => trim($description)]);
+			$role = $this->db->prepare('SELECT id FROM roles WHERE name = :name');
+			$role->execute(['name' => $name]);
+			$role_id = (int) $role->fetchColumn();
+			$this->db->prepare('DELETE FROM role_permissions WHERE role_id = :role_id')->execute(['role_id' => $role_id]);
+			$permission = $this->db->prepare('INSERT INTO role_permissions (role_id, permission) VALUES (:role_id, :permission)');
+			foreach ($permissions as $value) $permission->execute(['role_id' => $role_id, 'permission' => $value]);
+			$this->db->commit();
+		} catch (\Throwable $exception) {
+			$this->db->rollBack();
+			throw $exception;
+		}
 	}
 
 	public function updateProfile(int $id, string $display_name, string $password = ''): void
@@ -151,6 +275,11 @@ final class User
 		$role_statement->execute(['name' => $role_name]);
 		$role_id = (int) $role_statement->fetchColumn();
 		if ($role_id === 0) throw new \RuntimeException('Unknown role.');
+		$current = $this->find($id);
+		if (($current['role_name'] ?? '') === 'administrator' && (!$enabled || $role_name !== 'administrator')) {
+			$administrators = (int) $this->db->query("SELECT COUNT(*) FROM users INNER JOIN user_roles ON user_roles.user_id = users.id INNER JOIN roles ON roles.id = user_roles.role_id WHERE users.enabled = 1 AND roles.name = 'administrator'")->fetchColumn();
+			if ($administrators <= 1) throw new \RuntimeException('The final enabled administrator cannot be disabled or demoted.');
+		}
 		$this->db->beginTransaction();
 		try {
 			$fields = 'display_name = :display_name, enabled = :enabled, updated_at = :updated_at';

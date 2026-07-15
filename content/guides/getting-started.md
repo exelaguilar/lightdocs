@@ -38,6 +38,8 @@ composer docs:serve
 
 Open `/` for the public documentation and `/admin` for the Content Studio. Use `/admin/profile` to update your account and `/admin/users` to manage additional accounts when your role includes user management.
 
+The editor can keep a page as a **Draft**, send it **In review**, publish it immediately, archive it, or schedule publication for a future date. Only published pages whose scheduled time has arrived are visible to public readers, search, static builds, and LLM output.
+
 ## Create a page
 
 Create a Markdown file below `content/`:
@@ -77,7 +79,11 @@ Open `/admin/extensions` to enable or disable discovered extensions. Each extens
 $this->events->dispatch('content.published', ['file' => $file]);
 ```
 
-The shipped extensions are modular and are not hardcoded into the base UI: Local Git provides private repository history and is enabled by default; Audit records selected framework events; Backup creates private recovery ZIP archives; Media resizes supported image uploads; Storage can publish uploads to an S3-compatible endpoint; Webhooks sends signed HTTPS event notifications; OIDC adds optional external sign-in; and Remote sync provides manual repository import, pull, and explicitly enabled push actions. Enable only the extensions needed by this deployment, then configure each from its own **Settings** page. Remote sync never runs on a schedule, and OIDC does not create new local users unless auto-provisioning is enabled.
+The shipped extensions are modular and are not hardcoded into the base UI: Local Git provides private repository history and is enabled by default; Audit records selected framework events; Backup creates private recovery ZIP archives and can include SQLite state; Media resizes supported image uploads; Storage can publish uploads to an S3-compatible endpoint; Webhooks sends signed HTTPS event notifications; OIDC adds optional external sign-in; and Remote sync provides manual repository import, pull, and explicitly enabled push actions. Enable only the extensions needed by this deployment, then configure each from its own **Settings** page. Remote sync never runs on a schedule, and OIDC does not create new local users unless auto-provisioning is enabled.
+
+The main Studio sidebar also includes **Media library**, **Navigation**, and **Import Markdown**. These write only canonical assets and support files below `content/` or `storage/uploads`; the document index refreshes after a successful change. The backup screen is for recovery, while the export screen creates a publishable static bundle. Restore creates a pre-restore archive first and preserves the current SQLite database beside the restored copy.
+
+Only install an extension ZIP from an author you trust. An extension is executable PHP deployed into the application, not a sandboxed theme or browser plugin.
 
 Events are synchronous and in-process. Declaring a custom event in the admin UI only documents the signal; application or extension code must dispatch it and register a listener. Disabling an extension removes its services, navigation, startups, and listeners on the next request. Developer Tools at `/admin/developer` provides safe cache clearing, forced index rebuilds, and admin-session reset.
 

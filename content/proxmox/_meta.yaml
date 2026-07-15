@@ -1,0 +1,5 @@
+title: Proxmox
+description: 'Native Proxmox VE Community Scripts LXC documentation.'
+icon: server
+order: 20
+collapsed: true

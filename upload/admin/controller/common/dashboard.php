@@ -28,6 +28,9 @@ final class Dashboard extends Admin
 			'pages' => count($pages),
 			'published' => count(array_filter($pages, static fn (Page $page): bool => !$page->isDraft() && !$page->isPrivate())),
 			'drafts' => count(array_filter($pages, static fn (Page $page): bool => $page->isDraft())),
+			'review' => count(array_filter($pages, static fn (Page $page): bool => $page->status() === 'review')),
+			'scheduled' => count(array_filter($pages, static fn (Page $page): bool => $page->isScheduled())),
+			'archived' => count(array_filter($pages, static fn (Page $page): bool => $page->status() === 'archived')),
 			'private' => count(array_filter($pages, static fn (Page $page): bool => $page->isPrivate())),
 			'issues' => count($health['issues']),
 		];

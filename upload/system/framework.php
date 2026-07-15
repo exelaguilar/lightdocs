@@ -10,6 +10,7 @@ use Admin\Controller\Editor;
 use Admin\Controller\Export;
 use Admin\Controller\History;
 use Admin\Controller\Settings;
+use Admin\Controller\Roles;
 use Admin\Controller\Tools;
 use Frontend\Controller\Reader;
 use System\Library\Content\AssetRepository;
@@ -21,6 +22,8 @@ use System\Library\Content\MarkdownRenderer;
 use System\Library\Content\SearchIndexer;
 use System\Library\Content\SiteData;
 use System\Library\Content\SnippetRepository;
+use System\Library\Content\NavigationManager;
+use System\Library\Content\ContentImporter;
 use System\Model\ContentIndex;
 use System\Model\Schema;
 use System\Model\SqliteSearchService;
@@ -42,6 +45,7 @@ use System\Engine\Response;
 use System\Engine\Startup;
 use System\Library\DB;
 use System\Library\FileCache;
+use System\Library\Feedback;
 use System\Library\View;
 use System\Library\User;
 use Throwable;
@@ -88,18 +92,21 @@ final class Framework
 		$runtime_config['admin_navigation'] = $extensions->navigationItems();
 		$builder = new StaticSiteBuilder($config, $repository, $renderer, $search, $public_view);
 
-		$this->reader = new Reader($config, $public_view, $events, $repository, $renderer, $cache, $search);
+		$this->reader = new Reader($config, $public_view, $events, $repository, $renderer, $cache, $search, new Feedback($database));
+		$content_editor = new ContentEditor($config['content_dir'], $config['revision_dir'], $config['upload_dir'], $media_processor, $asset_storage);
+		$asset_repository = new AssetRepository($config['upload_dir'], $repository);
 		$editor = new Editor(
 			$runtime_config, $admin_view, $events, $repository, $renderer, $index, $git_history,
-			new ContentEditor($config['content_dir'], $config['revision_dir'], $config['upload_dir'], $media_processor, $asset_storage),
+			$content_editor,
 			new SnippetRepository($config['content_dir'], $repository),
-			new AssetRepository($config['upload_dir'], $repository),
+			$asset_repository,
 			$health,
 		);
 		$registry = new Registry();
 		$factory = new Factory($registry);
 		$registry->set('view', $this->context === 'admin' ? $admin_view : $public_view);
 		$registry->set('db', $database);
+		$registry->set('accounts', $accounts);
 		$registry->set('config', $runtime_config);
 		$registry->set('event', $events);
 		$registry->set('factory', $factory);
@@ -110,12 +117,13 @@ final class Framework
 		if ($this->context === 'admin') {
 			$factory->registerController('common/login', new Login($runtime_config, $admin_view, $events, $index, $accounts, $auth_provider));
 			$factory->registerController('common/users', new \Admin\Controller\Users($runtime_config, $admin_view, $events, $accounts));
+			$factory->registerController('common/roles', new Roles($runtime_config, $admin_view, $events, $accounts));
 			$factory->registerController('common/profile', new \Admin\Controller\Profile($runtime_config, $admin_view, $events, $accounts));
 			$factory->registerController('common/dashboard', new Dashboard($runtime_config, $admin_view, $events, $repository, $index, $health));
 			$factory->registerController('editor/editor', $editor);
 			$factory->registerController('settings/settings', new Settings($runtime_config, $admin_view, $events, $settings));
 			$factory->registerController('history/history', new History($runtime_config, $admin_view, $events, $git_history, $git_preflight));
-			$factory->registerController('tools/tools', new Tools($runtime_config, $admin_view, $events, $repository, $health, $extensions, $cache, $index));
+			$factory->registerController('tools/tools', new Tools($runtime_config, $admin_view, $events, $repository, $health, $extensions, $cache, $index, $asset_repository, $content_editor, new NavigationManager($config['content_dir']), new ContentImporter($config['content_dir'])));
 			$factory->registerController('export/export', new Export($runtime_config, $admin_view, $events, new ExportService($runtime_config, $builder)));
 			$factory->registerController('error/not_found', $this->reader);
 		} else {

@@ -24,7 +24,12 @@ final class Login extends Admin
 		$this->requireEditorEnabled();
 		$error = '';
 		if ($request->method === 'POST') {
-			$user = $this->accounts->authenticate((string) $request->input('username', 'admin'), (string) $request->input('password'));
+			$username = (string) $request->input('username', 'admin');
+			if ($this->accounts->isRateLimited($username, (string) ($request->server['REMOTE_ADDR'] ?? ''))) {
+				$error = 'Too many failed attempts. Try again in a few minutes.';
+				$this->render('common/login', ['config' => $this->config, 'error' => $error, 'auth_available' => $this->auth_provider !== null]);
+			}
+			$user = $this->accounts->authenticate($username, (string) $request->input('password'), (string) ($request->server['REMOTE_ADDR'] ?? ''));
 			if ($user) $this->signIn($user);
 			usleep(300000);
 			$error = 'Incorrect password.';
@@ -57,6 +62,11 @@ final class Login extends Admin
 
 	public function logout(): never
 	{
+		$user_id = (int) ($_SESSION['lightdocs_user_id'] ?? 0);
+		if ($user_id > 0) {
+			$this->accounts->revokeSession(session_id(), $user_id);
+		}
+		$_SESSION = [];
 		session_destroy();
 		Response::redirect('/admin/login');
 	}
@@ -69,6 +79,7 @@ final class Login extends Admin
 		$_SESSION['lightdocs_user'] = $user;
 		$_SESSION['lightdocs_permissions'] = $user['permissions'];
 		$_SESSION['csrf'] = bin2hex(random_bytes(24));
+		$this->accounts->registerSession((int) $user['id'], session_id(), (string) ($_SERVER['REMOTE_ADDR'] ?? ''), (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
 		$this->index->saveStudioState(session_id(), ['signed_in_at' => time()]);
 		Response::redirect('/admin');
 	}

@@ -41,6 +41,7 @@ $asset_version = static fn (string $asset): string => $asset . '?v=' . (@filemti
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to content</a>
+<div class="reading-progress" data-reading-progress aria-hidden="true"><span></span></div>
 <header class="site-header">
   <div class="header-inner">
     <div class="brand-row">
@@ -91,6 +92,7 @@ $asset_version = static fn (string $asset): string => $asset . '?v=' . (@filemti
     <?php if ($headings): ?><div class="toc-inner"><p class="toc-title"><span class="toc-title-icon" aria-hidden="true"></span>On this page</p><nav><ul><?php foreach ($headings as $heading): ?><li class="toc-level-<?= (int) $heading['level'] ?>"><a href="#<?= $e($heading['id']) ?>"><?= $e($heading['title']) ?></a></li><?php endforeach; ?></ul></nav><a class="toc-top" href="#main-content">Back to top <span>↑</span></a><?php if ($config['editor_enabled']): ?><a class="toc-studio" href="/admin">Open in Studio <span>↗</span></a><?php endif; ?></div><?php endif; ?>
   </aside>
 </div>
+<button class="back-to-top" type="button" data-back-to-top aria-label="Back to top" data-tooltip-placement="left"><span aria-hidden="true">↑</span></button>
 <dialog class="search-dialog" data-search-dialog aria-label="Search documentation">
   <div class="search-dialog-frame">
     <div class="search-input-row"><span class="search-icon" aria-hidden="true"></span><input type="search" placeholder="Search pages and headings..." autocomplete="off" data-search-input><button type="button" data-close-search aria-label="Close search"><kbd>Esc</kbd></button></div>

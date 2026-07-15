@@ -1,4 +1,5 @@
 title: Guides
-description: Authoring, deployment, and Lightdocs workflows.
+description: 'Authoring, deployment, and Lightdocs workflows.'
 icon: guides
 order: 10
+collapsed: false

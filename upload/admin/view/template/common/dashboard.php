@@ -24,6 +24,8 @@ $initial = mb_strtoupper(mb_substr($config['name'], 0, 1));
     <a href="/admin/editor"><span>Drafts</span><strong><?= (int) $stats['drafts'] ?></strong><small>Not publicly visible</small></a>
     <a href="/admin/editor"><span>Private</span><strong><?= (int) $stats['private'] ?></strong><small>Authenticated only</small></a>
     <a href="/admin/health"><span>Needs attention</span><strong><?= (int) $stats['issues'] ?></strong><small>Health findings</small></a>
+    <a href="/admin/editor"><span>In review</span><strong><?= (int) $stats['review'] ?></strong><small>Awaiting publication</small></a>
+    <a href="/admin/editor"><span>Scheduled</span><strong><?= (int) $stats['scheduled'] ?></strong><small>Future publication</small></a>
   </section>
 
   <div class="dashboard-grid">
@@ -42,7 +44,7 @@ $initial = mb_strtoupper(mb_substr($config['name'], 0, 1));
       </section>
       <section class="dashboard-panel issue-panel">
         <header><div><p class="panel-eyebrow">Review queue</p><h2>Content health</h2></div><a href="/admin/health">View all</a></header>
-        <?php if ($issues): ?><div><?php foreach ($issues as $issue): ?><a href="/admin/editor?file=<?= rawurlencode($issue['file']) ?>"><span class="issue-indicator severity-<?= $e($issue['severity']) ?>"></span><span><strong><?= $e($issue['message']) ?></strong><small><?= $e($issue['file']) ?></small></span></a><?php endforeach; ?></div><?php else: ?><div class="dashboard-empty"><span>✓</span><strong>Everything looks healthy</strong><small>No content issues found.</small></div><?php endif; ?>
+        <?php if ($issues): ?><div><?php foreach ($issues as $issue): $issue_url = str_starts_with($issue['file'], 'storage/uploads/') ? '/admin/media' : (str_ends_with($issue['file'], '.md') ? '/admin/editor?file=' . rawurlencode($issue['file']) : '/admin/health'); ?><a href="<?= $e($issue_url) ?>"><span class="issue-indicator severity-<?= $e($issue['severity']) ?>"></span><span><strong><?= $e($issue['message']) ?></strong><small><?= $e($issue['file']) ?></small></span></a><?php endforeach; ?></div><?php else: ?><div class="dashboard-empty"><span>✓</span><strong>Everything looks healthy</strong><small>No content issues found.</small></div><?php endif; ?>
       </section>
     </aside>
   </div>

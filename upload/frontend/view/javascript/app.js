@@ -11,6 +11,76 @@ const escapeHtml = (value) =>
 const escapeRegExp = (value) =>
 	String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+const toastRegion = document.createElement('div');
+toastRegion.className = 'ui-toast-region';
+toastRegion.setAttribute('aria-live', 'polite');
+toastRegion.setAttribute('aria-atomic', 'true');
+document.body.append(toastRegion);
+let toastTimer = 0;
+function showToast(message, type = 'success') {
+	clearTimeout(toastTimer);
+	toastRegion.replaceChildren();
+	const toast = document.createElement('div');
+	toast.className = `ui-toast is-${type}`;
+	toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+	toast.textContent = message;
+	toastRegion.append(toast);
+	requestAnimationFrame(() => toast.classList.add('is-visible'));
+	toastTimer = setTimeout(() => {
+		toast.classList.remove('is-visible');
+		setTimeout(() => toast.remove(), 180);
+	}, 2600);
+}
+
+const tooltip = document.createElement('div');
+tooltip.className = 'ui-tooltip';
+tooltip.id = 'ui-tooltip';
+tooltip.setAttribute('role', 'tooltip');
+tooltip.hidden = true;
+document.body.append(tooltip);
+let tooltipTarget = null;
+function hideTooltip() {
+	tooltip.hidden = true;
+	tooltipTarget?.removeAttribute('aria-describedby');
+	tooltipTarget = null;
+}
+function showTooltip(target) {
+	const text = target.dataset.tooltip || target.getAttribute('aria-label');
+	if (!text || target.closest('[hidden]')) return;
+	tooltipTarget = target;
+	tooltip.textContent = text;
+	tooltip.hidden = false;
+	target.setAttribute('aria-describedby', tooltip.id);
+	const bounds = target.getBoundingClientRect();
+	const tooltipBounds = tooltip.getBoundingClientRect();
+	const gap = 8;
+	const leftPlacement = target.dataset.tooltipPlacement === 'left';
+	tooltip.classList.toggle('is-left', leftPlacement);
+	if (leftPlacement) {
+		tooltip.style.top = `${Math.min(innerHeight - gap - tooltipBounds.height / 2, Math.max(gap + tooltipBounds.height / 2, bounds.top + bounds.height / 2))}px`;
+		tooltip.style.left = `${Math.max(gap + tooltipBounds.width, bounds.left - gap)}px`;
+		return;
+	}
+	const top =
+		bounds.bottom + gap + tooltipBounds.height <= innerHeight - gap
+			? bounds.bottom + gap
+			: Math.max(gap, bounds.top - gap - tooltipBounds.height);
+	const left = Math.min(
+		innerWidth - gap - tooltipBounds.width / 2,
+		Math.max(gap + tooltipBounds.width / 2, bounds.left + bounds.width / 2),
+	);
+	tooltip.style.top = `${top}px`;
+	tooltip.style.left = `${left}px`;
+}
+$$('[data-tooltip],button[aria-label]').forEach((target) => {
+	target.addEventListener('mouseenter', () => showTooltip(target));
+	target.addEventListener('mouseleave', hideTooltip);
+	target.addEventListener('focus', () => showTooltip(target));
+	target.addEventListener('blur', hideTooltip);
+});
+addEventListener('scroll', hideTooltip, { passive: true });
+addEventListener('resize', hideTooltip);
+
 if (/mac|iphone|ipad/i.test(navigator.platform || ''))
 	$$('.key-command').forEach((key) => (key.textContent = '⌘'));
 
@@ -59,6 +129,23 @@ document.addEventListener('keydown', (event) => {
 		closeSidebar();
 });
 
+const readingProgress = $('[data-reading-progress] span');
+const backToTop = $('[data-back-to-top]');
+function updateReadingProgress() {
+	const maximum = document.documentElement.scrollHeight - innerHeight;
+	const progress = maximum > 0 ? Math.min(1, Math.max(0, scrollY / maximum)) : 0;
+	if (readingProgress) readingProgress.style.transform = `scaleX(${progress})`;
+	backToTop?.classList.toggle('is-visible', scrollY > Math.min(420, innerHeight * .55));
+}
+if (readingProgress || backToTop) {
+	addEventListener('scroll', updateReadingProgress, { passive: true });
+	addEventListener('resize', updateReadingProgress, { passive: true });
+	updateReadingProgress();
+}
+backToTop?.addEventListener('click', () => {
+	window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
 const sectionMenu = $('[data-section-menu]');
 if (sectionMenu)
 	document.addEventListener('click', (event) => {
@@ -87,12 +174,14 @@ $$('.copy-code').forEach((button) =>
 			await navigator.clipboard.writeText(code);
 			button.textContent = 'Copied';
 			button.classList.add('copied');
+			showToast('Code copied');
 			setTimeout(() => {
 				button.textContent = 'Copy';
 				button.classList.remove('copied');
 			}, 1500);
 		} catch {
 			button.textContent = 'Select text';
+			showToast('Copy is unavailable in this browser.', 'error');
 		}
 	}),
 );
@@ -160,6 +249,7 @@ $$('.heading-anchor').forEach((anchor) =>
 		try {
 			await navigator.clipboard.writeText(location.href);
 			anchor.classList.add('copied');
+			showToast('Heading link copied');
 			setTimeout(() => anchor.classList.remove('copied'), 1200);
 		} catch {}
 	}),
@@ -498,6 +588,7 @@ $('[data-copy-link]')?.addEventListener('click', async (event) => {
 	try {
 		await navigator.clipboard.writeText(location.href);
 		target.textContent = 'Copied';
+		showToast('Page link copied');
 		setTimeout(() => (target.textContent = 'Copy link'), 1300);
 	} catch {}
 });
@@ -514,9 +605,11 @@ $$('[data-copy-markdown]').forEach((button) =>
 			);
 			await navigator.clipboard.writeText(markdown);
 			target.textContent = 'Copied';
+			showToast('Markdown copied');
 			setTimeout(() => (target.innerHTML = original), 1400);
 		} catch {
 			target.textContent = 'Unable to copy';
+			showToast('Markdown could not be copied.', 'error');
 			setTimeout(() => (target.innerHTML = original), 1400);
 		}
 	}),
@@ -530,6 +623,7 @@ $$('.copy-filetree').forEach((button) =>
 		try {
 			await navigator.clipboard.writeText(text);
 			button.textContent = 'Copied';
+			showToast('File tree copied');
 			setTimeout(() => (button.textContent = 'Copy'), 1200);
 		} catch {}
 	}),
@@ -582,30 +676,46 @@ $$('.docs-code-frame').forEach((frame) => {
 			try {
 				await navigator.clipboard.writeText(text);
 				event.currentTarget.textContent = 'Copied';
+				showToast('Code copied');
 				setTimeout(() => (event.currentTarget.textContent = 'Copy'), 1200);
 			} catch {}
 		},
 	);
 });
+function openImageLightbox(image) {
+	const modal = document.createElement('dialog');
+	modal.className = 'image-lightbox';
+	modal.innerHTML = `<button type="button" aria-label="Close image">×</button><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}">`;
+	document.body.append(modal);
+	modal.showModal();
+	const close = () => modal.close();
+	$('button', modal).addEventListener('click', close);
+	modal.addEventListener('click', (event) => {
+		if (event.target === modal) close();
+	});
+	modal.addEventListener('close', () => modal.remove(), { once: true });
+}
+
 $$('.zoom-image').forEach((button) =>
 	button.addEventListener('click', () => {
 		const image = $('img', button);
-		if (!image) return;
-		const modal = document.createElement('dialog');
-		modal.className = 'image-lightbox';
-		modal.innerHTML = `<button type="button" aria-label="Close image">×</button><img src="${escapeHtml(image.src)}" alt="${escapeHtml(image.alt)}">`;
-		document.body.append(modal);
-		modal.showModal();
-		const close = () => {
-			modal.close();
-			modal.remove();
-		};
-		$('button', modal).addEventListener('click', close);
-		modal.addEventListener('click', (event) => {
-			if (event.target === modal) close();
-		});
+		if (image) openImageLightbox(image);
 	}),
 );
+
+$$('.markdown-body img').forEach((image) => {
+	if (image.closest('.zoom-image') || image.closest('a')) return;
+	image.classList.add('markdown-zoomable');
+	image.tabIndex = 0;
+	image.setAttribute('role', 'button');
+	image.setAttribute('aria-label', `Enlarge ${image.alt || 'image'}`);
+	image.addEventListener('click', () => openImageLightbox(image));
+	image.addEventListener('keydown', (event) => {
+		if (event.key !== 'Enter' && event.key !== ' ') return;
+		event.preventDefault();
+		openImageLightbox(image);
+	});
+});
 
 $$('.copy-command').forEach((button) =>
 	button.addEventListener('click', async () => {
@@ -615,6 +725,7 @@ $$('.copy-command').forEach((button) =>
 		try {
 			await navigator.clipboard.writeText(command);
 			button.textContent = 'Copied';
+			showToast('Command copied');
 			setTimeout(() => (button.textContent = 'Copy command'), 1300);
 		} catch {
 			button.textContent = 'Select command';
@@ -622,34 +733,60 @@ $$('.copy-command').forEach((button) =>
 	}),
 );
 
+const feedbackContainer = $('[data-feedback-page]');
 const feedbackButtons = $$('.page-feedback button');
-if (feedbackButtons.length) {
-	const feedbackKey = `lightdocs-feedback:${location.pathname}`;
+if (feedbackContainer && feedbackButtons.length) {
+	const feedbackKey = `lightdocs-feedback:${feedbackContainer.dataset.feedbackPage}`;
+	const feedbackTokenKey = 'lightdocs-feedback-token';
+	const feedbackSummary = $('[data-feedback-summary]', feedbackContainer);
 	const applyFeedback = (value) =>
 		feedbackButtons.forEach((button) =>
-			button.setAttribute(
-				'aria-pressed',
-				String(
-					(button.dataset.feedback ||
-						button.textContent.trim().toLowerCase()) === value,
-				),
-			),
+			button.setAttribute('aria-pressed', String(button.dataset.feedback === value)),
 		);
+	const token = () => {
+		try {
+			const saved = localStorage.getItem(feedbackTokenKey);
+			if (saved) return saved;
+			const created = crypto.randomUUID().replace(/-/g, '_');
+			localStorage.setItem(feedbackTokenKey, created);
+			return created;
+		} catch {
+			return `${Date.now()}_${Math.random().toString(36).slice(2)}_feedback`;
+		}
+	};
+	const renderFeedbackSummary = (summary) => {
+		if (!feedbackSummary) return;
+		feedbackSummary.textContent = summary.total > 0
+			? `${summary.helpful_percent}% helpful from ${summary.total} response${summary.total === 1 ? '' : 's'}`
+			: 'Be the first to respond';
+	};
 	feedbackButtons.forEach((button) =>
-		button.addEventListener('click', () => {
-			const value =
-				button.dataset.feedback || button.textContent.trim().toLowerCase();
-			applyFeedback(value);
+		button.addEventListener('click', async () => {
+			const vote = button.dataset.feedback;
+			if (!vote) return;
+			feedbackButtons.forEach((candidate) => (candidate.disabled = true));
 			try {
-				localStorage.setItem(feedbackKey, value);
-			} catch {}
-			const container = button.closest('.page-feedback');
-			if (container && !$('.feedback-thanks', container)) {
-				const thanks = document.createElement('span');
-				thanks.className = 'feedback-thanks';
-				thanks.setAttribute('role', 'status');
-				thanks.textContent = 'Thanks for the feedback';
-				container.append(thanks);
+				const response = await fetch('/feedback', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+					body: new URLSearchParams({
+						path: feedbackContainer.dataset.feedbackPage || '',
+						token: token(),
+						vote,
+					}),
+				});
+				const result = await response.json();
+				if (!response.ok) throw new Error(result.error || 'Feedback could not be saved.');
+				applyFeedback(vote);
+				renderFeedbackSummary(result.summary || {});
+				try {
+					localStorage.setItem(feedbackKey, vote);
+				} catch {}
+				showToast('Thanks for the feedback');
+			} catch (error) {
+				showToast(error.message || 'Feedback could not be saved.', 'error');
+			} finally {
+				feedbackButtons.forEach((candidate) => (candidate.disabled = false));
 			}
 		}),
 	);

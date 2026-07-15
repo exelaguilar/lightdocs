@@ -12,7 +12,10 @@ abstract class Admin extends Controller
 	protected function authorize(): void
 	{
 		$this->requireEditorEnabled();
-		if (empty($_SESSION['lightdocs_admin'])) Response::redirect('/admin/login');
+		if (empty($_SESSION['lightdocs_admin']) || !$this->accounts?->sessionIsValid(session_id(), (int) ($_SESSION['lightdocs_user_id'] ?? 0))) {
+			$_SESSION = [];
+			Response::redirect('/admin/login');
+		}
 	}
 
 	protected function permission(string $name): void
@@ -33,5 +36,19 @@ abstract class Admin extends Controller
 		$payload['actor_id'] = (int) ($_SESSION['lightdocs_user_id'] ?? 0);
 		$payload['actor'] = (string) ($_SESSION['lightdocs_user']['username'] ?? 'admin');
 		$this->events->dispatch('content.changed', $payload);
+	}
+
+	/** @return array{message:string,error:string} */
+	protected function consumeFlash(string $key): array
+	{
+		$flash = $_SESSION['lightdocs_flash'][$key] ?? [];
+		unset($_SESSION['lightdocs_flash'][$key]);
+		return ['message' => (string) ($flash['message'] ?? ''), 'error' => (string) ($flash['error'] ?? '')];
+	}
+
+	protected function redirectWithFlash(string $path, string $key, string $message = '', string $error = ''): never
+	{
+		$_SESSION['lightdocs_flash'][$key] = ['message' => $message, 'error' => $error];
+		Response::redirect($path);
 	}
 }

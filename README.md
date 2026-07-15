@@ -59,6 +59,8 @@ The current release is [v0.1.11](https://github.com/exelaguilar/lightdocs/releas
 - Reusable templates and snippet management
 - One-hour signed draft previews
 - Built-in accounts with Administrator, Editor, and Viewer roles
+- Custom roles, explicit permissions, active-session management, and sign-in rate limiting
+- Dedicated media, navigation, Markdown import, backup, audit, and developer-tool screens
 - A modular Extension Manager with per-extension settings pages
 - Synchronous lifecycle events with enable/disable controls and custom event definitions
 
@@ -509,9 +511,12 @@ lightdocs rollback
 The Content Studio is always available at `/admin`. The sidebar provides the editor, settings, users, extensions, events, developer tools, exports, and extension-owned pages. The account menu contains profile settings and sign out.
 
 - `/admin/users` manages local accounts and the built-in Administrator, Editor, and Viewer roles.
-- `/admin/profile` updates the signed-in user's display name and password.
+- `/admin/users/new` and `/admin/users/edit` create and update individual accounts; `/admin/roles` manages custom roles and their explicit permissions.
+- `/admin/profile` updates the signed-in user's display name and password, shows active sessions, and can sign out other devices.
+- `/admin/media`, `/admin/navigation`, and `/admin/import` manage uploaded assets, reader navigation metadata, and trusted Markdown ZIP imports without editing support files by hand.
+- `/admin/backups` creates recovery archives and restores a selected archive. Enable **Include database** in Backup settings when accounts, roles, extension state, events, and audit history must travel with the archive.
 - `/admin/extensions` discovers extensions from `upload/extension/*/extension.json`, then enables or disables them without hardcoding extension behavior into the base application.
-- `/admin/extensions/{name}/settings` configures an enabled extension on its own page.
+- `/admin/extensions/{name}/settings` configures an enabled extension on its own page. Administrators can also install a ZIP package created by a trusted extension author; an extension package contains executable PHP and must be treated like application code.
 - `/admin/events` manages declared listener states and documents custom event names. Defining an event does not execute PHP; application or extension code must dispatch it and register a listener.
 - `/admin/developer` provides safe cache clearing, index rebuilds, and session reset. These actions do not delete canonical content or uploads.
 
@@ -530,6 +535,7 @@ Keep framework changes consistent with [`CODING_STANDARD.md`](CODING_STANDARD.md
 - Uploads are restricted by detected MIME type.
 - Private pages require an authenticated Studio session and are excluded from public navigation, search, raw Markdown, sitemaps, static builds, and LLM exports.
 - Lightdocs provides local accounts with built-in roles and permissions for one documentation installation. It is not a multi-tenant authorization platform.
+- Local password sign-in is rate-limited after repeated failures, and active administrative sessions can be revoked from the profile screen.
 
 ## License
 

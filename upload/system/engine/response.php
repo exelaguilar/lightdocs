@@ -33,6 +33,21 @@ final class Response
 		exit;
 	}
 
+	public static function file(string $path, string $type, string $disposition = 'inline'): never
+	{
+		if (!is_file($path)) {
+			self::text('File not found.', 404);
+		}
+		http_response_code(200);
+		header('Content-Type: ' . $type);
+		header('Content-Length: ' . filesize($path));
+		header('Content-Disposition: ' . $disposition . '; filename="' . basename($path) . '"');
+		header('Cache-Control: public, max-age=3600');
+		header('X-Content-Type-Options: nosniff');
+		readfile($path);
+		exit;
+	}
+
 	public static function redirect(string $url, int $status = 303): never
 	{
 		header('Location: ' . $url, true, $status);

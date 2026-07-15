@@ -55,6 +55,9 @@ final readonly class Request
 				'/admin/reorder' => 'editor/editor.reorder',
 				'/admin/graph' => 'tools/tools.graph',
 				'/admin/health' => 'tools/tools.health',
+				'/admin/media' => 'tools/tools.media',
+				'/admin/navigation' => 'tools/tools.navigation',
+				'/admin/import' => 'tools/tools.import',
 				'/admin/export' => 'export/export',
 				'/admin/export/download' => 'export/export.download',
 				'/admin/extensions' => 'tools/tools.extensions',
@@ -62,12 +65,17 @@ final readonly class Request
 				'/admin/audit' => 'tools/tools.audit',
 				'/admin/backups' => 'tools/tools.backups',
 				'/admin/backups/download' => 'tools/tools.backupDownload',
+				'/admin/backups/restore' => 'tools/tools.backupRestore',
 				'/admin/remote-sync' => 'tools/tools.remoteSync',
 				'/admin/developer' => 'tools/tools.developer',
 				'/admin/users' => 'common/users',
 				'/admin/users/new' => 'common/users.create',
 				'/admin/users/edit' => 'common/users.edit',
+				'/admin/roles/add' => 'common/roles.create',
+				'/admin/roles/edit' => 'common/roles.edit',
+				'/admin/roles' => 'common/roles',
 				'/admin/profile' => 'common/profile',
+				'/admin/profile/revoke-sessions' => 'common/profile.revokeSessions',
 			];
 
 			return $routes[$path] ?? 'error/not_found';
@@ -75,6 +83,7 @@ final readonly class Request
 
 		$routes = [
 			'/healthz' => 'common/reader.health',
+			'/feedback' => 'common/reader.feedback',
 			'/preview' => 'common/reader.sharedPreview',
 			'/search' => 'common/reader.search',
 			'/search-index.json' => 'common/reader.searchIndex',
@@ -90,6 +99,10 @@ final readonly class Request
 
 		if (preg_match('#^/llms/[^/]+\.txt$#', $path)) {
 			return 'common/reader.llms';
+		}
+
+		if (str_starts_with($path, '/uploads/')) {
+			return 'common/reader.asset';
 		}
 
 		if (str_ends_with($path, '.md')) {

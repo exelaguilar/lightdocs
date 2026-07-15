@@ -9,6 +9,7 @@ use System\Library\Content\ContentRepository;
 use System\Library\Content\DirectiveRegistry;
 use System\Library\DB;
 use System\Library\ExtensionState;
+use ZipArchive;
 
 final class ExtensionManager
 {
@@ -34,17 +35,18 @@ final class ExtensionManager
 	private array $navigation = [];
 
 	private string $registering = '';
+	private readonly string $directory;
 
 	private ?DirectiveRegistry $current_directives = null;
 
 	private ExtensionState $state;
 
-	public function __construct(array $config, DB $database, ContentRepository $repository, DirectiveRegistry $directives, private readonly Startup $startups)
+	public function __construct(private readonly array $config, DB $database, ContentRepository $repository, DirectiveRegistry $directives, private readonly Startup $startups)
 	{
 		$this->state = new ExtensionState($database);
 		$this->current_directives = $directives;
-		$directory = rtrim((string) ($config['extension_dir'] ?? DIR_ROOT . 'extension'), '/\\');
-		$this->discover($directory);
+		$this->directory = rtrim((string) ($config['extension_dir'] ?? DIR_ROOT . 'extension'), '/\\');
+		$this->discover($this->directory);
 
 		foreach ($this->manifests as $name => $manifest) {
 			$this->state->syncExtension($name, (string) ($manifest['version'] ?? ''), (bool) ($manifest['default_enabled'] ?? false));
@@ -60,6 +62,7 @@ final class ExtensionManager
 		foreach ($this->manifests as $name => $manifest) {
 			if (!$this->state->isExtensionEnabled($name)) continue;
 			$class = (string) ($manifest['class'] ?? '');
+			$this->loadClass($name, $class);
 			if ($class === '' || !class_exists($class)) throw new RuntimeException('Extension class is unavailable: ' . $name);
 			$extension = new $class(new ExtensionContext($config, $repository, $directives, $database, $this->state->settings($name)));
 			if (!$extension instanceof ExtensionInterface) throw new RuntimeException('Extension class is invalid: ' . $name);
@@ -78,6 +81,13 @@ final class ExtensionManager
 			if (!is_array($manifest) || !preg_match('/^[a-z0-9_]+$/', (string) ($manifest['name'] ?? ''))) continue;
 			$this->manifests[(string) $manifest['name']] = $manifest;
 		}
+	}
+
+	private function loadClass(string $name, string $class): void
+	{
+		if ($class === '' || class_exists($class, false)) return;
+		$path = $this->directory . '/' . $name . '/extension.php';
+		if (is_file($path)) require_once $path;
 	}
 
 	public function add(ExtensionInterface $extension): self
@@ -211,6 +221,7 @@ final class ExtensionManager
 				'class' => (string) ($manifest['class'] ?? ''),
 				'enabled' => $this->state->isExtensionEnabled($name),
 				'loaded' => isset($this->loaded[$name]),
+				'removable' => is_file($this->directory . '/' . $name . '/.lightdocs-installed'),
 				'services' => $this->extension_services[$name] ?? [],
 				'events' => $this->extension_events[$name] ?? array_values(array_map(static fn (array $event): string => (string) $event['code'], array_filter(($manifest['events'] ?? []), 'is_array'))),
 			];
@@ -254,5 +265,53 @@ final class ExtensionManager
 			$items[$section] = $entries;
 		}
 		return $items;
+	}
+
+	public function install(array $upload): string
+	{
+		if (!class_exists(ZipArchive::class)) throw new RuntimeException('ZIP support is unavailable.');
+		if (($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($upload['tmp_name'] ?? ''))) throw new RuntimeException('Choose a valid extension ZIP archive.');
+		$temporary = rtrim((string) ($this->config['state_root'] ?? sys_get_temp_dir()), '/\\') . '/extension-install-' . bin2hex(random_bytes(8));
+		if (!mkdir($temporary, 0700, true) && !is_dir($temporary)) throw new RuntimeException('Could not prepare the extension installer.');
+		$zip = new ZipArchive();
+		if ($zip->open((string) $upload['tmp_name']) !== true) throw new RuntimeException('The extension archive could not be opened.');
+		try {
+			for ($index = 0; $index < $zip->numFiles; $index++) {
+				$name = (string) $zip->getNameIndex($index);
+				if ($name === '' || str_contains($name, '..') || str_starts_with($name, '/') || preg_match('/^[A-Za-z]:[\\\\\/]/', $name)) throw new RuntimeException('The extension contains an unsafe path.');
+			}
+			if (!$zip->extractTo($temporary)) throw new RuntimeException('The extension archive could not be extracted.');
+		} finally { $zip->close(); }
+		$manifest_path = is_file($temporary . '/extension.json') ? $temporary . '/extension.json' : (($matches = glob($temporary . '/*/extension.json') ?: []) ? $matches[0] : '');
+		if ($manifest_path === '') throw new RuntimeException('The extension archive must contain extension.json.');
+		$manifest = json_decode((string) file_get_contents($manifest_path), true);
+		$name = is_array($manifest) ? (string) ($manifest['name'] ?? '') : '';
+		$class = is_array($manifest) ? (string) ($manifest['class'] ?? '') : '';
+		if (!preg_match('/^[a-z0-9_]+$/', $name) || $class === '') throw new RuntimeException('The extension manifest is invalid.');
+		$source = dirname($manifest_path);
+		$target = $this->directory . '/' . $name;
+		if (is_dir($target) && !is_file($target . '/.lightdocs-installed')) throw new RuntimeException('A bundled extension with that name cannot be replaced.');
+		if (is_dir($target)) $this->removeDirectory($target);
+		if (!is_dir($this->directory) && !mkdir($this->directory, 0755, true) && !is_dir($this->directory)) throw new RuntimeException('The extension directory is not writable.');
+		if (!rename($source, $target)) throw new RuntimeException('The extension could not be installed.');
+		file_put_contents($target . '/.lightdocs-installed', date(DATE_ATOM), LOCK_EX);
+		$this->removeDirectory($temporary);
+		return $name;
+	}
+
+	public function remove(string $name): void
+	{
+		if (!preg_match('/^[a-z0-9_]+$/', $name)) throw new RuntimeException('Invalid extension name.');
+		$target = $this->directory . '/' . $name;
+		if (!is_file($target . '/.lightdocs-installed')) throw new RuntimeException('Bundled extensions cannot be removed from the admin UI.');
+		$this->removeDirectory($target);
+	}
+
+	private function removeDirectory(string $directory): void
+	{
+		if (!is_dir($directory)) return;
+		$iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \RecursiveDirectoryIterator::SKIP_DOTS), \RecursiveIteratorIterator::CHILD_FIRST);
+		foreach ($iterator as $file) $file->isDir() ? @rmdir($file->getPathname()) : @unlink($file->getPathname());
+		@rmdir($directory);
 	}
 }

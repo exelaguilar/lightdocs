@@ -18,6 +18,8 @@ use System\Engine\ExtensionManager;
 use System\Engine\Startup;
 use System\Engine\Model;
 use System\Library\Content\DirectiveRegistry;
+use System\Library\Content\NavigationManager;
+use System\Library\User;
 
 $config = require dirname(__DIR__) . '/upload/system/startup.php';
 $failures = [];
@@ -57,6 +59,10 @@ $check(($stats['settings'] ?? 0) >= 4, 'SQLite site settings mirror is incomplet
 $check($index->search('deployment') !== [], 'SQLite search returned no results for a known term.');
 $runbook = new Page('', 'runbook.md', '/runbook', 'Runbook', '', "- [ ] Verify the deployment.\n", ['type' => 'runbook'], time());
 $check(str_contains($renderer->render($runbook)->html, 'type="checkbox"'), 'Runbook task lists did not render interactive progress inputs.');
+$scheduled = new Page('', 'scheduled.md', '/scheduled', 'Scheduled', '', '', ['status' => 'published', 'publish_at' => gmdate(DATE_ATOM, time() + 3600)], time());
+$check($scheduled->isScheduled() && $scheduled->isDraft(), 'Scheduled publishing did not keep a future page out of public routing.');
+$review = new Page('', 'review.md', '/review', 'Review', '', '', ['status' => 'review'], time());
+$check($review->isDraft() && $review->status() === 'review', 'Review status did not remain non-public.');
 $check((new GitHistory($config['site_root'], false))->inspect()['state'] === 'disabled', 'Optional Git history did not remain disabled by default.');
 $check(in_array((new GitHistory($config['site_root'], true))->inspect()['state'], ['ready', 'empty', 'not_repository', 'unavailable'], true), 'Optional Git history did not degrade safely.');
 
@@ -103,6 +109,36 @@ $check(str_contains($savedEnv, 'DOCS_ADMIN_PASSWORD=keep-this-exactly'), 'Studio
 foreach (glob($settingsRoot . '/*') ?: [] as $file) @unlink($file);
 @unlink($envPath);
 @rmdir($settingsRoot);
+
+$navigationRoot = $config['cache_dir'] . '/navigation-smoke-' . bin2hex(random_bytes(3));
+mkdir($navigationRoot . '/guides', 0775, true);
+$navigation = new NavigationManager($navigationRoot);
+$navigation->saveSections([['path' => 'guides', 'title' => 'Guides', 'description' => 'Smoke section', 'icon' => 'book', 'order' => 10]]);
+$navigation->saveFolder(['path' => 'guides', 'title' => 'Guides', 'description' => 'Smoke folder', 'icon' => 'book', 'order' => 10, 'collapsed' => true]);
+$check(($navigation->sections()[0]['path'] ?? '') === 'guides', 'Navigation section settings could not be persisted.');
+$check(($navigation->folders()[0]['collapsed'] ?? false) === true, 'Navigation folder metadata could not be persisted.');
+@unlink($navigationRoot . '/_sections.yaml');
+@unlink($navigationRoot . '/guides/_meta.yaml');
+@rmdir($navigationRoot . '/guides');
+@rmdir($navigationRoot);
+
+$accountsRoot = $config['cache_dir'] . '/accounts-smoke-' . bin2hex(random_bytes(3));
+$accountsDb = new DB($accountsRoot . '/lightdocs.sqlite');
+(new Schema($accountsDb, new Event()))->migrate();
+$accounts = new User($accountsDb, 'SmokePassword-123');
+$account = $accounts->authenticate('admin', 'SmokePassword-123', '127.0.0.1');
+$check($account !== null, 'Seeded administrator could not authenticate.');
+if ($account !== null) {
+	$accounts->registerSession((int) $account['id'], 'smoke-session', '127.0.0.1', 'Smoke test');
+	$check($accounts->sessionIsValid('smoke-session', (int) $account['id']), 'Tracked administrator session was not valid.');
+	$accounts->revokeOtherSessions('different-session', (int) $account['id']);
+	$check(!$accounts->sessionIsValid('smoke-session', (int) $account['id']), 'Administrator session revocation did not take effect.');
+}
+unset($accounts, $accountsDb);
+@unlink($accountsRoot . '/lightdocs.sqlite');
+@unlink($accountsRoot . '/lightdocs.sqlite-shm');
+@unlink($accountsRoot . '/lightdocs.sqlite-wal');
+@rmdir($accountsRoot);
 
 if ($failures !== []) {
     fwrite(STDERR, implode(PHP_EOL, $failures) . PHP_EOL);
