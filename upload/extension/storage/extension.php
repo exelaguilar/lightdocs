@@ -67,7 +67,7 @@ final class Extension implements ExtensionInterface, AssetStorage
 				'method' => 'PUT',
 				'header' => "Host: " . $host . $port . "\r\nContent-Type: " . $mime . "\r\nx-amz-content-sha256: " . $payload_hash . "\r\nx-amz-date: " . $amz_date . "\r\nAuthorization: " . $authorization . "\r\n",
 				'content' => $contents,
-				'timeout' => 15,
+				'timeout' => max(1, min(120, (int) ($settings['timeout'] ?? 15))),
 				'ignore_errors' => true,
 			],
 		];

@@ -3,7 +3,13 @@
 
 declare(strict_types=1);
 
-use System\Console\Console;
+define('APP_CONTEXT', 'frontend');
 
-$config = require dirname(__DIR__) . '/upload/system/startup.php';
-exit((new Console($config))->run($argv));
+require dirname(__DIR__) . '/upload/system/startup.php';
+
+$autoloader = new \System\Engine\Autoloader();
+$autoloader->register('System', DIR_SYSTEM);
+$autoloader->register('Frontend', DIR_ROOT . 'frontend/');
+$autoloader->register('Extension', DIR_ROOT . 'extension/');
+
+exit((new \System\Console\Console())->run($argv));

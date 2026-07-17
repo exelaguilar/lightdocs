@@ -8,15 +8,19 @@ use System\Library\Content\Page;
 use System\Library\Content\RenderedDocument;
 use System\Library\Content\SearchIndexer;
 use System\Library\Content\SearchService;
-use System\Library\DB;
-use System\Engine\Event;
 use System\Engine\Model;
+use System\Engine\Registry;
 
 final class SqliteSearchService extends Model implements SearchService
 {
-	public function __construct(DB $database, Event $events, private readonly ContentIndex $index, private readonly SearchIndexer $record_builder)
+	private ContentIndex $index;
+	private SearchIndexer $record_builder;
+
+	public function __construct(Registry $registry)
 	{
-		parent::__construct($database, $events);
+		parent::__construct($registry);
+		$this->index = $registry->get('index');
+		$this->record_builder = $registry->get('json_search');
 	}
 
 	public function build(): array

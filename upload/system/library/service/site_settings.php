@@ -54,7 +54,9 @@ final class SiteSettings
 		}
 		$this->write($this->site_path, $site);
 		$this->write($this->theme_path, $theme);
-		$this->events->dispatch('settings.saved', ['site' => $site, 'theme' => $theme]);
+		$payload = ['site' => $site, 'theme' => $theme];
+		$event_args = [&$payload];
+		$this->events->trigger('settings.saved', $event_args);
 	}
 
 	private function updateEnvironment(array $values): void

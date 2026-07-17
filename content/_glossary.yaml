@@ -1,0 +1,19 @@
+# Canonical shared terms for the reader glossary and Content Studio.
+container:
+  term: Container
+  definition: An isolated operating-system environment that shares the host kernel.
+  aliases:
+    - LXC container
+hypervisor:
+  term: Hypervisor
+  definition: Software that creates and runs virtual machines on a physical host.
+proxmox-ve:
+  term: Proxmox VE
+  definition: An open-source platform for managing virtual machines, containers, storage, and clustering.
+  aliases:
+    - Proxmox
+virtual-machine:
+  term: Virtual machine
+  definition: A software-defined computer with its own operating system and virtual hardware.
+  aliases:
+    - VM

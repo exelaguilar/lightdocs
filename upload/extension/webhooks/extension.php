@@ -39,7 +39,7 @@ final class Extension implements ExtensionInterface, WebhookProvider
 		$url = trim((string) ($this->context->settings['endpoint_url'] ?? ''));
 		$secret = (string) ($this->context->settings['secret'] ?? '');
 		if ($url === '' || $secret === '' || !str_starts_with(strtolower($url), 'https://')) return;
-		$body = json_encode(['event' => $event, 'payload' => $payload, 'sent_at' => gmdate(DATE_ATOM)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+		$body = json_encode(['event' => $event, 'payload' => !empty($this->context->settings['include_payload']) ? $payload : [], 'sent_at' => gmdate(DATE_ATOM)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 		$headers = 'Content-Type: application/json' . "\r\n" . 'X-Lightdocs-Event: ' . $event . "\r\n" . 'X-Lightdocs-Signature: sha256=' . hash_hmac('sha256', $body, $secret) . "\r\n";
 		$options = ['http' => ['method' => 'POST', 'header' => $headers, 'content' => $body, 'timeout' => max(1, min(30, (int) ($this->context->settings['timeout'] ?? 5))), 'ignore_errors' => true]];
 		file_get_contents($url, false, stream_context_create($options));

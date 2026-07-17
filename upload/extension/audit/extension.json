@@ -3,10 +3,13 @@
   "class": "Extension\\Audit\\Extension",
   "version": "1.0.0",
   "description": "Optional local audit trail for framework and content events.",
+  "type": "developer",
   "default_enabled": false,
   "contexts": ["admin", "public"],
-  "navigation": [{"section": "Tools", "label": "Audit log", "route": "/admin/audit", "active": "audit", "sort_order": 15}],
+  "navigation": [{"section": "Tools", "label": "Audit log", "route": "/admin/audit", "active": "audit", "icon": "developer", "sort_order": 15}],
   "settings": [
-    {"key": "retention_days", "label": "Retention period", "type": "number", "default": 90, "min": 1, "max": 3650, "description": "Delete audit records older than this many days."}
+    {"key": "retention_days", "label": "Retention period", "type": "number", "default": 90, "min": 1, "max": 3650, "description": "Delete audit records older than this many days."},
+    {"key": "events", "label": "Recorded events", "type": "text", "default": "content.changed,index.rebuilt,settings.saved", "description": "Comma-separated framework events to record. Only events emitted by the application can be captured."},
+    {"key": "record_payloads", "label": "Record event payloads", "type": "boolean", "default": true, "description": "Store event details in the audit log. Disable this when metadata should not be retained."}
   ]
 }

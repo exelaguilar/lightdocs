@@ -25,6 +25,7 @@ final class MarkdownRenderer
 		private readonly array $site_data = [],
 		private readonly string $content_root = '',
 		DirectiveRegistry|array $directives = [],
+		private readonly ?Glossary $glossary = null,
 	)
 	{
 		$this->directives = $directives instanceof DirectiveRegistry ? $directives : new DirectiveRegistry($directives);
@@ -139,9 +140,12 @@ final class MarkdownRenderer
 			}
 			$used[$id] = true;
 			$heading->setAttribute('id', $id);
+			$heading->setAttribute('class', trim($heading->getAttribute('class') . ' relative group'));
 			$anchor = $document->createElement('a');
 			$anchor->setAttribute('href', '#' . $id);
-			$anchor->setAttribute('class', 'heading-anchor');
+			$anchor->setAttribute('class', 'absolute [inset-inline-end:calc(100%+8px)] top-[.18em] opacity-0 text-[.72em] font-normal text-[var(--faint)] no-underline group-hover:opacity-100 focus:opacity-100');
+			$anchor->setAttribute('data-heading-anchor', '');
+			$anchor->textContent = '#';
 			$anchor->setAttribute('aria-label', 'Link to ' . $title);
 			$heading->appendChild($anchor);
 			if (in_array(strtolower($heading->tagName), ['h2', 'h3'], true)) {
@@ -153,6 +157,7 @@ final class MarkdownRenderer
 		for ($task_parent = $first_task?->parentNode; $task_parent !== null && $task_parent !== $root; $task_parent = $task_parent->parentNode) {
 			if ($task_parent instanceof DOMElement && strtolower($task_parent->tagName) === 'li') {
 				if (!$task_parent->hasAttribute('id')) $task_parent->setAttribute('id', 'runbook-checklist');
+				$task_parent->setAttribute('class', trim($task_parent->getAttribute('class') . ' scroll-mt-[88px]'));
 				break;
 			}
 		}
@@ -160,10 +165,12 @@ final class MarkdownRenderer
 		foreach ($xpath->query('//*[@data-inline-toc]', $root) ?: [] as $inline_toc) {
 			if (!$inline_toc instanceof DOMElement || $headings === []) continue;
 			$list = $document->createElement('ul');
+			$list->setAttribute('class', 'mt-2.5 columns-2 gap-[30px] p-0 max-[1200px]:columns-1');
 			foreach ($headings as $item) {
 				$entry = $document->createElement('li');
-				$entry->setAttribute('class', 'toc-level-' . $item['level']);
+				$entry->setAttribute('class', 'm-0 break-inside-avoid');
 				$link = $document->createElement('a', $item['title']);
+				$link->setAttribute('class', 'block py-0.5 text-xs no-underline text-[var(--muted)] hover:text-[var(--brand-strong)]');
 				$link->setAttribute('href', '#' . $item['id']);
 				$entry->appendChild($link);
 				$list->appendChild($entry);
@@ -183,6 +190,7 @@ final class MarkdownRenderer
 				$link->setAttribute('rel', 'noopener noreferrer');
 			}
 		}
+		$this->enhanceGlossary($xpath, $root);
 
 		foreach ($xpath->query('//pre/code', $root) ?: [] as $code) {
 			if (!$code instanceof DOMElement || !$code->parentNode instanceof DOMElement) {
@@ -195,18 +203,25 @@ final class MarkdownRenderer
 				$this->highlight($document, $code, $language);
 			}
 			$wrapper = $document->createElement('div');
-			$wrapper->setAttribute('class', 'code-block');
+			$wrapper->setAttribute('class', 'relative my-7 overflow-hidden rounded-[var(--radius-lg)] border border-[color-mix(in_srgb,var(--border)_55%,#333)] bg-[var(--code)] shadow-[0_8px_24px_rgba(0,0,0,.08)] print:break-inside-avoid');
+			$wrapper->setAttribute('data-code-block', '');
+			$pre->setAttribute('class', 'm-0 overflow-auto p-[19px_21px] font-mono text-[13px] leading-[1.7] text-[var(--code-text)] [tab-size:2] print:whitespace-pre-wrap');
+			$code->setAttribute('class', trim($code->getAttribute('class') . ' [font:inherit]'));
 			if ($pre->parentNode) {
 				$pre->parentNode->replaceChild($wrapper, $pre);
 				$wrapper->appendChild($pre);
 			}
 			$toolbar = $document->createElement('div');
-			$toolbar->setAttribute('class', 'code-toolbar');
+			$toolbar->setAttribute('class', 'flex h-[39px] items-center justify-between border-b border-[#24242a] py-0 ps-3.5 pe-2 font-mono text-xs uppercase tracking-[.07em] text-[#81818b]');
 			$label = $document->createElement('span', $language ?: 'code');
+			$dot = $document->createElement('span');
+			$dot->setAttribute('class', 'me-[7px] inline-block h-1.5 w-1.5 rounded-full bg-[#4b4b55]');
+			$toolbar->appendChild($label);
+			$label->insertBefore($dot, $label->firstChild);
 			$button = $document->createElement('button', 'Copy');
 			$button->setAttribute('type', 'button');
-			$button->setAttribute('class', 'copy-code');
-			$toolbar->appendChild($label);
+			$button->setAttribute('class', 'min-w-[54px] rounded-md border border-[#303039] bg-[#19191e] px-2 py-1 text-[11px] text-[#aaaab5] hover:border-[#4b4b58] hover:bg-[#222228] hover:text-white');
+			$button->setAttribute('data-copy-code', '');
 			$toolbar->appendChild($button);
 			$wrapper->insertBefore($toolbar, $pre);
 		}
@@ -218,7 +233,8 @@ final class MarkdownRenderer
 				continue;
 			}
 			$wrapper = $document->createElement('div');
-			$wrapper->setAttribute('class', 'table-scroll');
+			$wrapper->setAttribute('class', 'my-7 max-w-full overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)]');
+			$table->setAttribute('class', trim($table->getAttribute('class') . ' m-0 border-0 rounded-none'));
 			$table->parentNode->replaceChild($wrapper, $table);
 			$wrapper->appendChild($table);
 		}
@@ -244,6 +260,28 @@ final class MarkdownRenderer
 		return new RenderedDocument($body_html, $headings, $plain);
 	}
 
+	private function enhanceGlossary(DOMXPath $xpath, ?DOMElement $root): void
+	{
+		if ($root === null || $this->glossary === null) {
+			return;
+		}
+		foreach ($xpath->query('.//a[@href]', $root) ?: [] as $link) {
+			if (!$link instanceof DOMElement || !preg_match('~^/glossary#([a-z0-9][a-z0-9_-]*)$~i', $link->getAttribute('href'), $match)) {
+				continue;
+			}
+			$slug = strtolower($match[1]);
+			$term = $this->glossary->find($slug);
+			if ($term === null) {
+				continue;
+			}
+			$class = trim($link->getAttribute('class') . ' inline cursor-help border-0 border-b border-dashed border-[color-mix(in_srgb,var(--brand)_62%,transparent)] bg-transparent p-0 font-semibold leading-inherit text-[var(--brand-strong)] hover:border-solid hover:text-[var(--brand)] aria-expanded:border-solid aria-expanded:text-[var(--brand)] focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-[var(--brand)] focus-visible:outline-offset-3');
+			$link->setAttribute('class', $class);
+			$link->setAttribute('data-glossary-term', $slug);
+			$link->setAttribute('data-glossary-definition', $term['definition']);
+			$link->setAttribute('aria-label', $link->textContent . ': ' . $term['definition']);
+		}
+	}
+
 	private function highlight(DOMDocument $document, DOMElement $code, string $language): void
 	{
 		try {
@@ -254,6 +292,31 @@ final class MarkdownRenderer
 			libxml_clear_errors();
 			$container = $fragment_document->getElementsByTagName('div')->item(0);
 			if ($container) {
+				$token_utilities = [
+					'hl-keyword' => 'text-[#c4a7ff]',
+					'hl-type' => 'text-[#c4a7ff]',
+					'hl-string' => 'text-[#a6e3a1]',
+					'hl-value' => 'text-[#a6e3a1]',
+					'hl-comment' => 'text-[#71717d] italic',
+					'hl-function' => 'text-[#89b4fa]',
+					'hl-property' => 'text-[#89b4fa]',
+					'hl-number' => 'text-[#fab387]',
+					'hl-tag' => 'text-[#f38ba8]',
+					'hl-attribute' => 'text-[#f9e2af]',
+				];
+				foreach ($container->getElementsByTagName('span') as $token) {
+					$classes = preg_split('/\s+/', trim($token->getAttribute('class'))) ?: [];
+					$utilities = [];
+					foreach ($classes as $class) {
+						if (isset($token_utilities[$class])) {
+							array_push($utilities, ...explode(' ', $token_utilities[$class]));
+						} elseif (!str_starts_with($class, 'hl-') && $class !== '') {
+							$utilities[] = $class;
+						}
+					}
+					if ($utilities === []) $token->removeAttribute('class');
+					else $token->setAttribute('class', implode(' ', array_unique($utilities)));
+				}
 				while ($code->firstChild) {
 					$code->removeChild($code->firstChild);
 				}

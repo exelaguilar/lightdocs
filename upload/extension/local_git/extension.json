@@ -3,10 +3,12 @@
   "class": "Extension\\LocalGit\\Extension",
   "version": "1.0.0",
   "description": "Local-only Git history and sanitized content preflight.",
+  "type": "developer",
   "default_enabled": true,
   "contexts": ["admin", "public"],
   "settings": [
-    {"key": "history_enabled", "label": "Enable Git history", "type": "boolean", "default": true, "description": "Allow Local Git to inspect, initialize, and commit the private repository."}
+    {"key": "history_enabled", "label": "Enable Git history", "type": "boolean", "default": true, "description": "Allow Local Git to inspect, initialize, and commit the private repository."},
+    {"key": "history_limit", "label": "History entries", "type": "number", "default": 30, "min": 5, "max": 100, "description": "Maximum recent commits shown in the Local Git history view."}
   ],
-  "navigation": [{"section": "Tools", "label": "Local Git", "route": "/admin/history", "active": "history", "sort_order": 30}]
+  "navigation": [{"section": "Tools", "label": "Local Git", "route": "/admin/history", "active": "history", "icon": "graph", "sort_order": 30}]
 }

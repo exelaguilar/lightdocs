@@ -58,6 +58,7 @@ final class Extension implements ExtensionInterface, BackupProvider
 		if ($includes['environment'] && is_file($this->context->config['environment_file'])) $zip->addFile($this->context->config['environment_file'], 'config/lightdocs.env');
 		$zip->addFromString('manifest.json', json_encode(['format' => 2, 'version' => SYSTEM_VERSION ?? 'development', 'created_at' => time(), 'includes' => $includes], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
 		$zip->close();
+		$this->cleanup($directory);
 		return ['file' => $path, 'size' => (int) filesize($path), 'created_at' => time(), 'includes' => $includes];
 	}
 
@@ -135,9 +136,13 @@ final class Extension implements ExtensionInterface, BackupProvider
 	private function cleanup(string $directory): void
 	{
 		$retention_days = max(1, (int) ($this->context->settings['retention_days'] ?? 30));
-		foreach (glob(rtrim($directory, '/\\') . '/lightdocs-backup-*.zip') ?: [] as $path) {
+		$archives = glob(rtrim($directory, '/\\') . '/lightdocs-backup-*.zip') ?: [];
+		foreach ($archives as $path) {
 			if (is_file($path) && filemtime($path) < time() - ($retention_days * 86400)) @unlink($path);
 		}
+		$archives = array_values(array_filter(glob(rtrim($directory, '/\\') . '/lightdocs-backup-*.zip') ?: [], 'is_file'));
+		usort($archives, static fn (string $left, string $right): int => filemtime($right) <=> filemtime($left));
+		foreach (array_slice($archives, max(1, (int) ($this->context->settings['max_archives'] ?? 20))) as $path) @unlink($path);
 	}
 
 	private function manifest(string $path): array

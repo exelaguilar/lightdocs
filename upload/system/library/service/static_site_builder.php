@@ -7,11 +7,13 @@ namespace System\Library\Service;
 use FilesystemIterator;
 use System\Library\Content\ContentHealth;
 use System\Library\Content\ContentRepository;
+use System\Library\Content\Glossary;
 use System\Library\Content\MarkdownRenderer;
 use System\Library\Content\Page;
 use System\Library\Content\SearchService;
 use System\Library\Content\SiteData;
-use System\Library\View;
+use System\Library\Template;
+use System\Engine\Event;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
@@ -28,7 +30,8 @@ final class StaticSiteBuilder
 		private readonly ContentRepository $repository,
 		private readonly MarkdownRenderer $renderer,
 		private readonly SearchService $search,
-		private readonly View $view,
+		private readonly Template $view,
+		private readonly ?Event $events = null,
 	) {
 	}
 
@@ -79,8 +82,9 @@ final class StaticSiteBuilder
 		$this->prepareBuildDestination($destination);
 		$include_private = $profile !== 'public';
 		$tree = $this->repository->tree(false, $include_private);
+		$glossary = new Glossary($this->config['glossary_file']);
 		$renderer = $profile === 'sanitized'
-			? new MarkdownRenderer((bool) $this->config['raw_html'], SiteData::sanitized(SiteData::load($this->config['data_file'])), $this->config['content_dir'], $this->config['directives'] ?? [])
+			? new MarkdownRenderer((bool) $this->config['raw_html'], SiteData::sanitized(SiteData::load($this->config['data_file'])), $this->config['content_dir'], $this->config['directives'] ?? [], $glossary)
 			: $this->renderer;
 		$build_config = $this->config;
 		$build_config['editor_enabled'] = false;
@@ -92,8 +96,13 @@ final class StaticSiteBuilder
 			[$previous, $next] = $this->repository->neighbours($source_page, $include_private);
 			$backlinks = $this->repository->backlinks($source_page, $include_private);
 			$related = $this->repository->relatedPages($source_page, $include_private);
+			$feedback = ['total' => 0, 'helpful_percent' => 0];
 			$config = $build_config;
-			$content = $this->view->render('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'config'));
+			$content = $this->view->render('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'feedback', 'config'));
+			$payload = ['page' => $page, 'content' => $content, 'private_access' => $include_private, 'static' => true];
+			$event_args = [&$payload];
+			$this->events?->trigger('frontend/page/content/after', $event_args);
+			if (isset($payload['content']) && is_string($payload['content'])) $content = $payload['content'];
 			$html = $this->view->render('common/layout', [
 				'config' => $build_config, 'title' => $page->title, 'description' => $page->description,
 				'canonical_path' => $page->url, 'tree' => $tree, 'current_url' => $page->url,
@@ -109,6 +118,49 @@ final class StaticSiteBuilder
 			file_put_contents($markdown_path, $page->markdown);
 			$search_documents = [...$search_documents, ...$this->search->records($page, $rendered)];
 		}
+		$terms = $glossary->all();
+		$glossary_content = $this->view->render('glossary/glossary', compact('terms'));
+		$glossary_html = $this->view->render('common/layout', [
+			'config' => $build_config, 'title' => 'Glossary', 'description' => 'Definitions for terms used throughout this documentation.',
+			'canonical_path' => '/glossary', 'tree' => $tree, 'current_url' => '/glossary', 'breadcrumbs' => [], 'headings' => [],
+			'sections' => $this->repository->sections(), 'current_section' => null, 'content' => $glossary_content,
+		]);
+		if (!is_dir($destination . '/glossary')) {
+			mkdir($destination . '/glossary', 0775, true);
+		}
+		file_put_contents($destination . '/glossary/index.html', $glossary_html);
+		$glossary_markdown = "# Glossary\n\n";
+		foreach ($terms as $term) {
+			$glossary_markdown .= '## ' . $term['term'] . "\n\n" . $term['definition'];
+			if ($term['aliases'] !== []) {
+				$glossary_markdown .= "\n\nAlso known as: " . implode(', ', $term['aliases']) . '.';
+			}
+			$glossary_markdown .= "\n\n";
+		}
+		file_put_contents($destination . '/glossary.md', $glossary_markdown);
+		$search_documents[] = ['url' => '/glossary', 'title' => 'Glossary', 'description' => 'Definitions for terms used throughout this documentation.', 'text' => implode(' ', array_map(static fn (array $term): string => $term['term'] . ' ' . $term['definition'] . ' ' . implode(' ', $term['aliases']), $terms))];
+		$nodes_by_url = [];
+		$links = [];
+		$inbound = [];
+		foreach ($this->repository->all(false, $include_private) as $graph_page) {
+			$nodes_by_url[$graph_page->url] = ['url' => $graph_page->url, 'title' => $graph_page->title, 'section' => $this->repository->sectionFor($graph_page)['title'] ?? 'Overview'];
+			foreach ($this->repository->outboundLinks($graph_page, $include_private) as $target) {
+				$links[] = ['source' => $graph_page->url, 'target' => $target->url];
+				$inbound[$target->url] = ($inbound[$target->url] ?? 0) + 1;
+			}
+		}
+		foreach ($nodes_by_url as $url => &$graph_node) $graph_node['inbound'] = $inbound[$url] ?? 0;
+		unset($graph_node);
+		$nodes = array_values($nodes_by_url);
+		usort($nodes, static fn (array $a, array $b): int => [$b['inbound'], $a['title']] <=> [$a['inbound'], $b['title']]);
+		$graph_content = $this->view->render('graph/graph', compact('nodes', 'links'));
+		$graph_html = $this->view->render('common/layout', [
+			'config' => $build_config, 'title' => 'Documentation Graph', 'description' => 'Explore links between documentation pages.',
+			'canonical_path' => '/graph', 'tree' => $tree, 'current_url' => '/graph', 'breadcrumbs' => [], 'headings' => [],
+			'sections' => $this->repository->sections(), 'current_section' => null, 'content' => $graph_content,
+		]);
+		if (!is_dir($destination . '/graph')) mkdir($destination . '/graph', 0775, true);
+		file_put_contents($destination . '/graph/index.html', $graph_html);
 		foreach ($this->repository->aliasMap($include_private) as $alias_path => $alias_page) {
 			$redirect_path = $destination . $alias_path . '/index.html';
 			if (!is_dir(dirname($redirect_path))) mkdir(dirname($redirect_path), 0775, true);
@@ -138,12 +190,13 @@ final class StaticSiteBuilder
 		if (!is_dir($asset_destination)) {
 			mkdir($asset_destination, 0775, true);
 		}
-		foreach (['app.css', 'app.js'] as $asset) {
-			$asset_source = $asset === 'app.css'
+		foreach (['front.min.css', 'app.js'] as $asset) {
+			$asset_source = $asset === 'front.min.css'
 				? $project_root . '/frontend/view/stylesheet/' . $asset
 				: $project_root . '/frontend/view/javascript/' . $asset;
 			copy($asset_source, $asset_destination . '/' . $asset);
 		}
+		$this->copyExtensionAssets($destination);
 		if (is_dir($this->config['upload_dir'])) {
 			$this->copyDirectory($this->config['upload_dir'], $destination . '/uploads');
 		}
@@ -160,6 +213,19 @@ final class StaticSiteBuilder
 		$this->writeIntegrityManifest($destination);
 
 		return $destination;
+	}
+
+	private function copyExtensionAssets(string $destination): void
+	{
+		$assets = $this->config['extension_assets']['public'] ?? ['styles' => [], 'scripts' => []];
+		foreach (array_merge($assets['styles'] ?? [], $assets['scripts'] ?? []) as $asset) {
+			if (!is_string($asset) || !preg_match('#^/extension/[a-z0-9_]+/[a-zA-Z0-9._/-]+$#', $asset)) continue;
+			$source = dirname(__DIR__, 3) . $asset;
+			if (!is_file($source)) throw new RuntimeException('Extension asset is unavailable: ' . $asset);
+			$target = $destination . $asset;
+			if (!is_dir(dirname($target))) mkdir(dirname($target), 0775, true);
+			copy($source, $target);
+		}
 	}
 
 	private function prepareBuildDestination(string $destination): void

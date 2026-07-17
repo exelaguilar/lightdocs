@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class GitHistory
 {
-	public function __construct(private readonly string $root, private readonly bool $enabled)
+	public function __construct(private readonly string $root, private readonly bool $enabled, private readonly int $history_limit = 30)
 	{
 	}
 
@@ -19,7 +19,7 @@ final class GitHistory
 		$version = $this->run(['git', '--version']);
 		if ($version['code'] !== 0) return ['state' => 'unavailable', ...$empty];
 		if (!is_dir($this->root . '/.git')) return ['state' => 'not_repository', ...$empty];
-		$log = $this->run(['git', 'log', '--max-count=30', '--date=iso-strict', '--format=%H%x1f%h%x1f%an%x1f%aI%x1f%s%x1e']);
+		$log = $this->run(['git', 'log', '--max-count=' . max(5, min(100, $this->history_limit)), '--date=iso-strict', '--format=%H%x1f%h%x1f%an%x1f%aI%x1f%s%x1e']);
 		$status = $this->run(['git', '--no-optional-locks', 'status', '--porcelain=v1', '-uall']);
 		$branch = trim($this->run(['git', 'branch', '--show-current'])['output']);
 		if ($log['code'] !== 0) return ['state' => 'empty', 'commits' => [], 'changes' => $this->changes($status['output']), 'branch' => $branch ?: 'main', 'root' => $this->root];

@@ -3,13 +3,15 @@
   "class": "Extension\\RemoteSync\\Extension",
   "version": "1.0.0",
   "description": "Optional, manually-triggered synchronization with a remote Git repository.",
+  "type": "integration",
   "default_enabled": false,
   "contexts": ["admin"],
   "settings": [
     {"key": "remote_url", "label": "Remote repository URL", "type": "url", "default": "", "description": "HTTPS or SSH repository URL. No network request is made while saving settings."},
+    {"key": "remote_name", "label": "Remote name", "type": "text", "default": "origin", "description": "Local Git remote name to create or update for synchronization."},
     {"key": "branch", "label": "Branch", "type": "text", "default": "main", "description": "Remote branch used for manual pull and push operations."},
     {"key": "access_token", "label": "Access token", "type": "password", "default": "", "description": "Optional HTTPS bearer token. Leave blank to use SSH credentials or the Git credential helper."},
     {"key": "allow_push", "label": "Allow push", "type": "boolean", "default": false, "description": "Permit the administrator to push local commits to the configured remote."}
   ],
-  "navigation": [{"section": "Tools", "label": "Remote sync", "route": "/admin/remote-sync", "active": "remote_sync", "sort_order": 40}]
+  "navigation": [{"section": "Tools", "label": "Remote sync", "route": "/admin/remote-sync", "active": "remote_sync", "icon": "external", "sort_order": 40}]
 }

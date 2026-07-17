@@ -1,0 +1,11 @@
+<article class="min-w-0 print:[&_a]:text-black" data-docs-article>
+  <header class="mb-7 border-b border-[var(--border)] pb-6 pt-1">
+    <p class="mb-2 text-xs font-semibold uppercase tracking-[.07em] text-[var(--brand-strong)]">404</p>
+    <h1 class="m-0 max-w-[760px] text-[clamp(1.75rem,3vw,2rem)] font-bold leading-[1.2] tracking-[-.035em] text-[var(--text-strong)]">Page not found</h1>
+    <p class="mt-3 max-w-[660px] text-base leading-7 text-[var(--muted)]">This page does not exist or may have moved.</p>
+  </header>
+  <div class="flex flex-wrap gap-2">
+    <a class="rounded-[var(--radius-sm)] bg-[var(--brand)] px-3.5 py-2 text-sm font-semibold text-white hover:opacity-90" href="/">Return home</a>
+    <a class="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-sm font-semibold text-[var(--text)] hover:bg-[var(--surface-subtle)]" href="/search">Search documentation</a>
+  </div>
+</article>

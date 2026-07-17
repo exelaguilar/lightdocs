@@ -44,7 +44,7 @@ final class Extension implements ExtensionInterface, RemoteRepositoryProvider
 		if (empty($this->context->settings['allow_push'])) throw new RuntimeException('Push is disabled in Remote sync settings.');
 		$this->assertReady();
 		$this->configureRemote();
-		$this->mustRun($this->networkCommand(['push', 'origin', 'HEAD:' . $this->branch()]));
+		$this->mustRun($this->networkCommand(['push', $this->remoteName(), 'HEAD:' . $this->branch()]));
 	}
 
 	public function initialize(): void
@@ -57,8 +57,8 @@ final class Extension implements ExtensionInterface, RemoteRepositoryProvider
 		$this->mustRun(['git', 'init']);
 		$this->configureRemote();
 		$branch = $this->branch();
-		$this->mustRun($this->networkCommand(['fetch', 'origin', $branch]));
-		$this->mustRun($this->networkCommand(['checkout', '-B', $branch, '--track', 'origin/' . $branch]));
+		$this->mustRun($this->networkCommand(['fetch', $this->remoteName(), $branch]));
+		$this->mustRun($this->networkCommand(['checkout', '-B', $branch, '--track', $this->remoteName() . '/' . $branch]));
 	}
 
 	public function pull(): void
@@ -66,8 +66,8 @@ final class Extension implements ExtensionInterface, RemoteRepositoryProvider
 		$this->assertReady();
 		$this->configureRemote();
 		$branch = $this->branch();
-		$this->mustRun($this->networkCommand(['fetch', 'origin', $branch]));
-		$this->mustRun($this->networkCommand(['pull', '--ff-only', 'origin', $branch]));
+		$this->mustRun($this->networkCommand(['fetch', $this->remoteName(), $branch]));
+		$this->mustRun($this->networkCommand(['pull', '--ff-only', $this->remoteName(), $branch]));
 	}
 
 	private function assertReady(): void
@@ -82,8 +82,9 @@ final class Extension implements ExtensionInterface, RemoteRepositoryProvider
 	{
 		$url = trim((string) ($this->context->settings['remote_url'] ?? ''));
 		if (!preg_match('~^(https://|ssh://|git@)[^\\s]+$~i', $url)) throw new RuntimeException('Remote repository URL must use HTTPS, SSH, or git@ syntax.');
-		$remote = $this->run(['git', 'remote', 'get-url', 'origin']);
-		$command = $remote['code'] === 0 ? ['git', 'remote', 'set-url', 'origin', $url] : ['git', 'remote', 'add', 'origin', $url];
+		$name = $this->remoteName();
+		$remote = $this->run(['git', 'remote', 'get-url', $name]);
+		$command = $remote['code'] === 0 ? ['git', 'remote', 'set-url', $name, $url] : ['git', 'remote', 'add', $name, $url];
 		$this->mustRun($command);
 	}
 
@@ -98,6 +99,13 @@ final class Extension implements ExtensionInterface, RemoteRepositoryProvider
 		$branch = trim((string) ($this->context->settings['branch'] ?? 'main'));
 		if (!preg_match('/^[A-Za-z0-9._\/-]{1,100}$/', $branch)) throw new RuntimeException('The remote branch name is invalid.');
 		return $branch;
+	}
+
+	private function remoteName(): string
+	{
+		$name = trim((string) ($this->context->settings['remote_name'] ?? 'origin'));
+		if (!preg_match('/^[A-Za-z0-9._-]{1,80}$/', $name)) throw new RuntimeException('The remote name is invalid.');
+		return $name;
 	}
 
 	private function networkCommand(array $command): array

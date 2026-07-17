@@ -1,0 +1,23 @@
+{
+  "name": "reader_banner",
+  "class": "Extension\\ReaderBanner\\Extension",
+  "version": "1.0.0",
+  "description": "Example public-reader extension that adds a dismissible notice with a hook, CSS, and JavaScript.",
+  "type": "example",
+  "default_enabled": false,
+  "contexts": ["public"],
+  "settings_summary": "This example shows how an extension can enhance public documentation without editing a core template. It registers its own assets and appends a notice through the reader content hook.",
+  "settings_notes": [
+    "The notice is appended below rendered documentation pages and can be dismissed in the browser.",
+    "Its stylesheet and JavaScript are served from this extension's own directory.",
+    "This package is disabled by default and is safe to remove from a production deployment after using it as a reference."
+  ],
+  "settings": [
+    {"key": "message", "label": "Notice message", "type": "text", "default": "This documentation is maintained by the platform team.", "description": "Text displayed in the banner."},
+    {"key": "accent_color", "label": "Accent color", "type": "color", "default": "#3b82f6", "description": "Used for the banner border, icon, and subtle background tint."},
+    {"key": "icon", "label": "Icon", "type": "select", "default": "info", "options": [{"value": "info", "label": "Information"}, {"value": "sparkles", "label": "Sparkles"}, {"value": "check", "label": "Checkmark"}, {"value": "none", "label": "No icon"}], "description": "Choose the visual cue shown before the message."},
+    {"key": "location", "label": "Location", "type": "select", "default": "below_content", "options": [{"value": "above_content", "label": "Above page content"}, {"value": "below_content", "label": "Below page content"}], "description": "Choose where the banner is inserted on each page."},
+    {"key": "page_scope", "label": "Page scope", "type": "select", "default": "except_home", "options": [{"value": "all", "label": "All public pages"}, {"value": "except_home", "label": "All pages except home"}, {"value": "home_only", "label": "Home page only"}], "description": "Limit which public pages receive the banner."},
+    {"key": "dismissible", "label": "Allow visitors to dismiss", "type": "boolean", "default": true, "description": "Show a close button and remember the visitor's choice in their browser."}
+  ]
+}

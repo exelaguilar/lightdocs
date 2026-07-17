@@ -1,42 +1,63 @@
 <?php
-
-declare(strict_types=1);
-
 namespace System\Engine;
 
-use System\Library\View;
+use System\Engine\Registry;
 use RuntimeException;
 
+/**
+ * Controller
+ *
+ * The base Controller class for the application.
+ *
+ * All other controllers should extend this class. It provides direct access to the
+ * application's core services via the registry and includes common helper methods.
+ *
+ * ## Core Services
+ * The following services are available via magic `__get()` (e.g., `$this->request`):
+ *
+ * @package System\Engine
+ * @author Exel
+ */
 abstract class Controller
 {
-	private static ?Proxy $proxy = null;
+    /**
+     * The application's dependency container.
+     *
+     * @var Registry
+     */
+    protected Registry $registry;
 
-	public static function setRegistry(Registry $registry): void
-	{
-		self::$proxy = new Proxy($registry);
-	}
+    /**
+     * Controller constructor.
+     *
+     * @param Registry $registry The application's dependency container.
+     */
+    public function __construct(Registry $registry)
+    {
+        $this->registry = $registry;
+    }
 
-	public function __construct(
-		protected readonly array $config,
-		protected readonly View $view,
-		protected readonly Event $events,
-	) {
-	}
+    /**
+     * Dynamically retrieves a service from the registry.
+     *
+     * @param string $key The key for the service in the registry.
+     * @return mixed The service object.
+     * @throws RuntimeException If the service key is not found in the registry.
+     */
+    public function __get(string $key): mixed
+    {
+        return $this->registry->get($key);
+    }
 
-	public function __get(string $key): mixed
-	{
-		return self::$proxy?->{$key};
-	}
-
-	protected function render(string $template, array $data = [], int $status = 200): never
-	{
-		Response::html($this->view->render($template, $data), $status);
-	}
-
-	protected function csrf(Request $request): void
-	{
-		if (!hash_equals((string) ($_SESSION['csrf'] ?? ''), (string) $request->input('csrf'))) {
-			throw new RuntimeException('The form expired. Reload and try again.', 419);
-		}
-	}
+    /**
+     * Dynamically sets a value in the registry.
+     *
+     * @param string $key   The key for the value in the registry.
+     * @param mixed  $value The value to set.
+     * @return void
+     */
+    public function __set(string $key, mixed $value): void
+    {
+        $this->registry->set($key, $value);
+    }
 }

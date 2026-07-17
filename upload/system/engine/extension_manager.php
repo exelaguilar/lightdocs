@@ -34,6 +34,12 @@ final class ExtensionManager
 	/** @var array<string,list<array<string,mixed>>> */
 	private array $navigation = [];
 
+	/** @var array<string,array{styles:list<string>,scripts:list<string>}> */
+	private array $assets = [
+		'admin' => ['styles' => [], 'scripts' => []],
+		'public' => ['styles' => [], 'scripts' => []],
+	];
+
 	private string $registering = '';
 	private readonly string $directory;
 
@@ -127,6 +133,12 @@ final class ExtensionManager
 		return $this->services[$name] ?? null;
 	}
 
+	/** @return array<string,mixed> */
+	public function services(): array
+	{
+		return $this->services;
+	}
+
 	public function on(string $event, callable $listener, ?string $code = null): self
 	{
 		$extension = $this->registering;
@@ -162,11 +174,42 @@ final class ExtensionManager
 		return $this;
 	}
 
+	public function asset(string $context, string $type, string $path): self
+	{
+		if ($this->registering === '') throw new RuntimeException('Assets can only be registered by an extension.');
+		if (!isset($this->assets[$context])) throw new RuntimeException('Unknown asset context: ' . $context);
+		$bucket = match ($type) {
+			'style' => 'styles',
+			'script' => 'scripts',
+			default => throw new RuntimeException('Extension assets must be styles or scripts.'),
+		};
+		$prefix = '/extension/' . $this->registering . '/';
+		if (!str_starts_with($path, $prefix) || str_contains($path, '..') || str_contains($path, '?') || str_contains($path, '#')) {
+			throw new RuntimeException('Extension assets must be local files owned by the extension.');
+		}
+		$this->assets[$context][$bucket][] = $path;
+		$this->assets[$context][$bucket] = array_values(array_unique($this->assets[$context][$bucket]));
+		return $this;
+	}
+
+	/** @return array{admin:array{styles:list<string>,scripts:list<string>},public:array{styles:list<string>,scripts:list<string>}} */
+	public function assets(): array
+	{
+		return $this->assets;
+	}
+
 	public function registerEvents(Event $events): void
 	{
 		foreach ($this->listeners as $event => $listeners) {
 			foreach ($listeners as $listener) {
-				if ($listener['enabled']) $events->listen($event, $listener['listener'], $listener['extension'] . '.' . $event);
+				if (!$listener['enabled']) continue;
+				$callback = $listener['listener'];
+				// Wrap the closure listener in a CallbackAction so it plugs into
+				// the Action-based Event dispatcher. The wrapper keeps the
+				// historical listener contract (&$payload, $event) intact.
+				$events->register($event, new CallbackAction(static function (&$payload) use ($callback, $event): mixed {
+					return $callback($payload, $event);
+				}, $listener['extension'] . '.' . $event));
 			}
 		}
 	}
@@ -189,10 +232,17 @@ final class ExtensionManager
 		foreach (($this->manifests[$name]['settings'] ?? []) as $definition) {
 			if (!is_array($definition) || empty($definition['key'])) continue;
 			$key = (string) $definition['key'];
+			$type = (string) ($definition['type'] ?? 'text');
 			$value = $input[$key] ?? $current[$key] ?? ($definition['default'] ?? '');
-			if (($definition['type'] ?? 'text') === 'password' && trim((string) $value) === '') $value = $current[$key] ?? ($definition['default'] ?? '');
-			if (($definition['type'] ?? 'text') === 'number') $value = max((int) ($definition['min'] ?? 0), min((int) ($definition['max'] ?? PHP_INT_MAX), (int) $value));
-			if (($definition['type'] ?? 'text') === 'boolean') $value = (bool) $value;
+			if ($type === 'password' && trim((string) $value) === '') $value = $current[$key] ?? ($definition['default'] ?? '');
+			if ($type === 'number') $value = max((int) ($definition['min'] ?? 0), min((int) ($definition['max'] ?? PHP_INT_MAX), (int) $value));
+			if ($type === 'boolean') $value = (bool) $value;
+			if ($type === 'color' && !preg_match('/^#[a-f0-9]{6}$/i', (string) $value)) $value = $definition['default'] ?? '#000000';
+			if ($type === 'select') {
+				$options = is_array($definition['options'] ?? null) ? $definition['options'] : [];
+				$values = array_values(array_filter(array_map(static fn (mixed $option): string => is_array($option) ? (string) ($option['value'] ?? '') : (string) $option, $options)));
+				if (!in_array((string) $value, $values, true)) $value = $definition['default'] ?? ($values[0] ?? '');
+			}
 			$this->state->setSetting($name, $key, $value);
 		}
 	}
@@ -214,10 +264,14 @@ final class ExtensionManager
 	{
 		$rows = [];
 		foreach ($this->manifests as $name => $manifest) {
+			$contexts = $manifest['contexts'] ?? [];
+			if (!is_array($contexts)) $contexts = [];
 			$rows[$name] = [
 				'name' => $name,
 				'version' => (string) ($manifest['version'] ?? ''),
 				'description' => (string) ($manifest['description'] ?? ''),
+				'type' => $this->type($manifest),
+				'contexts' => array_values(array_intersect($contexts, ['admin', 'public'])),
 				'class' => (string) ($manifest['class'] ?? ''),
 				'enabled' => $this->state->isExtensionEnabled($name),
 				'loaded' => isset($this->loaded[$name]),
@@ -246,7 +300,20 @@ final class ExtensionManager
 		foreach ($this->manifests as $name => $manifest) {
 			$definitions = array_values(array_filter(($manifest['settings'] ?? []), 'is_array'));
 			if ($definitions === []) continue;
-			$settings[] = ['name' => $name, 'enabled' => $this->state->isExtensionEnabled($name), 'definitions' => $definitions, 'values' => $this->state->settings($name)];
+			$notes = $manifest['settings_notes'] ?? [];
+			if (!is_array($notes)) $notes = [];
+			$settings[] = [
+				'name' => $name,
+				'version' => (string) ($manifest['version'] ?? ''),
+				'description' => (string) ($manifest['description'] ?? ''),
+				'type' => $this->type($manifest),
+				'contexts' => array_values(array_intersect(is_array($manifest['contexts'] ?? null) ? $manifest['contexts'] : [], ['admin', 'public'])),
+				'enabled' => $this->state->isExtensionEnabled($name),
+				'definitions' => $definitions,
+				'values' => $this->state->settings($name),
+				'settings_summary' => (string) ($manifest['settings_summary'] ?? ''),
+				'settings_notes' => array_values(array_filter($notes, 'is_string')),
+			];
 		}
 		return $settings;
 	}
@@ -255,6 +322,12 @@ final class ExtensionManager
 	{
 		foreach ($this->settings() as $setting) if ($setting['name'] === $name) return $setting;
 		return null;
+	}
+
+	private function type(array $manifest): string
+	{
+		$type = (string) ($manifest['type'] ?? 'utility');
+		return preg_match('/^[a-z][a-z0-9_-]{1,30}$/', $type) ? $type : 'utility';
 	}
 
 	public function navigationItems(): array

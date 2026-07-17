@@ -1,8 +1,8 @@
 ---
-title: Deployment
-description: Deploy through Apache, Nginx, PHP-FPM, shared hosting, or static export.
+title: "Deployment"
+description: "Deploy through Apache, Nginx, PHP-FPM, shared hosting, or static export."
+keywords: ["deployment","lxc","nginx","php-fpm","sqlite","security"]
 order: 2
-keywords: [deployment, lxc, nginx, php-fpm, sqlite, security]
 ---
 
 # Deployment

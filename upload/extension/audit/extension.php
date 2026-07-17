@@ -26,7 +26,7 @@ final class Extension implements ExtensionInterface
 	public function register(ExtensionManager $extensions): void
 	{
 		$extensions->service('audit.log', $this);
-		foreach (['content.changed', 'index.rebuilt', 'settings.saved'] as $event) {
+		foreach ($this->eventNames() as $event) {
 			$extensions->on($event, function (mixed $payload, string $name): void {
 				$this->record($name, $payload);
 			}, 'audit.' . str_replace('.', '_', $event));
@@ -91,10 +91,17 @@ final class Extension implements ExtensionInterface
 	private function record(string $event, mixed $payload): void
 	{
 		$statement = $this->db->prepare('INSERT INTO audit_logs (event, source, payload_json, created_at) VALUES (:event, :source, :payload, :created_at)');
-		$payload = is_array($payload) ? $payload : ['value' => $payload];
+		$payload = !empty($this->context->settings['record_payloads']) ? (is_array($payload) ? $payload : ['value' => $payload]) : ['recorded' => false];
 		$statement->execute(['event' => $event, 'source' => 'audit', 'payload' => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '{}', 'created_at' => time()]);
 		$retention_days = max(1, (int) ($this->context->settings['retention_days'] ?? 90));
 		$cleanup = $this->db->prepare('DELETE FROM audit_logs WHERE created_at < :cutoff');
 		$cleanup->execute(['cutoff' => time() - ($retention_days * 86400)]);
+	}
+
+	/** @return list<string> */
+	private function eventNames(): array
+	{
+		$names = array_map('trim', explode(',', (string) ($this->context->settings['events'] ?? 'content.changed,index.rebuilt,settings.saved')));
+		return array_values(array_unique(array_filter($names, static fn (string $event): bool => preg_match('/^[a-z][a-z0-9_.-]{2,80}$/', $event) === 1)));
 	}
 }

@@ -1,56 +1,99 @@
 <?php
+namespace Admin\Controller\Common;
 
-declare(strict_types=1);
+use System\Engine\Controller;
 
-namespace Admin\Controller;
-
-use System\Engine\Event;
-use System\Engine\Request;
-use System\Engine\Response;
-use System\Library\User;
-use System\Library\View;
-
-final class Profile extends Admin
+/**
+ * Account self-service: display name, password, and active-session review.
+ *
+ * @package Admin\Controller\Common
+ */
+class Profile extends Controller
 {
-	public function __construct(array $config, View $view, Event $events, private readonly User $accounts)
-	{
-		parent::__construct($config, $view, $events);
-	}
+    public function index(): void
+    {
+        $this->load->language('common');
+        $this->document->setTitle($this->language->get('heading_common_profile'));
+        $this->load->model('common/user');
 
-	public function index(Request $request): never
-	{
-		$this->authorize();
-		$user_id = (int) ($_SESSION['lightdocs_user_id'] ?? 0);
-		$user = $this->accounts->find($user_id);
-		if (!$user) \System\Engine\Response::redirect('/admin/logout');
-		$flash = $this->consumeFlash('profile');
-		if ($request->method === 'POST') {
-			$this->csrf($request);
-			$message = '';
-			$error = '';
-			try {
-				if ((string) $request->input('action') === 'revoke_sessions') {
-					$this->accounts->revokeOtherSessions(session_id(), $user_id);
-					$message = 'Other active sessions were signed out.';
-				} else {
-					$this->accounts->updateProfile($user_id, (string) $request->input('display_name'), (string) $request->input('password'));
-					$_SESSION['lightdocs_user'] = $this->accounts->find($user_id);
-					$message = 'Profile settings saved.';
-				}
-			} catch (\Throwable $exception) {
-				$error = $exception->getMessage();
-			}
-			$this->redirectWithFlash('/admin/profile', 'profile', $message, $error);
-		}
-		$this->render('common/profile', ['config' => $this->config, 'user' => $_SESSION['lightdocs_user'], 'sessions' => $this->accounts->sessions($user_id), 'current_session' => session_id(), 'active_nav' => 'profile', 'csrf' => $_SESSION['csrf'], 'message' => $flash['message'], 'error' => $flash['error']]);
-	}
+        $user_id = (int)($this->session->get('user_id') ?? 0);
+        $user = $this->model_common_user->getUser($user_id);
 
-	public function revokeSessions(Request $request): never
-	{
-		$this->authorize();
-		if ($request->method !== 'POST') Response::text('Method not allowed.', 405);
-		$this->csrf($request);
-		$this->accounts->revokeOtherSessions(session_id(), (int) ($_SESSION['lightdocs_user_id'] ?? 0));
-		$this->redirectWithFlash('/admin/profile', 'profile', 'Other active sessions were signed out.');
-	}
+        if ($user === null) {
+            $this->response->redirect($this->url->link('common/login.logout'));
+        }
+
+        $active_tab = (string)$this->request->get('tab', 'string');
+        $active_tab = in_array($active_tab, ['profile', 'security'], true) ? $active_tab : 'profile';
+
+        if (strtoupper((string)($this->request->server['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+            $message = '';
+            $error = '';
+            $posted_tab = (string)$this->request->post('tab', 'string');
+            $redirect_tab = in_array($posted_tab, ['profile', 'security'], true) ? $posted_tab : $active_tab;
+
+            try {
+                if ((string)$this->request->post('action', 'string') === 'revoke_sessions') {
+                    $this->model_common_user->revokeOtherSessions($this->session->getId(), $user_id);
+                    $message = 'Other active sessions were signed out.';
+                } else {
+                    $display_name = trim((string)$this->request->post('display_name', 'string')) ?: (string)$user['display_name'];
+                    $parts = preg_split('/\s+/', $display_name, 2) ?: [];
+                    $this->model_common_user->editProfile($user_id, (string)($parts[0] ?? ''), (string)($parts[1] ?? ''), (string)$this->request->post('password', 'string'));
+                    $this->session->set('firstname', (string)($parts[0] ?? ''));
+                    $this->session->set('lastname', (string)($parts[1] ?? ''));
+                    $message = 'Profile settings saved.';
+                }
+            } catch (\Throwable $exception) {
+                $error = $exception->getMessage();
+            }
+
+            if ($message !== '') $this->session->addNotification('success', $message);
+            if ($error !== '') $this->session->addNotification('danger', $error);
+            $this->response->redirect($this->url->link('common/profile', ['tab' => $redirect_tab]));
+        }
+
+        $current_session_id = $this->session->getId();
+
+        $sessions = array_map(static fn(array $session): array => $session + [
+                'last_seen_label' => date('M j, Y H:i', (int)$session['last_seen_at']),
+                'session_label' => $session['session_id'] === $current_session_id ? 'This browser' : 'Signed-in browser',
+                'status_label' => $session['session_id'] === $current_session_id ? 'Current' : 'Active',
+                'is_current' => $session['session_id'] === $current_session_id,
+            ], $this->model_common_user->getSessions($user_id));
+
+        $data = [
+            'user' => $user + [
+                'role_label' => (string)($user['group_name'] ?? 'Unassigned'),
+                'last_login_label' => !empty($user['last_login']) ? date('M j, Y H:i', (int)$user['last_login']) : 'No sign-in recorded',
+                'last_login_ip' => trim((string)($user['ip'] ?? '')) ?: 'Unknown address',
+            ],
+            'sessions' => $sessions,
+            'session_count' => count($sessions),
+            'active_tab' => $active_tab,
+            'current_session' => $current_session_id,
+            'config' => $this->config->all(),
+            'csrf' => (string)$this->session->get('csrf_token', ''),
+            'message' => '',
+            'error' => '',
+        ];
+        $data['header'] = $this->load->controller('common/header', ['active_nav' => 'profile']);
+        $data['footer'] = $this->load->controller('common/footer');
+
+        $this->response->setOutput($this->load->view('common/profile', $data));
+    }
+
+    public function revokeSessions(): void
+    {
+        if (strtoupper((string)($this->request->server['REQUEST_METHOD'] ?? 'GET')) !== 'POST') {
+            $this->response->json(['error' => 'Method not allowed.'], 405);
+            return;
+        }
+
+        $this->load->model('common/user');
+        $this->model_common_user->revokeOtherSessions($this->session->getId(), (int)($this->session->get('user_id') ?? 0));
+
+        $this->session->addNotification('success', 'Other active sessions were signed out.');
+        $this->response->redirect($this->url->link('common/profile'));
+    }
 }

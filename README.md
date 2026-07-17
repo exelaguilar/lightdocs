@@ -47,6 +47,8 @@ The current release is [v0.1.11](https://github.com/exelaguilar/lightdocs/releas
 - Ranked keyboard search across pages, headings, keywords, and aliases
 - Syntax-highlighted code blocks with filenames, copy buttons, and highlighted lines
 - Tabs, banners, figures, file trees, comparison panels, inline TOCs, and reusable snippets
+- Core reading preferences for text size, content width, and distraction-free focus mode
+- Explicit, YAML-backed glossary popovers with editor suggestions for linking recognized terms
 - Sitemap, raw Markdown routes, site-wide LLM files, and section-specific LLM output
 
 ### Content Studio
@@ -423,6 +425,23 @@ docker compose -f compose.yaml -f deploy/docker/compose.build.yaml up -d --build
 
 Markdown files live under `content/` in a project checkout or under `/var/lib/lightdocs/content` in a managed installation.
 
+### Glossary references
+
+Define shared terms in `content/_glossary.yaml`, then link to the generated `/glossary` page with ordinary Markdown. Lightdocs enhances a known glossary link into an accessible popover, while GitHub, raw files, and other Markdown renderers retain a useful link. Content Studio recognizes matching terms as you type and offers to insert the link; it never rewrites prose automatically.
+
+Administrators can also manage terms at `/admin/glossary`; Studio writes the same canonical YAML file. In the Markdown editor, type `/` on an empty line to search compact insert commands, including each available glossary reference.
+
+```yaml
+proxmox-ve:
+  term: Proxmox VE
+  definition: An open-source platform for virtual machines and containers.
+  aliases: [Proxmox]
+```
+
+```markdown
+Use [Proxmox VE](/glossary#proxmox-ve) to manage the host.
+```
+
 ```markdown
 ---
 title: Restore the media server
@@ -516,11 +535,32 @@ The Content Studio is always available at `/admin`. The sidebar provides the edi
 - `/admin/media`, `/admin/navigation`, and `/admin/import` manage uploaded assets, reader navigation metadata, and trusted Markdown ZIP imports without editing support files by hand.
 - `/admin/backups` creates recovery archives and restores a selected archive. Enable **Include database** in Backup settings when accounts, roles, extension state, events, and audit history must travel with the archive.
 - `/admin/extensions` discovers extensions from `upload/extension/*/extension.json`, then enables or disables them without hardcoding extension behavior into the base application.
-- `/admin/extensions/{name}/settings` configures an enabled extension on its own page. Administrators can also install a ZIP package created by a trusted extension author; an extension package contains executable PHP and must be treated like application code.
+- `/admin/extensions/{name}/settings` configures an extension on its own page, even while it is disabled. The Media extension processes newly uploaded images only after it is enabled; its settings page explains its size, quality, and PHP GD requirements. Administrators can also install a ZIP package created by a trusted extension author; an extension package contains executable PHP and must be treated like application code.
 - `/admin/events` manages declared listener states and documents custom event names. Defining an event does not execute PHP; application or extension code must dispatch it and register a listener.
 - `/admin/developer` provides safe cache clearing, index rebuilds, and session reset. These actions do not delete canonical content or uploads.
 
-Local Git, Audit, Backup, Media, Remote sync, Storage, Webhooks, and OIDC are optional extensions. Local Git is enabled by default; the others are opt-in and should be configured only when needed. Extension settings and event state live in SQLite and should be included in database-level backups.
+Local Git, Audit, Backup, Media, Remote sync, Storage, and Webhooks are optional extensions. Local Git is enabled by default; the others are opt-in and should be configured only when needed. Extension settings and event state live in SQLite and should be included in database-level backups.
+
+Extensions can contribute to both Studio and the public reader. An extension can register local CSS or JavaScript under `/extension/{name}/...` for either `admin` or `public`, listen to lifecycle events, add directives, services, startups, and Studio navigation. Studio controller routes already expose `controller/{route}/before` and `controller/{route}/after` hooks. Public pages also trigger `frontend/page/content/after` with a mutable payload containing `page`, `content`, and `private_access`; this is the supported hook for adding reader behavior without modifying a core template. Public extension assets and this content hook are also applied to static exports.
+
+The bundled **Reader Banner** extension is a disabled-by-default, working public-reader example. Enable it from `/admin/extensions`, adjust its message at `/admin/extensions/reader_banner/settings`, and inspect `upload/extension/reader_banner/` to see a complete manifest, hook listener, stylesheet, and JavaScript asset. Extensions declare a `type` such as `content`, `developer`, `integration`, `storage`, or `example`; the Extensions table uses this metadata for filtering.
+
+Extension settings support `text`, `number`, `password`, `url`, `boolean`, `color`, and validated `select` fields. Select settings declare their allowed `options` in the manifest, so the settings page can safely expose choices such as an extension's icon, location, scope, or behavior rather than relying on undocumented free-form values.
+
+An extension that adds an admin page can declare a sidebar item in its manifest. Set `section` to `Workspace`, `Manage`, or `Tools`, add a `sort_order`, and choose an `icon` from the built-in vocabulary (`overview`, `editor`, `settings`, `extensions`, `events`, `health`, `media`, `graph`, `developer`, `export`, `external`, or `users`). Unknown icons safely fall back to the extension icon.
+
+```php
+public function register(ExtensionManager $extensions): void
+{
+	$extensions->asset('public', 'style', '/extension/branding/view/stylesheet/branding.css');
+	$extensions->asset('public', 'script', '/extension/branding/view/javascript/branding.js');
+	$extensions->on('frontend/page/content/after', static function (mixed &$payload): void {
+		if (is_array($payload)) $payload['content'] .= '<aside class="site-note">Maintained by Platform</aside>';
+	});
+}
+```
+
+Asset paths are intentionally restricted to files owned by the registering extension. Extension PHP is trusted application code, so install packages only from a source you trust.
 
 ## Contributing and maintenance
 

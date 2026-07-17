@@ -64,12 +64,44 @@ content/
 
 ## Rich code frames
 
-:::code filename="/etc/pve/lxc/103.conf" lines="2" numbers
+Code frames support language badges, linked filenames, highlighted lines, wrapping, copying, and automatic expansion controls for long examples. Add `collapse` when a long example should begin compact.
+
+:::code filename="/etc/pve/lxc/103.conf" href="https://pve.proxmox.com/pve-docs/pct.conf.5.html" lines="2" numbers collapse
 ```ini
 unprivileged: 1
 mp0: /mnt/pve/media_storage,mp=/media_storage
 features: nesting=1
 ```
+:::
+
+## Type references and example output
+
+Use a type table for compact property documentation:
+
+:::type-table title="Container options"
+| Property | Type | Description |
+| --- | --- | --- |
+| `id` | `integer` | Proxmox container identifier. |
+| `hostname` | `string` | DNS-compatible container name. |
+:::
+
+Large responses and generated output can remain collapsed until needed:
+
+:::output title="Example response"
+```json
+{"status":"ok","version":"development"}
+```
+:::
+
+## Repository and graph links
+
+:::repo-card title="Lightdocs" url="https://github.com/exelaguilar/lightdocs" branch="main"
+The PHP-native documentation platform source repository.
+:::
+
+Use `:::graph` to link readers to the public relationship map, or open `/graph` directly.
+
+:::graph title="Explore related guides"
 :::
 
 ## Comparisons
@@ -88,6 +120,10 @@ Command blocks explicitly label **Proxmox host** or **Inside CT 103**.
 `content/_sections.yaml` defines the small section switcher. Folder `_meta.yaml` files continue to control folder titles, icons, order, and initial collapsed state.
 
 `content/_theme.yaml` controls the accent, radius, density, and readable content width without a CSS build process.
+
+Reader preferences provide Standard, Notebook, and Focus layouts. Notebook keeps a compact sidebar while hiding the desktop table of contents; Focus hides all surrounding navigation.
+
+Set `language` and `direction: rtl` in `content/_site.yaml` when the documentation requires a right-to-left shell.
 
 ## AI output controls
 

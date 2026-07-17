@@ -1,0 +1,140 @@
+/* Lightdocs-owned admin theme. */
+:root {
+	--background: oklch(0.985 0.002 264);
+	--foreground: oklch(0.21 0.01 264);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.21 0.01 264);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.21 0.01 264);
+	--primary: var(--brand);
+	--primary-foreground: #fff;
+	--secondary: oklch(0.965 0.003 264);
+	--secondary-foreground: oklch(0.25 0.01 264);
+	--muted: oklch(0.965 0.003 264);
+	--muted-foreground: oklch(0.48 0.015 264);
+	--accent: oklch(0.955 0.006 264);
+	--accent-foreground: oklch(0.22 0.01 264);
+	--border: oklch(0.9 0.006 264);
+	--input: oklch(0.9 0.006 264);
+	--ring: var(--brand);
+	--sidebar: oklch(0.99 0.002 264);
+	--sidebar-foreground: oklch(0.29 0.01 264);
+	--sidebar-accent: oklch(0.955 0.006 264);
+	--sidebar-accent-foreground: oklch(0.22 0.01 264);
+	--sidebar-border: oklch(0.9 0.006 264);
+	--sidebar-ring: var(--brand);
+	--radius: 0.55rem;
+}
+
+html.dark,
+html[data-theme="dark"] {
+	--background: oklch(0.16 0.009 264);
+	--foreground: oklch(0.94 0.004 264);
+	--card: oklch(0.19 0.01 264);
+	--card-foreground: oklch(0.94 0.004 264);
+	--popover: oklch(0.19 0.01 264);
+	--popover-foreground: oklch(0.94 0.004 264);
+	--primary-foreground: oklch(0.98 0 0);
+	--secondary: oklch(0.235 0.012 264);
+	--secondary-foreground: oklch(0.91 0.004 264);
+	--muted: oklch(0.235 0.012 264);
+	--muted-foreground: oklch(0.69 0.012 264);
+	--accent: oklch(0.27 0.014 264);
+	--accent-foreground: oklch(0.94 0.004 264);
+	--border: oklch(0.29 0.014 264);
+	--input: oklch(0.29 0.014 264);
+	--sidebar: oklch(0.145 0.009 264);
+	--sidebar-foreground: oklch(0.9 0.004 264);
+	--sidebar-accent: oklch(0.23 0.012 264);
+	--sidebar-accent-foreground: oklch(0.94 0.004 264);
+	--sidebar-border: oklch(0.27 0.014 264);
+}
+
+.lightdocs-admin-shell {
+	min-height: 100vh;
+	background: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-sans);
+	--destructive: oklch(0.577 0.245 27.325);
+}
+
+/* [role="menuitem"] is the one shared hook kept as CSS rather than inline
+   utilities: it styles menu items across four call sites (account menu, editor
+   "more" menu, command palette, editor slash menu) rendered from static PHP,
+   permission-conditional PHP, extension-contributed data, and JS — an
+   open-ended set where a semantic attribute selector is more correct than
+   asking every current and future call site to repeat the same utility
+   string by hand. Positioning/visibility for the popovers themselves and all
+   table styling are inline Tailwind utilities in the markup; see the
+   `[&_th]:`/`[&_td]:` classes on `<table>` and `aria-hidden:hidden` on
+   `[data-popover]` elements. */
+.lightdocs-admin-shell [role="menuitem"] {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	min-height: 2.25rem;
+	padding: 0.5rem 0.75rem;
+	border-radius: var(--radius-md);
+	font-size: 0.8125rem;
+	text-align: start;
+	color: inherit;
+}
+
+.lightdocs-admin-shell [role="menuitem"]:hover,
+.lightdocs-admin-shell [role="menuitem"]:focus-visible {
+	background: var(--accent);
+	color: var(--accent-foreground);
+	outline: none;
+}
+
+/* Empirically verified working; not converted to an inline Tailwind arbitrary
+   variant because standalone CSS `rotate` on nested <svg> elements showed
+   inconsistent behavior with `group-open:`/self-referencing variants in this
+   TailwindPHP build (a `group-open:rotate-180` attempt on the editor's other
+   disclosure chevrons never applied) — this plain selector is the version
+   confirmed to actually rotate the folder chevron on open. */
+li[data-tree-folder] > details[open] > summary > .tree-chevron {
+	rotate: 90deg;
+}
+
+.editor-drawer-backdrop {
+	display: none;
+}
+
+/* Command-menu item labels use :first-child/:last-child structural selectors
+   because the truncating label span and the trailing shortcut-hint span are
+   repeated verbatim across ~8 static menu items in header.php; a per-item
+   utility class would just duplicate this same string at every call site
+   with no maintainability benefit over one structural rule. */
+[data-admin-command-dialog] > div [role="menuitem"] > span:first-child {
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+[data-admin-command-dialog] > div [role="menuitem"] > span:last-child {
+	margin-inline-start: auto;
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+}
+
+/* Mobile editor drawer backdrop: only shown below 900px, while the editor's
+   two-pane shell is expanded (not manually collapsed). Kept as CSS because it
+   combines an ancestor attribute selector, a negated class, and a media query
+   in one condition — expressing that as Tailwind arbitrary variants would
+   need a compound `max-[900px]:[[data-editor-shell]:not(.content-collapsed)_&]:`
+   selector, which is harder to read than the plain CSS it would replace. */
+@media (max-width: 900px) {
+	[data-editor-shell]:not(.content-collapsed) .editor-drawer-backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 44;
+		border: 0;
+		padding: 0;
+		background: color-mix(in srgb, #000 45%, transparent);
+		cursor: default;
+	}
+}

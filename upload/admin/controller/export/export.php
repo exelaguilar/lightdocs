@@ -1,46 +1,69 @@
 <?php
+namespace Admin\Controller\Export;
 
-declare(strict_types=1);
-
-namespace Admin\Controller;
-
-use System\Library\Service\ExportService;
-use System\Engine\Event;
-use System\Engine\Request;
-use System\Library\View;
+use System\Engine\Action;
+use System\Engine\Controller;
 use Throwable;
 
-final class Export extends Admin
+/**
+ * Static site export builder and single-use archive downloads.
+ *
+ * @package Admin\Controller\Export
+ */
+class Export extends Controller
 {
-	public function __construct(array $config, View $view, Event $events, private readonly ExportService $exports)
-	{
-		parent::__construct($config, $view, $events);
-	}
+    public function index(): mixed
+    {
+        $this->load->language('common');
+        $this->document->setTitle($this->language->get('heading_export_export'));
+        $this->document->addScript('/admin/view/javascript/export.js', 'footer', ['type' => 'module']);
 
-	public function index(Request $request): never
-	{
-		$this->permission('content.read');
-		$flash = $this->consumeFlash('export');
-		$message = $flash['message'];
-		$error = $flash['error'];
-		$download_file = (string) ($_SESSION['lightdocs_export_download'] ?? '');
-		unset($_SESSION['lightdocs_export_download']);
-		if ($request->method === 'POST') {
-			$this->csrf($request);
-			try {
-				$profile = (string) $request->input('profile', 'public');
-				$download_file = $this->exports->archive($profile, !empty($request->post['acknowledge_secrets']));
-				$message = ucfirst($profile) . ' export is ready. The download link is single-use.';
-			} catch (Throwable $exception) { $error = $exception->getMessage(); }
-			if ($download_file !== '') $_SESSION['lightdocs_export_download'] = $download_file;
-			$this->redirectWithFlash('/admin/export', 'export', $message, $error);
-		}
-		$this->render('export/export', ['config' => $this->config, 'csrf' => $_SESSION['csrf'], 'zip_available' => class_exists(\ZipArchive::class), 'message' => $message, 'error' => $error, 'download_file' => $download_file, 'active_nav' => 'export']);
-	}
+        $download_file = (string)($this->session->get('lightdocs_export_download') ?? '');
+        $this->session->remove('lightdocs_export_download');
 
-	public function download(Request $request): never
-	{
-		$this->permission('content.read');
-		$this->exports->download((string) $request->query('file'));
-	}
+        if (strtoupper((string)($this->request->server['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+            if (!$this->user->hasPermission('modify', 'export/export')) {
+                return new Action('error/permission');
+            }
+
+            $message = '';
+            $error = '';
+
+            try {
+                $profile = (string)$this->request->post('profile', 'string') ?: 'public';
+                $download_file = $this->exports->archive($profile, !empty($this->request->post['acknowledge_secrets']));
+                $message = ucfirst($profile) . ' export is ready. The download link is single-use.';
+            } catch (Throwable $exception) {
+                $error = $exception->getMessage();
+            }
+
+            if ($download_file !== '') {
+                $this->session->set('lightdocs_export_download', $download_file);
+            }
+
+            if ($message !== '') $this->session->addNotification('success', $message);
+            if ($error !== '') $this->session->addNotification('danger', $error);
+            $this->response->redirect($this->url->link('export/export'));
+        }
+
+        $data = [
+            'zip_available' => class_exists(\ZipArchive::class),
+            'download_file' => $download_file,
+            'download_url' => '/admin/export/download?file=' . rawurlencode($download_file),
+            'message' => '',
+            'error' => '',
+            'config' => $this->config->all(),
+            'csrf' => (string)$this->session->get('csrf_token', ''),
+        ];
+        $data['header'] = $this->load->controller('common/header', ['active_nav' => 'export']);
+        $data['footer'] = $this->load->controller('common/footer');
+
+        $this->response->setOutput($this->load->view('export/export', $data));
+        return null;
+    }
+
+    public function download(): void
+    {
+        $this->exports->download((string)$this->request->get('file', 'string'));
+    }
 }

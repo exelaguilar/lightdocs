@@ -1,56 +1,57 @@
-<?php
-$initial = $initial ?? mb_strtoupper(mb_substr($config['name'], 0, 1));
-$active_nav = $active_nav ?? 'editor';
-$permissions = $_SESSION['lightdocs_permissions'] ?? [];
-$extension_navigation = $config['admin_navigation']['Tools'] ?? [];
-$icons = [
-    'overview' => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-    'editor' => '<path d="M4 17.5V21h3.5L18.8 9.7l-3.5-3.5L4 17.5Z"/><path d="m14 7 3.5 3.5"/><path d="M12 21h8"/>',
-    'settings' => '<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="m19.4 15 .1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 0 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 0 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3h-.2a1.8 1.8 0 0 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1A1.8 1.8 0 0 1 7.3 3l.1.1a1.8 1.8 0 0 0 3-.9V2a1.8 1.8 0 0 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 0 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 0 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 2.8Z"/>',
-    'extensions' => '<path d="M8 3h8v5h5v8h-5v5H8v-5H3V8h5V3Z"/><path d="M12 8v8M8 12h8"/>',
-    'events' => '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/>',
-    'health' => '<path d="M4 12h3l2-5 4 10 2-5h5"/><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z"/>',
-    'media' => '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="10" r="1.5"/><path d="m5 17 4-4 3 3 2-2 5 3"/>',
-    'graph' => '<circle cx="6" cy="17" r="2"/><circle cx="18" cy="7" r="2"/><circle cx="12" cy="12" r="2"/><path d="m7.7 15.8 2.7-2.6M13.7 10.7l2.7-2.5"/>',
-    'developer' => '<path d="m8 9-3 3 3 3M16 9l3 3-3 3M14 6l-4 12"/>',
-    'export' => '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
-    'theme' => '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
-    'external' => '<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',
-    'logout' => '<path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M14 16l4-4-4-4M18 12H8"/>',
-    'users' => '<path d="M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM17 11a3 3 0 0 0 0-6"/>',
-    'extension' => '<path d="M12 3a2 2 0 0 1 2 2v1h3a2 2 0 0 1 2 2v3h1a2 2 0 1 1 0 4h-1v3a2 2 0 0 1-2 2h-3v-1a2 2 0 1 0-4 0v1H7a2 2 0 0 1-2-2v-3H4a2 2 0 1 1 0-4h1V8a2 2 0 0 1 2-2h3V5a2 2 0 0 1 2-2Z"/>',
-];
-$icon = static function (string $name) use ($icons): string {
-    return '<svg viewBox="0 0 24 24" aria-hidden="true">' . ($icons[$name] ?? $icons['extension']) . '</svg>';
-};
-?>
-<script>(function(){try{if(localStorage.getItem('lightdocs-admin-sidebar')==='collapsed')document.documentElement.classList.add('admin-sidebar-collapsed');var theme=localStorage.getItem('lightdocs-theme');if(theme==='light'||theme==='dark')document.documentElement.dataset.theme=theme;}catch(e){}})();</script>
-<aside class="editor-header studio-sidebar">
-  <div class="studio-brand-row"><a class="brand" href="/admin"><span class="brand-mark"><?= $e($initial) ?></span><span class="studio-label"><?= $e($config['name']) ?></span><span class="version-pill studio-label">Studio</span></a></div>
-  <button type="button" class="sidebar-collapse" data-admin-sidebar-toggle aria-expanded="true" aria-label="Collapse navigation" title="Collapse navigation"><span class="collapse-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 5v14"/><path d="m15 8-4 4 4 4"/></svg></span></button>
-  <nav aria-label="Content Studio">
-    <span class="studio-nav-label">Workspace</span>
-    <a href="/admin" <?= $active_nav === 'dashboard' ? 'aria-current="page"' : '' ?> title="Overview"><span class="nav-icon"><?= $icon('overview') ?></span><span class="studio-label">Overview</span></a>
-    <a href="/admin/editor" <?= $active_nav === 'editor' ? 'aria-current="page"' : '' ?> title="Editor"><span class="nav-icon"><?= $icon('editor') ?></span><span class="studio-label">Editor</span></a>
-    <span class="studio-nav-label">Manage</span>
-    <a href="/admin/settings" <?= $active_nav === 'settings' ? 'aria-current="page"' : '' ?> title="Settings"><span class="nav-icon"><?= $icon('settings') ?></span><span class="studio-label">Settings</span></a>
-    <a href="/admin/navigation" <?= $active_nav === 'navigation' ? 'aria-current="page"' : '' ?> title="Navigation"><span class="nav-icon"><?= $icon('graph') ?></span><span class="studio-label">Navigation</span></a>
-    <a href="/admin/extensions" <?= $active_nav === 'extensions' ? 'aria-current="page"' : '' ?> title="Extensions"><span class="nav-icon"><?= $icon('extensions') ?></span><span class="studio-label">Extensions</span></a>
-    <a href="/admin/events" <?= $active_nav === 'events' ? 'aria-current="page"' : '' ?> title="Events"><span class="nav-icon"><?= $icon('events') ?></span><span class="studio-label">Events</span></a>
-    <?php if (in_array('users.manage', $permissions, true)): ?><a href="/admin/users" <?= $active_nav === 'users' ? 'aria-current="page"' : '' ?> title="Users"><span class="nav-icon"><?= $icon('users') ?></span><span class="studio-label">Users</span></a><?php endif; ?>
-    <?php if (in_array('users.manage', $permissions, true)): ?><a href="/admin/roles" <?= $active_nav === 'roles' ? 'aria-current="page"' : '' ?> title="Roles"><span class="nav-icon"><?= $icon('users') ?></span><span class="studio-label">Roles</span></a><?php endif; ?>
-    <span class="studio-nav-label">Tools</span>
-    <a href="/admin/health" <?= $active_nav === 'health' ? 'aria-current="page"' : '' ?> title="Content health"><span class="nav-icon"><?= $icon('health') ?></span><span class="studio-label">Content health</span></a>
-    <a href="/admin/media" <?= $active_nav === 'media' ? 'aria-current="page"' : '' ?> title="Media library"><span class="nav-icon"><?= $icon('media') ?></span><span class="studio-label">Media library</span></a>
-    <a href="/admin/import" <?= $active_nav === 'import' ? 'aria-current="page"' : '' ?> title="Import Markdown"><span class="nav-icon"><?= $icon('export') ?></span><span class="studio-label">Import Markdown</span></a>
-    <a href="/admin/graph" <?= $active_nav === 'graph' ? 'aria-current="page"' : '' ?> title="Content map"><span class="nav-icon"><?= $icon('graph') ?></span><span class="studio-label">Content map</span></a>
-    <a href="/admin/developer" <?= $active_nav === 'developer' ? 'aria-current="page"' : '' ?> title="Developer tools"><span class="nav-icon"><?= $icon('developer') ?></span><span class="studio-label">Developer tools</span></a>
-    <?php foreach ($extension_navigation as $item): ?><a href="<?= $e($item['route']) ?>" <?= $active_nav === ($item['active'] ?? '') ? 'aria-current="page"' : '' ?> title="<?= $e($item['label']) ?>"><span class="nav-icon"><?= $icon('extension') ?></span><span class="studio-label"><?= $e($item['label']) ?></span></a><?php endforeach; ?>
-    <a href="/admin/export" <?= $active_nav === 'export' ? 'aria-current="page"' : '' ?> title="Exports"><span class="nav-icon"><?= $icon('export') ?></span><span class="studio-label">Exports</span></a>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title><?= $e($title) ?> &middot; <?= $e($config['name']) ?></title>
+  <?php foreach ($styles as $style): ?><link rel="<?= $e($style['rel']) ?>" href="<?= $e($style['href']) ?>" media="<?= $e($style['media']) ?>"><?php endforeach; ?>
+  <style>
+    :root {
+      --brand: <?= $e($config['accent']) ?>;
+      --brand-strong: color-mix(in srgb, <?= $e($config['accent']) ?> 84%, #220c4d);
+      --brand-soft: color-mix(in srgb, <?= $e($config['accent']) ?> 9%, #fff);
+    }
+  </style>
+  <script nonce="<?= $e($csp_nonce ?? '') ?>">(function(){try{var theme=localStorage.getItem('lightdocs-theme')||'system';if(theme==='light'||theme==='dark')document.documentElement.dataset.theme=theme;var dark=theme==='dark'||(theme==='system'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);}catch(e){}})();</script>
+</head>
+<body class="lightdocs-admin-shell max-w-full overflow-x-clip <?= $e($body_class) ?>">
+<?php if ($notifications): ?>
+  <div class="fixed inset-x-0 top-2 z-[300] mx-auto grid w-[min(30rem,calc(100vw-2rem))] gap-2" data-admin-notifications>
+    <?php foreach ($notifications as $notification): ?>
+      <div class="rounded-lg border px-4 py-3 text-sm shadow-lg <?= in_array($notification['type'], ['danger', 'warning'], true) ? 'border-destructive/40 bg-destructive/10 text-destructive' : 'border-border bg-card text-foreground' ?>" role="<?= in_array($notification['type'], ['danger', 'warning'], true) ? 'alert' : 'status' ?>" data-admin-toast><?= $e($notification['message']) ?></div>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+<?php if ($shell): ?>
+<aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-[15.5rem] flex-col bg-sidebar text-sidebar-foreground aria-hidden:hidden max-[768px]:w-full">
+  <nav aria-label="Content Studio" class="flex h-full min-h-0 flex-col border-e border-sidebar-border bg-sidebar">
+    <header class="flex min-h-12 items-center gap-2 border-b border-sidebar-border px-3 py-2">
+      <a class="flex min-w-0 flex-1 items-center gap-2 text-sm font-semibold text-foreground" href="/admin"><span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-xs shadow-sm"><?= $e($header['initial']) ?></span><span><?= $e($config['name']) ?></span><span class="rounded-full border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"><?= $e($text['text_studio']) ?></span></a>
+    </header>
+    <section class="scrollbar-thin scrollbar-thumb-muted-foreground/30 scrollbar-track-transparent flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-3">
+      <?php foreach ($header['navigation_groups'] as $group): ?>
+        <?php if ($group['items']): ?><div class="grid gap-1.5"><h3 class="px-2 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground"><?= $e($group['label']) ?></h3><ul class="grid gap-0.5">
+          <?php foreach ($group['items'] as $item): ?><li><a class="group flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-semibold aria-[current=page]:text-foreground" href="<?= $e($item['href']) ?>" <?= !empty($item['active']) ? 'aria-current="page"' : '' ?>><span class="inline-flex h-4 w-4 shrink-0 text-muted-foreground"><?= $item['icon_svg'] ?></span><span><?= $e($item['label']) ?></span></a></li><?php endforeach; ?>
+        </ul></div><?php endif; ?>
+      <?php endforeach; ?>
+    </section>
+    <footer class="mt-auto border-t border-sidebar-border p-3"><a class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground" href="/" target="_blank"><?= $header['external_icon_svg'] ?><span><?= $e($text['text_view_docs']) ?></span></a></footer>
   </nav>
-  <div class="studio-sidebar-footer"><a href="/" target="_blank"><span class="nav-icon"><?= $icon('external') ?></span><span class="studio-label">View docs</span></a></div>
 </aside>
-  <?php $page_labels = ['dashboard' => 'Overview', 'editor' => 'Editor', 'settings' => 'Settings', 'navigation' => 'Navigation', 'extensions' => 'Extensions', 'events' => 'Events', 'users' => 'Users', 'roles' => 'Roles', 'profile' => 'Profile settings', 'health' => 'Content health', 'media' => 'Media library', 'import' => 'Import Markdown', 'graph' => 'Content map', 'audit' => 'Audit log', 'backups' => 'Backups', 'remote_sync' => 'Remote sync', 'developer' => 'Developer tools', 'export' => 'Exports']; ?>
-<header class="admin-topbar"><nav aria-label="Breadcrumb"><a href="/admin">Studio</a><span>/</span><strong><?= $e($page_labels[$active_nav] ?? 'Workspace') ?></strong></nav><div class="admin-topbar-actions"><button type="button" class="admin-command-button" data-admin-command aria-label="Open command menu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd>⌘K</kbd></button><button type="button" class="admin-icon-button" data-admin-theme-toggle aria-label="Change color theme"><span class="theme-state-icon" data-admin-theme-icon aria-hidden="true"></span></button><details class="admin-account-menu"><summary><span class="admin-avatar"><?= $e(mb_strtoupper(mb_substr($_SESSION['lightdocs_user']['display_name'] ?? 'A', 0, 1))) ?></span><span class="admin-user-label"><?= $e($_SESSION['lightdocs_user']['display_name'] ?? 'Administrator') ?></span><span class="admin-account-chevron" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></span></summary><nav aria-label="Account menu"><a href="/admin/profile">Profile settings</a><?php if (in_array('users.manage', $permissions, true)): ?><a href="/admin/users">Manage users</a><?php endif; ?><a href="/admin/logout" data-account-signout>Sign out</a></nav></details></div></header>
-<dialog class="admin-command-dialog" data-admin-command-dialog aria-label="Command menu"><div class="admin-command-panel"><div class="admin-command-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input type="search" placeholder="Search pages and actions..." data-admin-command-input><kbd>Esc</kbd></div><nav aria-label="Admin commands"><a data-admin-command-item href="/admin/editor"><span>Open editor</span><kbd>↵</kbd></a><a data-admin-command-item href="/admin/settings"><span>Open settings</span></a><a data-admin-command-item href="/admin/extensions"><span>Manage extensions</span></a><a data-admin-command-item href="/admin/events"><span>Manage events</span></a><a data-admin-command-item href="/admin/developer"><span>Developer tools</span></a><?php if (in_array('users.manage', $permissions, true)): ?><a data-admin-command-item href="/admin/users"><span>Open users</span></a><?php endif; ?><a data-admin-command-item href="/admin/profile"><span>Profile settings</span></a><a data-admin-command-item href="/" target="_blank"><span>View documentation</span></a></nav></div></dialog>
-<script defer src="/admin/view/javascript/admin.js?v=<?= @filemtime(dirname(__DIR__, 3) . '/view/javascript/admin.js') ?: 1 ?>"></script>
+<div id="admin-content" class="flex min-h-screen flex-col ms-[15.5rem] max-[768px]:ms-0 [&_button:not(:disabled)]:cursor-pointer [&_summary]:cursor-pointer">
+  <header class="sticky top-0 z-[70] flex min-h-14 max-w-full min-w-0 items-center justify-between gap-4 overflow-visible border-b border-border bg-background/90 px-6 max-[640px]:gap-2 max-[640px]:px-3">
+    <div class="flex min-w-0 items-center gap-2">
+      <button id="admin-sidebar-toggle" type="button" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" data-admin-sidebar-toggle aria-expanded="true" aria-controls="sidebar" aria-label="<?= $e($text['text_collapse_navigation']) ?>"><svg viewBox="0 0 24 24" class="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg></button>
+      <nav class="flex min-w-0 items-center gap-2 truncate text-xs font-normal text-muted-foreground" aria-label="Breadcrumb"><a class="shrink-0 hover:text-foreground" href="/admin"><?= $e($text['text_breadcrumb_home']) ?></a><span aria-hidden="true">/</span><span class="truncate font-semibold text-foreground" aria-current="page"><?= $e($header['page_labels'][$header['active_nav']] ?? $text['text_workspace']) ?></span></nav>
+    </div>
+    <div class="flex min-w-0 max-w-full shrink items-center justify-end gap-2 overflow-visible max-[640px]:gap-1">
+      <button type="button" class="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-card px-2 text-sm" data-admin-command aria-label="<?= $e($text['text_open_command_menu']) ?>"><svg viewBox="0 0 24 24" class="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><kbd class="hidden text-xs text-muted-foreground sm:inline">⌘K</kbd></button>
+      <button class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-card" type="button" data-admin-theme-toggle aria-label="<?= $e($text['text_change_theme']) ?>"><span class="inline-flex h-4 w-4 items-center justify-center" data-admin-theme-icon></span></button>
+      <div class="relative min-w-0 max-w-[min(14rem,calc(100vw-7rem))] shrink-0">
+        <button id="admin-account-trigger" type="button" class="inline-flex min-w-0 max-w-full items-center gap-2 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-haspopup="menu" aria-controls="admin-account-menu" aria-expanded="false"><span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs"><?= $e($header['account']['initial']) ?></span><span class="max-[640px]:hidden min-w-0 max-w-[9rem] truncate font-medium"><?= $e($header['account']['display_name']) ?></span><svg viewBox="0 0 24 24" class="h-4 w-4 shrink-0" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 10 5 5 5-5"/></svg></button>
+        <div class="absolute right-0 top-[calc(100%+0.375rem)] z-[80] w-56 max-w-[calc(100vw-1rem)] overflow-hidden rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-xl aria-hidden:hidden" data-popover aria-hidden="true"><nav id="admin-account-menu" aria-label="<?= $e($text['text_account_menu']) ?>" class="grid gap-1" role="menu"><a class="rounded-md px-3 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" role="menuitem" href="/admin/profile"><?= $e($text['text_nav_profile']) ?></a><?php if (!empty($header['account']['can_manage_users'])): ?><a class="rounded-md px-3 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" role="menuitem" href="/admin/users"><?= $e($text['text_manage_users']) ?></a><?php endif; ?><a class="rounded-md px-3 py-2 text-sm hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" role="menuitem" href="/admin/logout" data-account-signout><?= $e($text['text_sign_out']) ?></a></nav></div>
+      </div>
+    </div>
+  </header>
+  <dialog class="m-auto rounded-xl border border-border bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/20 backdrop:backdrop-blur-sm" data-admin-command-dialog aria-label="<?= $e($text['text_open_command_menu']) ?>"><div class="w-[min(34rem,calc(100vw-2rem))] p-2"><div class="flex items-center gap-2 border-b border-border px-2 py-2"><svg viewBox="0 0 24 24" class="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="min-w-0 flex-1 bg-transparent text-sm outline-none" type="search" placeholder="<?= $e($text['text_command_placeholder']) ?>" data-admin-command-input><kbd class="text-xs text-muted-foreground">Esc</kbd></div><nav class="mt-2 grid gap-1" aria-label="Admin commands"><?php foreach ($header['commands'] as $command): ?><a class="rounded-md px-3 py-2 text-sm hover:bg-muted" data-admin-command-item href="<?= $e($command['href']) ?>"<?= $command['external'] ? ' target="_blank"' : '' ?>><?= $e($command['label']) ?></a><?php endforeach; ?></nav></div></dialog>
+<?php endif; ?>

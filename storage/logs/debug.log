@@ -1,0 +1,4 @@
+[2026-07-17 13:07:33] ERROR: Unhandled Exception: Call to undefined method Admin\Controller\Tools\Backups::prepareArchives() in D:\Coding Projects\lightdocs\upload\admin\controller\tools\backups.php:43 
+[2026-07-17 13:07:53] ERROR: Unhandled Exception: Call to undefined method Admin\Controller\Tools\Backups::prepareArchives() in D:\Coding Projects\lightdocs\upload\admin\controller\tools\backups.php:43 
+[2026-07-17 13:08:49] ERROR: Unhandled Exception: Unexpected encoding - UTF-8 or ASCII was expected in D:\Coding Projects\lightdocs\upload\vendor\league\commonmark\src\Input\MarkdownInput.php:39 
+[2026-07-17 17:53:32] ERROR: Unhandled Exception: Object of class System\Engine\Action could not be converted to string in D:\Coding Projects\lightdocs\upload\system\engine\front.php:87 

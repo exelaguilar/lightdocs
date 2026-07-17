@@ -1,75 +1,39 @@
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
-const toastRegion = document.createElement('div');
-toastRegion.className = 'ui-toast-region';
-toastRegion.setAttribute('aria-live', 'polite');
-toastRegion.setAttribute('aria-atomic', 'true');
-document.body.append(toastRegion);
-let toastTimer = 0;
+const lightdocsComponents = new Map();
+window.lightdocs = {
+	register(name, definition) {
+		lightdocsComponents.set(name, definition);
+		$$(definition.selector).forEach((element) => definition.init(element));
+	},
+	theme: {
+		set(theme) {
+			document.documentElement.classList.toggle('dark', theme === 'dark');
+		},
+	},
+};
+
+const toastRegion = document.getElementById('toaster');
 function showAdminToast(message, type = 'success') {
-	clearTimeout(toastTimer);
-	toastRegion.replaceChildren();
+	if (!toastRegion) return;
 	const toast = document.createElement('div');
-	toast.className = `ui-toast is-${type}`;
+	toast.className = `rounded-lg border px-4 py-3 text-sm shadow-lg ${type === 'error' ? 'border-destructive/40 bg-destructive/10 text-destructive' : 'border-border bg-card text-foreground'}`;
+	toast.dataset.category = type;
 	toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
 	toast.textContent = message;
 	toastRegion.append(toast);
-	requestAnimationFrame(() => toast.classList.add('is-visible'));
-	toastTimer = setTimeout(() => {
-		toast.classList.remove('is-visible');
-		setTimeout(() => toast.remove(), 180);
-	}, 2600);
+	window.setTimeout(() => toast.remove(), type === 'error' ? 5000 : 3000);
 }
 
-const tooltip = document.createElement('div');
-tooltip.className = 'ui-tooltip';
-tooltip.id = 'admin-ui-tooltip';
-tooltip.setAttribute('role', 'tooltip');
-tooltip.hidden = true;
-document.body.append(tooltip);
-let tooltipTarget = null;
-function hideTooltip() {
-	tooltip.hidden = true;
-	tooltipTarget?.removeAttribute('aria-describedby');
-	tooltipTarget = null;
-}
-function showTooltip(target) {
-	const text = target.dataset.tooltip || target.getAttribute('aria-label');
-	if (!text || target.closest('[hidden]')) return;
-	tooltipTarget = target;
-	tooltip.textContent = text;
-	tooltip.hidden = false;
-	target.setAttribute('aria-describedby', tooltip.id);
-	const bounds = target.getBoundingClientRect();
-	const tooltipBounds = tooltip.getBoundingClientRect();
-	const gap = 8;
-	const leftPlacement = target.dataset.tooltipPlacement === 'left';
-	tooltip.classList.toggle('is-left', leftPlacement);
-	if (leftPlacement) {
-		tooltip.style.top = `${Math.min(innerHeight - gap - tooltipBounds.height / 2, Math.max(gap + tooltipBounds.height / 2, bounds.top + bounds.height / 2))}px`;
-		tooltip.style.left = `${Math.max(gap + tooltipBounds.width, bounds.left - gap)}px`;
-		return;
-	}
-	const top =
-		bounds.bottom + gap + tooltipBounds.height <= innerHeight - gap
-			? bounds.bottom + gap
-			: Math.max(gap, bounds.top - gap - tooltipBounds.height);
-	const left = Math.min(
-		innerWidth - gap - tooltipBounds.width / 2,
-		Math.max(gap + tooltipBounds.width / 2, bounds.left + bounds.width / 2),
-	);
-	tooltip.style.top = `${top}px`;
-	tooltip.style.left = `${left}px`;
-}
-$$('[data-tooltip],button[aria-label]').forEach((target) => {
-	target.addEventListener('mouseenter', () => showTooltip(target));
-	target.addEventListener('mouseleave', hideTooltip);
-	target.addEventListener('focus', () => showTooltip(target));
-	target.addEventListener('blur', hideTooltip);
+window.lightdocs.register('admin-toast', {
+	selector: '[data-admin-toast]',
+	init: (notice) => {
+		if (notice.dataset.adminToastInitialized) return;
+		notice.dataset.adminToastInitialized = 'true';
+		showAdminToast(notice.dataset.adminToast || notice.textContent.trim(), notice.dataset.adminToastType || 'success');
+	},
 });
-addEventListener('scroll', hideTooltip, { passive: true });
-addEventListener('resize', hideTooltip);
 
 document.addEventListener('submit', (event) => {
 	const form = event.target;
@@ -77,35 +41,132 @@ document.addEventListener('submit', (event) => {
 	if (!window.confirm(form.dataset.confirm)) event.preventDefault();
 });
 
-$$('[data-table-filter]').forEach((input) => {
-	const table = document.querySelector(`[data-table="${input.dataset.tableFilter}"]`);
-	if (!table) return;
-	const rows = $$('tbody tr', table);
-	const emptyRow = document.createElement('tr');
-	emptyRow.className = 'table-filter-empty';
-	emptyRow.hidden = true;
-	const emptyCell = document.createElement('td');
-	emptyCell.colSpan = Math.max(1, $$('thead th', table).length);
-	emptyCell.textContent = 'No rows match this filter.';
-	emptyRow.append(emptyCell);
-	table.querySelector('tbody')?.append(emptyRow);
-	const status = document.createElement('span');
-	status.className = 'table-filter-status';
-	status.setAttribute('role', 'status');
-	const toolbar = input.closest('.table-toolbar');
-	if (toolbar) toolbar.insertBefore(status, input);
-	const filter = () => {
-		const query = input.value.trim().toLowerCase();
-		let visible = 0;
-		rows.forEach((row) => {
-			row.hidden = query !== '' && !row.textContent.toLowerCase().includes(query);
-			if (!row.hidden) visible++;
+window.lightdocs.register('admin-table-filter', {
+	selector: '[data-table-filter]',
+	init: (input) => {
+		if (input.dataset.tableFilterInitialized) return;
+		input.dataset.tableFilterInitialized = 'true';
+		const table = document.querySelector(`[data-table="${input.dataset.tableFilter}"]`);
+		if (!table) return;
+		const typeFilter = document.querySelector(`[data-table-type-filter="${input.dataset.tableFilter}"]`);
+		const rows = $$('tbody tr', table);
+		const emptyRow = document.createElement('tr');
+		emptyRow.className = 'table-filter-empty border-t border-border';
+		emptyRow.hidden = true;
+		const emptyCell = document.createElement('td');
+		emptyCell.className = 'px-6 py-14 text-center text-sm text-muted-foreground';
+		emptyCell.colSpan = Math.max(1, $$('thead th', table).length);
+		emptyCell.textContent = 'No rows match this filter.';
+		emptyRow.append(emptyCell);
+		table.querySelector('tbody')?.append(emptyRow);
+		const tableSection = table.closest('section');
+		let resultCount = tableSection?.querySelector('[data-table-result-count]');
+		if (!resultCount && tableSection) {
+			const footer = document.createElement('footer');
+			footer.className = 'flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground max-[640px]:px-4';
+			resultCount = document.createElement('span');
+			resultCount.dataset.tableResultCount = '';
+			resultCount.setAttribute('role', 'status');
+			footer.append(resultCount);
+			tableSection.append(footer);
+		}
+		const filter = () => {
+			const query = input.value.trim().toLowerCase();
+			const type = typeFilter?.value || '';
+			let visible = 0;
+			rows.forEach((row) => {
+				row.hidden = (query !== '' && !row.textContent.toLowerCase().includes(query)) || (type !== '' && row.dataset.extensionType !== type);
+				if (!row.hidden) visible++;
+			});
+			emptyRow.hidden = visible > 0 || (query === '' && type === '');
+			const label = table.dataset.tableLabel || input.dataset.tableFilter;
+			if (resultCount) resultCount.textContent = `Showing ${visible} of ${rows.length} ${label}`;
+		};
+		input.addEventListener('input', filter);
+		typeFilter?.addEventListener('change', filter);
+		filter();
+	},
+});
+
+window.lightdocs.register('admin-extension-filter', {
+	selector: '[data-extension-grid]',
+	init: (extensionGrid) => {
+		if (extensionGrid.dataset.extensionGridInitialized) return;
+		extensionGrid.dataset.extensionGridInitialized = 'true';
+		const extensionGridFilter = $('[data-extension-grid-filter]');
+		const extensionGridType = $('[data-extension-grid-type]');
+		const extensionGridEmpty = $('[data-extension-grid-empty]');
+		if (!extensionGridFilter || !extensionGridType) return;
+		const filterExtensions = () => {
+			const query = extensionGridFilter.value.trim().toLowerCase();
+			const type = extensionGridType.value;
+			let visible = 0;
+			$$('[data-extension-type]', extensionGrid).forEach((card) => {
+				const matches =
+					(query === '' || card.textContent.toLowerCase().includes(query)) &&
+					(type === '' || card.dataset.extensionType === type);
+				card.hidden = !matches;
+				if (matches) visible++;
+			});
+			if (extensionGridEmpty) extensionGridEmpty.hidden = visible !== 0;
+		};
+		extensionGridFilter.addEventListener('input', filterExtensions);
+		extensionGridType.addEventListener('change', filterExtensions);
+		filterExtensions();
+	},
+});
+
+window.lightdocs.register('admin-navigation-editor', {
+	selector: '[data-navigation-sections]',
+	init: (list) => {
+		if (list.dataset.navigationEditorInitialized) return;
+		list.dataset.navigationEditorInitialized = 'true';
+		const addButton = $('[data-navigation-add-section]');
+		addButton?.addEventListener('click', () => {
+			const index = list.querySelectorAll('.navigation-row').length;
+			$('[data-navigation-empty]')?.remove();
+			const row = document.createElement('div');
+			row.className = 'navigation-row grid lg:grid-cols-[minmax(11rem,1.2fr)_minmax(10rem,1fr)_minmax(12rem,1.3fr)_minmax(7rem,.6fr)_5rem] max-[1024px]:grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-2.5 rounded-lg border border-border bg-muted/20 p-3';
+			row.innerHTML = '<label class="grid min-w-0 gap-1.5"><span class="text-xs font-medium text-foreground">Path</span><input class="min-h-8 w-full rounded-md border border-input bg-card px-2 py-1.5 text-xs text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" name="sections[' + index + '][path]" required></label><label class="grid min-w-0 gap-1.5"><span class="text-xs font-medium text-foreground">Title</span><input class="min-h-8 w-full rounded-md border border-input bg-card px-2 py-1.5 text-xs text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" name="sections[' + index + '][title]"></label><label class="grid min-w-0 gap-1.5"><span class="text-xs font-medium text-foreground">Description</span><input class="min-h-8 w-full rounded-md border border-input bg-card px-2 py-1.5 text-xs text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" name="sections[' + index + '][description]"></label><label class="grid min-w-0 gap-1.5"><span class="text-xs font-medium text-foreground">Icon</span><input class="min-h-8 w-full rounded-md border border-input bg-card px-2 py-1.5 text-xs text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" name="sections[' + index + '][icon]" value="folder"></label><label class="grid min-w-0 gap-1.5"><span class="text-xs font-medium text-foreground">Order</span><input class="min-h-8 w-full rounded-md border border-input bg-card px-2 py-1.5 text-xs text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" type="number" name="sections[' + index + '][order]" value="100"></label>';
+			list.append(row);
+			row.querySelector('input')?.focus();
 		});
-		emptyRow.hidden = query === '' || visible > 0;
-		status.textContent = query === '' ? `${rows.length} total` : `${visible} of ${rows.length} shown`;
-	};
-	input.addEventListener('input', filter);
-	filter();
+	},
+});
+
+window.lightdocs.register('admin-media-controls', {
+	selector: '[data-media-upload-form]',
+	init: (form) => {
+		if (form.dataset.mediaControlsInitialized) return;
+		form.dataset.mediaControlsInitialized = 'true';
+		const file = $('[data-media-upload-file]', form);
+		file?.addEventListener('change', () => {
+			if (!file.files?.length) return;
+			$('[data-media-upload-label]', form).textContent = 'Uploading…';
+			$('[data-media-upload-status]', form).textContent = file.files[0].name;
+			form.requestSubmit();
+		});
+		$$('[data-media-rename]').forEach((button) => button.addEventListener('click', () => {
+			const dialog = $('[data-media-dialog]');
+			$('[data-media-original]', dialog).value = button.dataset.mediaRename;
+			$('[data-media-new]', dialog).value = button.dataset.mediaRename;
+			dialog.showModal();
+		}));
+		$$('[data-media-cancel]').forEach((button) => button.addEventListener('click', () => $('[data-media-dialog]')?.close()));
+		const previewDialog = $('[data-media-preview-dialog]');
+		$$('[data-media-preview]').forEach((button) => button.addEventListener('click', () => {
+			const content = $('[data-media-preview-content]', previewDialog);
+			const preview = document.createElement(button.dataset.mediaPreviewImage === '1' ? 'img' : 'iframe');
+			preview.className = 'max-h-[70vh] max-w-full object-contain';
+			preview.src = button.dataset.mediaPreview;
+			if (preview.tagName === 'IMG') preview.alt = button.dataset.mediaPreviewName;
+			else preview.title = button.dataset.mediaPreviewName;
+			content.replaceChildren(preview);
+			$('[data-media-preview-title]', previewDialog).textContent = button.dataset.mediaPreviewName;
+			previewDialog.showModal();
+		}));
+		$('[data-media-preview-close]')?.addEventListener('click', () => previewDialog?.close());
+	},
 });
 
 $('[data-permissions-select-all]')?.addEventListener('click', () => {
@@ -114,15 +175,15 @@ $('[data-permissions-select-all]')?.addEventListener('click', () => {
 	});
 });
 
-const adminSidebarToggle = $('[data-admin-sidebar-toggle]');
+const adminSidebarToggle = document.getElementById('admin-sidebar-toggle');
 const adminThemeToggles = $$('[data-admin-theme-toggle]');
 const adminThemeIcons = $$('[data-admin-theme-icon]');
-const adminThemeLabel = $('[data-admin-theme-label]');
 const adminThemes = ['system', 'light', 'dark'];
+const adminThemeIconSvgOpen = '<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
 const adminThemeIconMarkup = {
-	system: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="9"/></svg>',
-	light: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
-	dark: '<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5Z"/></svg>',
+	system: adminThemeIconSvgOpen + '<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+	light: adminThemeIconSvgOpen + '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+	dark: adminThemeIconSvgOpen + '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5Z"/></svg>',
 };
 function adminTheme() {
 	try {
@@ -134,11 +195,14 @@ function adminTheme() {
 function applyAdminTheme(theme) {
 	if (theme === 'system') delete document.documentElement.dataset.theme;
 	else document.documentElement.dataset.theme = theme;
+	const resolvedTheme =
+		theme === 'system'
+			? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+			: theme;
+	window.lightdocs.theme.set(resolvedTheme);
 	try {
 		localStorage.setItem('lightdocs-theme', theme);
 	} catch {}
-	if (adminThemeLabel)
-		adminThemeLabel.textContent = theme[0].toUpperCase() + theme.slice(1);
 	adminThemeIcons.forEach((icon) => {
 		icon.innerHTML = adminThemeIconMarkup[theme] || adminThemeIconMarkup.system;
 		icon.closest('button')?.setAttribute('data-theme', theme);
@@ -146,31 +210,23 @@ function applyAdminTheme(theme) {
 	const themeLabel = theme[0].toUpperCase() + theme.slice(1);
 	adminThemeToggles.forEach((toggle) => toggle.setAttribute('aria-label', `Color theme: ${themeLabel}. Click to change.`));
 }
-function syncAdminSidebar() {
-	const collapsed = document.documentElement.classList.contains(
-		'admin-sidebar-collapsed',
-	);
-	adminSidebarToggle?.setAttribute('aria-expanded', String(!collapsed));
-	adminSidebarToggle?.setAttribute(
-		'aria-label',
-		collapsed ? 'Expand navigation' : 'Collapse navigation',
-	);
-	adminSidebarToggle?.setAttribute(
-		'title',
-		collapsed ? 'Expand navigation' : 'Collapse navigation',
-	);
+function syncAdminSidebarToggle() {
+	const sidebarEl = document.getElementById('sidebar');
+	if (!adminSidebarToggle || !sidebarEl) return;
+	adminSidebarToggle.setAttribute('aria-expanded', String(sidebarEl.getAttribute('aria-hidden') !== 'true'));
 }
 adminSidebarToggle?.addEventListener('click', () => {
-	document.documentElement.classList.toggle('admin-sidebar-collapsed');
+	const sidebarEl = document.getElementById('sidebar');
+	const contentEl = document.getElementById('admin-content');
+	if (sidebarEl) {
+		const open = sidebarEl.getAttribute('aria-hidden') !== 'true';
+		sidebarEl.setAttribute('aria-hidden', String(open));
+		if (contentEl) contentEl.style.marginInlineStart = open ? '0' : '';
+	}
+	syncAdminSidebarToggle();
 	try {
-		localStorage.setItem(
-			'lightdocs-admin-sidebar',
-			document.documentElement.classList.contains('admin-sidebar-collapsed')
-				? 'collapsed'
-				: 'expanded',
-		);
+		localStorage.setItem('lightdocs-sidebar', sidebarEl?.getAttribute('aria-hidden') === 'true' ? 'closed' : 'open');
 	} catch {}
-	syncAdminSidebar();
 });
 adminThemeToggles.forEach((toggle) => toggle.addEventListener('click', () => {
 	applyAdminTheme(
@@ -188,34 +244,69 @@ const openCommandMenu = () => {
 	commandInput?.focus();
 };
 commandButton?.addEventListener('click', openCommandMenu);
-commandInput?.addEventListener('input', () => {
-	const query = commandInput.value.trim().toLowerCase();
-	$$('[data-admin-command-item]', commandDialog).forEach((item) => {
-		item.hidden = query !== '' && !item.textContent.toLowerCase().includes(query);
-	});
-});
 commandDialog?.addEventListener('click', (event) => {
 	if (event.target === commandDialog) commandDialog.close();
 });
+const commandItems = $$('[data-admin-command-item]');
+commandInput?.addEventListener('input', () => {
+	const query = commandInput.value.trim().toLowerCase();
+	commandItems.forEach((item) => {
+		const text = `${item.dataset.filter || ''} ${item.dataset.keywords || ''} ${item.textContent}`.toLowerCase();
+		item.hidden = query !== '' && !text.includes(query);
+	});
+});
+function wirePopoverTrigger(trigger) {
+	const container = trigger?.closest('.relative');
+	const popover = container?.querySelector('[data-popover]');
+	if (!trigger || !popover) return;
+	trigger.addEventListener('click', () => {
+		const open = trigger.getAttribute('aria-expanded') === 'true';
+		trigger.setAttribute('aria-expanded', String(!open));
+		popover.setAttribute('aria-hidden', String(open));
+	});
+	trigger.addEventListener('keydown', (event) => {
+		if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			trigger.click();
+			if (trigger.getAttribute('aria-expanded') === 'true')
+				popover.querySelector('[role="menuitem"]')?.focus();
+		}
+	});
+	popover.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			trigger.click();
+			trigger.focus();
+		}
+	});
+	document.addEventListener('click', (event) => {
+		if (!container.contains(event.target)) {
+			trigger.setAttribute('aria-expanded', 'false');
+			popover.setAttribute('aria-hidden', 'true');
+		}
+	});
+}
+wirePopoverTrigger($('#admin-account-trigger'));
+wirePopoverTrigger($('#editor-more-trigger'));
 document.addEventListener('keydown', (event) => {
+	if (event.key === 'Escape') {
+		$$('[data-popover][aria-hidden="false"]').forEach((popover) => {
+			popover.setAttribute('aria-hidden', 'true');
+			popover.closest('.relative')?.querySelector('[aria-expanded="true"]')?.setAttribute('aria-expanded', 'false');
+		});
+	}
 	if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
 		event.preventDefault();
 		openCommandMenu();
 	}
 });
 applyAdminTheme(adminTheme());
-syncAdminSidebar();
-
-const accountMenu = $('.admin-account-menu');
-document.addEventListener('click', (event) => {
-	if (accountMenu?.open && !accountMenu.contains(event.target)) accountMenu.open = false;
-});
-document.addEventListener('keydown', (event) => {
-	if (event.key === 'Escape' && accountMenu?.open) accountMenu.open = false;
-});
+syncAdminSidebarToggle();
 
 const form = $('[data-editor-form]');
-const workspace = $('.editor-workspace');
+const workspace = $('[data-editor-shell]');
+const sourcePane = $('[data-source-pane]');
+const previewPane = $('[data-preview-pane]');
 const frame = $('[data-preview-frame]');
 const textarea = $('[data-markdown-editor]');
 const previewButton = $('[data-toggle-preview]');
@@ -235,25 +326,25 @@ function updateOutline() {
 	const outline = $('[data-editor-outline]');
 	if (!outline || !textarea) return;
 	const headings = [...textarea.value.matchAll(/^(#{1,3})\s+(.+)$/gm)];
-	outline.innerHTML = headings.length
-		? headings
-				.map(
-					(match) =>
-						`<button type="button" data-outline-index="${match.index}" class="outline-level-${match[1].length}">${match[2].replace(/<[^>]*>/g, '')}</button>`,
-				)
-				.join('')
-		: '<span>No headings yet</span>';
-	$$('[data-outline-index]', outline).forEach((button) =>
-		button.addEventListener('click', () => {
-			const index = Number(button.dataset.outlineIndex);
-			textarea.focus();
-			textarea.setSelectionRange(index, index);
-			textarea.scrollTop = Math.max(
-				0,
-				textarea.value.slice(0, index).split(/\r?\n/).length * 20 - 80,
-			);
-		}),
-	);
+	if (!headings.length) {
+		outline.innerHTML = '';
+		return;
+	}
+	outline.innerHTML = `<select class="min-h-8 max-w-[16rem] rounded-md border border-input bg-card px-2 py-1 text-xs text-foreground" data-outline-select aria-label="Jump to heading"><option value=''>Jump to heading&hellip;</option>${headings
+		.map((match) => `<option value="${match.index}">${match[2].replace(/<[^>]*>/g, '')}</option>`)
+		.join('')}</select>`;
+	const select = $('[data-outline-select]', outline);
+	select?.addEventListener('change', () => {
+		if (select.value === '') return;
+		const index = Number(select.value);
+		textarea.focus();
+		textarea.setSelectionRange(index, index);
+		textarea.scrollTop = Math.max(
+			0,
+			textarea.value.slice(0, index).split(/\r?\n/).length * 20 - 80,
+		);
+		select.value = '';
+	});
 }
 function updateCount() {
 	if (!textarea || !count) return;
@@ -267,7 +358,7 @@ function markDirty() {
 	if (!textarea || !saveState) return;
 	const dirty = textarea.value !== cleanValue;
 	saveState.textContent = dirty ? 'Unsaved' : 'Saved';
-	saveState.closest('.studio-status')?.classList.toggle('dirty', dirty);
+	saveState.classList.toggle('text-destructive', dirty);
 }
 async function preview() {
 	if (!form || !frame) return;
@@ -312,228 +403,80 @@ function schedulePreview() {
 	timer = setTimeout(preview, 320);
 }
 
-let navigatingAway = false;
-function flashStatus(text, isError) {
-	const main = $('.editor-main');
-	if (!main) return;
-	showAdminToast(text, isError ? 'error' : 'success');
-	$$('[data-flash]', main).forEach((note) => note.remove());
-	const note = document.createElement('p');
-	note.className = isError ? 'form-error' : 'form-success';
-	note.dataset.flash = 'true';
-	note.setAttribute('role', isError ? 'alert' : 'status');
-	note.textContent = text;
-	main.prepend(note);
-	if (!isError) setTimeout(() => note.remove(), 4000);
-}
-function updateRevisions(revisions) {
-	const badge = $('[data-toggle-revisions] span');
-	if (badge) badge.textContent = String(revisions.length);
-	const list = $('[data-revision-panel] .revision-list');
-	if (!list) return;
-	list.replaceChildren(
-		...revisions.map((revision) => {
-			const row = document.createElement('div');
-			const info = document.createElement('span');
-			const when = document.createElement('strong');
-			when.textContent = revision.label;
-			const size = document.createElement('small');
-			size.textContent = revision.size;
-			info.append(when, size);
-			const actions = document.createElement('span');
-			actions.className = 'revision-actions';
-			const compare = document.createElement('button');
-			compare.type = 'button';
-			compare.dataset.compareRevision = revision.id;
-			compare.textContent = 'Compare';
-			const restore = document.createElement('button');
-			restore.type = 'submit';
-			restore.name = 'action';
-			restore.value = 'restore:' + revision.id;
-			restore.dataset.restoreRevision = 'true';
-			restore.textContent = 'Restore';
-			actions.append(compare, restore);
-			row.append(info, actions);
-			return row;
-		}),
-	);
-}
-async function saveDocument() {
-	if (!form || !textarea) return;
-	syncFrontmatter();
-	if (saveState) saveState.textContent = 'Saving…';
-	const data = new FormData(form);
-	data.set('action', 'save');
+const glossaryTerms = (() => {
 	try {
-		const response = await fetch('/admin/save', { method: 'POST', body: data });
-		const result = await response.json();
-		if (!response.ok) throw new Error(result.error || 'Save failed.');
-		form.elements.hash.value = result.hash;
-		cleanValue = textarea.value;
-		markDirty();
-		if (saveState) saveState.textContent = 'Saved';
-		if (result.created) {
-			navigatingAway = true;
-			location.href = '/admin/editor?file=' + encodeURIComponent(result.file);
-			return;
-		}
-		flashStatus(result.message || 'Saved', false);
-		updateRevisions(result.revisions || []);
-	} catch (error) {
-		if (saveState) saveState.textContent = 'Unsaved';
-		flashStatus(error.message, true);
+		const terms = JSON.parse($('[data-glossary-terms]')?.textContent || '[]');
+		return Array.isArray(terms) ? terms : [];
+	} catch {
+		return [];
 	}
+})();
+const glossarySuggestion = $('[data-glossary-suggestion]');
+const glossarySuggestionLabel = $('[data-glossary-suggestion-label]');
+const slashMenuRoot = $('[data-slash-menu-root]');
+const slashMenu = $('[data-slash-menu]');
+let glossaryMatch = null;
+let slashMatch = null;
+let slashIndex = 0;
+function hideGlossarySuggestion() {
+	if (glossarySuggestion) glossarySuggestion.hidden = true;
+	glossaryMatch = null;
 }
-
-function syncFrontmatter() {
-	if (!textarea || isSnippet) return;
-	const fields = Object.fromEntries(
-		$$('[data-meta-field]').map((field) => [
-			field.dataset.metaField,
-			field.type === 'checkbox' ? field.checked : field.value,
-		]),
-	);
-	let source = textarea.value;
-	let body = source;
-	let lines = [];
-	const match = source.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
-	if (match) {
-		lines = match[1].split(/\r?\n/);
-		body = source.slice(match[0].length);
-	}
-	const keys = [
-		'title',
-		'description',
-		'keywords',
-		'aliases',
-		'order',
-		'visibility',
-		'type',
-		'reviewed',
-		'review_after',
-		'status',
-		'publish_at',
-		'draft',
-		'nav',
-		'contains_secrets',
-		'ai_exclude',
-	];
-	const retained = lines.filter(
-		(line) => !keys.some((key) => new RegExp(`^${key}:`).test(line)),
-	);
-	const quote = (value) =>
-		`"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-	const list = (value) =>
-		JSON.stringify(
-			String(value || '')
-				.split(',')
-				.map((item) => item.trim())
-				.filter(Boolean),
-		);
-	const generated = [
-		`title: ${quote(fields.title || 'New Page')}`,
-		`description: ${quote(fields.description || '')}`,
-		list(fields.keywords) !== '[]' ? `keywords: ${list(fields.keywords)}` : '',
-		list(fields.aliases) !== '[]' ? `aliases: ${list(fields.aliases)}` : '',
-		`order: ${Number(fields.order) || 100}`,
-		fields.visibility && fields.visibility !== 'public'
-			? `visibility: ${fields.visibility}`
-			: '',
-		fields.type && fields.type !== 'article' ? `type: ${fields.type}` : '',
-		fields.reviewed ? `reviewed: ${quote(fields.reviewed)}` : '',
-		Number(fields.review_after) && Number(fields.review_after) !== 180
-			? `review_after: ${Number(fields.review_after)}`
-			: '',
-		fields.status && fields.status !== 'published' ? `status: ${fields.status}` : '',
-		fields.publish_at ? `publish_at: ${quote(fields.publish_at)}` : '',
-		fields.status === 'draft' || (!fields.status && fields.draft) ? 'draft: true' : '',
-		fields.nav ? '' : 'nav: false',
-		fields.contains_secrets ? 'contains_secrets: true' : '',
-		fields.ai_exclude ? 'ai_exclude: true' : '',
-	];
-	textarea.value = `---\n${[...generated, ...retained].filter(Boolean).join('\n')}\n---\n\n${body.replace(/^\s+/, '')}`;
-	markDirty();
-	updateCount();
-	schedulePreview();
-}
-
-previewButton?.addEventListener('click', () => {
-	const previewOnly = workspace?.classList.toggle('preview-only') || false;
-	previewButton.classList.toggle('active', previewOnly);
-	previewButton.setAttribute('aria-pressed', String(previewOnly));
-	previewButton.textContent = previewOnly ? 'Split view' : 'Preview only';
-	if (frame && !frame.srcdoc) preview();
-});
-metadataButton?.addEventListener('click', () => {
-	metadataPanel?.classList.toggle('open');
-	metadataButton.classList.toggle('active');
-});
-revisionsButton?.addEventListener('click', () =>
-	revisionsPanel?.classList.toggle('open'),
-);
-$('[data-close-revisions]')?.addEventListener('click', () =>
-	revisionsPanel?.classList.remove('open'),
-);
-gitHistoryButton?.addEventListener('click', () =>
-	gitHistoryPanel?.classList.toggle('open'),
-);
-$('[data-close-git-history]')?.addEventListener('click', () =>
-	gitHistoryPanel?.classList.remove('open'),
-);
-const studioMenus = $$('details.editor-more,details.studio-nav-menu');
-studioMenus.forEach((menu) =>
-	menu.addEventListener('toggle', () => {
-		if (!menu.open) return;
-		studioMenus.forEach((other) => {
-			if (other !== menu) other.open = false;
-		});
-	}),
-);
-document.addEventListener('click', (event) =>
-	studioMenus.forEach((menu) => {
-		if (menu.open && !menu.contains(event.target)) menu.open = false;
-	}),
-);
-document.addEventListener('click', (event) => {
-	const button = event.target.closest('[data-restore-revision]');
-	if (
-		button &&
-		!confirm(
-			'Restore this revision? The current page will be saved in history first.',
-		)
-	)
-		event.preventDefault();
-});
-$$('[data-meta-field]').forEach((field) =>
-	field.addEventListener('change', syncFrontmatter),
-);
-$$('[data-meta-field][type="text"], [data-meta-field][type="number"]').forEach(
-	(field) =>
-		field.addEventListener('input', () => {
-			clearTimeout(timer);
-			timer = setTimeout(syncFrontmatter, 250);
-		}),
-);
-textarea?.addEventListener('input', () => {
-	markDirty();
-	updateCount();
-	schedulePreview();
-	if (/(^|\s)@image\s*$/.test(textarea.value.slice(0, textarea.selectionStart))) openAssetPicker();
-});
-form?.addEventListener('submit', (event) => {
-	const submitter = event.submitter;
-	const action =
-		submitter && submitter.name === 'action' && submitter.value
-			? submitter.value
-			: 'save';
-	if (action !== 'save') {
-		syncFrontmatter();
-		navigatingAway = true;
+function updateGlossarySuggestion() {
+	if (!textarea || !glossarySuggestion || textarea.selectionStart !== textarea.selectionEnd) {
+		hideGlossarySuggestion();
 		return;
 	}
-	event.preventDefault();
-	saveDocument();
+	const before = textarea.value.slice(0, textarea.selectionStart);
+	if (/\\[\\[[^\\]]*$/.test(before)) {
+		hideGlossarySuggestion();
+		return;
+	}
+	const candidates = glossaryTerms
+		.flatMap((term) => [term.term, ...(term.aliases || [])].map((label) => ({ term, label })))
+		.filter((candidate) => candidate.label)
+		.sort((left, right) => right.label.length - left.label.length);
+	const match = candidates.find((candidate) => {
+		const start = before.length - candidate.label.length;
+		return start >= 0 && before.slice(start).toLocaleLowerCase() === candidate.label.toLocaleLowerCase() && (start === 0 || !/[\p{L}\p{N}_-]/u.test(before[start - 1]));
+	});
+	if (!match) {
+		hideGlossarySuggestion();
+		return;
+	}
+	glossaryMatch = { ...match, start: before.length - match.label.length, end: before.length };
+	glossarySuggestionLabel.textContent = `Link “${match.label}” to the ${match.term.term} glossary term.`;
+	glossarySuggestion.hidden = false;
+}
+$('[data-insert-glossary-reference]')?.addEventListener('click', () => {
+	if (!textarea || !glossaryMatch) return;
+	textarea.setRangeText(`[${glossaryMatch.label}](/glossary#${glossaryMatch.term.slug})`, glossaryMatch.start, glossaryMatch.end, 'end');
+	textarea.dispatchEvent(new Event('input', { bubbles: true }));
+	textarea.focus();
 });
+$('[data-dismiss-glossary-suggestion]')?.addEventListener('click', hideGlossarySuggestion);
+
+function hideSlashMenu() {
+	if (slashMenuRoot) slashMenuRoot.hidden = true;
+	slashMatch = null;
+	slashIndex = 0;
+}
+function positionSlashMenu() {
+	if (!textarea || !slashMenuRoot || slashMenuRoot.hidden) return;
+	const styles = getComputedStyle(textarea);
+	const mirror = document.createElement('div');
+	const marker = document.createElement('span');
+	mirror.className = 'fixed invisible pointer-events-none h-auto';
+	Object.assign(mirror.style, {
+		boxSizing: 'border-box',
+		font: styles.font,
+		letterSpacing: styles.letterSpacing,
+		lineHeight: styles.lineHeight,
+		padding: styles.padding,
+		textIndent: styles.textIndent,
+		textTransform: styles.textTransform,
+		});
+	}
 document.addEventListener('keydown', (event) => {
 	if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
 		event.preventDefault();
@@ -658,7 +601,8 @@ $$('[data-preview-size]').forEach((button) =>
 	button.addEventListener('click', () => {
 		frame?.setAttribute('data-size', button.dataset.previewSize);
 		$$('[data-preview-size]').forEach((candidate) =>
-			candidate.classList.toggle('active', candidate === button),
+			(candidate.dataset.variant = candidate === button ? 'outline' : 'ghost',
+			candidate.setAttribute('aria-pressed', String(candidate === button))),
 		);
 		preview();
 	}),
@@ -790,7 +734,14 @@ function renderLineDiff(previous, current, previousTarget, currentTarget) {
 		for (const row of rows) {
 			const item = row[side];
 			const line = document.createElement('span');
-			line.className = `diff-line ${item ? `diff-${item.type}` : 'diff-empty'}`;
+			const tone = item?.type === 'add'
+				? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+				: item?.type === 'remove'
+					? 'bg-destructive/10 text-destructive'
+					: item?.type === 'skip'
+						? 'bg-muted text-muted-foreground italic'
+						: 'text-foreground';
+			line.className = `diff-line block min-h-5 whitespace-pre-wrap break-words border-b border-border/50 px-3 py-1 font-mono text-xs leading-5 ${tone}`;
 			line.dataset.line = item?.line ? String(item.line) : '';
 			line.textContent = item?.text || ' ';
 			fragment.append(line);
@@ -802,10 +753,10 @@ function renderLineDiff(previous, current, previousTarget, currentTarget) {
 	const additions = fullRows.filter((row) => row.right?.type === 'add').length;
 	const removals = fullRows.filter((row) => row.left?.type === 'remove').length;
 	const dialog = previousTarget.closest('dialog');
-	const title = dialog?.querySelector('.revision-compare-head strong');
+	const title = dialog?.querySelector('header h2');
 	if (title) {
 		title.dataset.baseTitle ||= title.textContent;
-		title.textContent = `${title.dataset.baseTitle} · +${additions} −${removals}`;
+		title.textContent = `${title.dataset.baseTitle} · +${additions} →${removals}`;
 	}
 }
 const compareDialog = $('[data-revision-compare]');
@@ -866,9 +817,9 @@ $('[data-close-git-compare]')?.addEventListener('click', () =>
 async function uploadIntoEditor(file) {
 	if (!file || !form || !textarea) return;
 	const data = new FormData();
-	data.set('csrf', form.elements.csrf.value);
+	data.set('csrf_token', form.elements.csrf_token.value);
 	data.set('asset', file);
-	textarea.classList.add('uploading');
+	textarea.classList.add('border-primary');
 	if (saveState) saveState.textContent = 'Uploading asset...';
 	try {
 		const response = await fetch('/admin/upload', {
@@ -888,24 +839,24 @@ async function uploadIntoEditor(file) {
 	} catch (error) {
 		alert(error.message);
 	} finally {
-		textarea.classList.remove('uploading');
+		textarea.classList.remove('border-primary');
 		markDirty();
 	}
 }
 textarea?.addEventListener('dragover', (event) => {
 	if ([...event.dataTransfer.types].includes('Files')) {
 		event.preventDefault();
-		textarea.classList.add('drag-active');
+		textarea.classList.add('border-primary', 'border-dashed', 'bg-muted');
 	}
 });
 textarea?.addEventListener('dragleave', () =>
-	textarea.classList.remove('drag-active'),
+	textarea.classList.remove('border-primary', 'border-dashed', 'bg-muted'),
 );
 textarea?.addEventListener('drop', (event) => {
 	const file = event.dataTransfer.files[0];
 	if (file) {
 		event.preventDefault();
-		textarea.classList.remove('drag-active');
+		textarea.classList.remove('border-primary', 'border-dashed', 'bg-muted');
 		uploadIntoEditor(file);
 	}
 });
@@ -922,14 +873,14 @@ let draggedPage = null;
 $$('[data-tree-page]').forEach((item) => {
 	item.addEventListener('dragstart', (event) => {
 		draggedPage = item;
-		item.classList.add('dragging');
+		item.classList.add('bg-muted');
 		event.dataTransfer.effectAllowed = 'move';
 	});
 	item.addEventListener('dragend', () => {
-		item.classList.remove('dragging');
+		item.classList.remove('bg-muted');
 		draggedPage = null;
 		$$('[data-tree-page]').forEach((page) =>
-			page.classList.remove('drag-over'),
+			page.classList.remove('border-primary'),
 		);
 	});
 	item.addEventListener('dragover', (event) => {
@@ -939,10 +890,10 @@ $$('[data-tree-page]').forEach((item) => {
 			draggedPage !== item
 		) {
 			event.preventDefault();
-			item.classList.add('drag-over');
+			item.classList.add('border-primary');
 		}
 	});
-	item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+	item.addEventListener('dragleave', () => item.classList.remove('border-primary'));
 	item.addEventListener('drop', async (event) => {
 		if (
 			!draggedPage ||
@@ -951,7 +902,7 @@ $$('[data-tree-page]').forEach((item) => {
 		)
 			return;
 		event.preventDefault();
-		item.classList.remove('drag-over');
+		item.classList.remove('border-primary');
 		const box = item.getBoundingClientRect();
 		item.parentElement.insertBefore(
 			draggedPage,
@@ -961,7 +912,7 @@ $$('[data-tree-page]').forEach((item) => {
 			.map((child) => $('[data-page-file]', child)?.dataset.pageFile)
 			.filter(Boolean);
 		const data = new FormData();
-		data.set('csrf', form.elements.csrf.value);
+		data.set('csrf_token', form.elements.csrf_token.value);
 		files.forEach((file) => data.append('files[]', file));
 		if (saveState) saveState.textContent = 'Saving navigation…';
 		try {
@@ -988,9 +939,11 @@ const editorShell = $('[data-editor-shell]');
 const contentToggle = $('[data-toggle-content]');
 const contentFilter = $('[data-content-filter]');
 function setContentPanel(open) {
-	if (!editorShell || !contentToggle) return;
+	if (!editorShell) return;
 	editorShell.classList.toggle('content-collapsed', !open);
-	contentToggle.setAttribute('aria-expanded', String(open));
+	contentToggle?.setAttribute('aria-expanded', String(open));
+	const panel = $('#studio-content-panel');
+	panel?.setAttribute('aria-hidden', String(!open));
 	try {
 		localStorage.setItem('lightdocs-studio-content', open ? 'open' : 'closed');
 	} catch {}
@@ -1044,3 +997,65 @@ document.addEventListener('keydown', (event) => {
 		contentFilter?.focus();
 	}
 });
+
+const adminTooltipTargets = $$('[data-tooltip], button[aria-label], a[aria-label], summary[aria-label]');
+if (adminTooltipTargets.length) {
+	const tooltipEl = document.createElement('div');
+	tooltipEl.className =
+		'pointer-events-none fixed z-[300] hidden max-w-[min(16rem,calc(100vw-2rem))] rounded-md border border-border bg-popover px-2.5 py-1.5 text-[11px] font-medium leading-4 text-popover-foreground opacity-0 shadow-lg transition-[opacity,transform] duration-150 ease-out translate-y-1';
+	tooltipEl.setAttribute('role', 'tooltip');
+	tooltipEl.id = 'admin-tooltip';
+	document.body.appendChild(tooltipEl);
+	let tooltipTarget = null;
+	let tooltipTimer = 0;
+	function positionAdminTooltip() {
+		if (!tooltipTarget) return;
+		const rect = tooltipTarget.getBoundingClientRect();
+		const preferred = tooltipTarget.dataset.tooltipPlacement || tooltipTarget.dataset.side || 'top';
+		const gap = 8;
+		const tipRect = tooltipEl.getBoundingClientRect();
+		const sides = preferred === 'auto' ? ['top', 'bottom', 'right', 'left'] : [preferred, 'top', 'bottom', 'right', 'left'];
+		const side = sides.find((candidate, index) => sides.indexOf(candidate) === index && ((candidate === 'top' && rect.top >= tipRect.height + gap) || (candidate === 'bottom' && window.innerHeight - rect.bottom >= tipRect.height + gap) || (candidate === 'left' && rect.left >= tipRect.width + gap) || (candidate === 'right' && window.innerWidth - rect.right >= tipRect.width + gap))) || 'top';
+		let top = side === 'bottom' ? rect.bottom + gap : side === 'left' || side === 'right' ? rect.top + rect.height / 2 - tipRect.height / 2 : rect.top - tipRect.height - gap;
+		let left = side === 'left' ? rect.left - tipRect.width - gap : side === 'right' ? rect.right + gap : rect.left + rect.width / 2 - tipRect.width / 2;
+		left = Math.max(4, Math.min(left, window.innerWidth - tipRect.width - 4));
+		top = Math.max(4, Math.min(top, window.innerHeight - tipRect.height - 4));
+		tooltipEl.dataset.placement = side;
+		tooltipEl.style.top = `${top}px`;
+		tooltipEl.style.left = `${left}px`;
+	}
+	function showAdminTooltip(target) {
+		clearTimeout(tooltipTimer);
+		const label = target.dataset.tooltip || target.getAttribute('aria-label') || target.getAttribute('title');
+		if (!label || target.closest('[hidden]')) return;
+		tooltipTarget = target;
+		tooltipEl.textContent = label;
+		target.setAttribute('aria-describedby', tooltipEl.id);
+		tooltipEl.classList.remove('hidden');
+		requestAnimationFrame(() => {
+			if (tooltipTarget !== target) return;
+			positionAdminTooltip();
+			tooltipEl.classList.remove('opacity-0', 'translate-y-1');
+		});
+	}
+	function hideAdminTooltip() {
+		clearTimeout(tooltipTimer);
+		tooltipTimer = window.setTimeout(() => {
+			tooltipTarget?.removeAttribute('aria-describedby');
+			tooltipTarget = null;
+			tooltipEl.classList.add('opacity-0', 'translate-y-1');
+			window.setTimeout(() => tooltipEl.classList.add('hidden'), 150);
+		}, 60);
+	}
+	adminTooltipTargets.forEach((target) => {
+		target.addEventListener('mouseenter', () => showAdminTooltip(target));
+		target.addEventListener('mouseleave', hideAdminTooltip);
+		target.addEventListener('focus', () => showAdminTooltip(target));
+		target.addEventListener('blur', hideAdminTooltip);
+		target.addEventListener('click', hideAdminTooltip);
+	});
+	window.addEventListener('scroll', () => tooltipTarget && positionAdminTooltip(), true);
+	document.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape') hideAdminTooltip();
+	});
+}

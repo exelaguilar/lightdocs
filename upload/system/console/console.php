@@ -12,32 +12,62 @@ use System\Library\Content\SearchIndexer;
 use System\Library\Content\SearchService;
 use System\Library\Content\SiteData;
 use System\Library\Content\DirectiveRegistry;
+use System\Library\Content\Glossary;
 use System\Model\ContentIndex;
 use System\Model\Schema;
 use System\Model\SqliteSearchService;
 use System\Library\Service\StaticSiteBuilder;
+use System\Engine\Config;
 use System\Engine\Event;
+use System\Engine\Registry;
 use System\Library\DB;
 use System\Library\FileCache;
-use System\Library\View;
+use System\Library\Template;
 
 final class Console
 {
+	/** @var array<string, mixed> */
+	private array $config;
 	private ContentRepository $repository;
 	private SearchService $search;
 	private StaticSiteBuilder $builder;
 
-	public function __construct(private readonly array $config)
+	public function __construct()
 	{
-		$this->repository = new ContentRepository($config['content_dir']);
-		$renderer = new MarkdownRenderer((bool) $config['raw_html'], SiteData::load($config['data_file']), $config['content_dir'], new DirectiveRegistry($config['directives'] ?? []));
-		$record_builder = new SearchIndexer($this->repository, $renderer, $config['cache_dir'] . '/search-index.json');
-		$database = new DB($config['database_path']);
-		$events = new Event();
-		(new Schema($database, $events))->migrate();
-		$index = new ContentIndex($database, $events, $this->repository, $renderer, $config['content_dir'], $config['upload_dir']);
-		$this->search = new SqliteSearchService($database, $events, $index, $record_builder);
-		$this->builder = new StaticSiteBuilder($config, $this->repository, $renderer, $this->search, new View(dirname(__DIR__, 2) . '/frontend/view/template'));
+		$registry = new Registry();
+
+		$config = new Config();
+		$config->load('default.php');
+		$config->load('public.php');
+		$registry->set('config', $config);
+		$this->config = $config->all();
+
+		$database = new DB($config->get('database_path'));
+		$registry->set('db', $database);
+
+		$events = new Event($registry);
+		$registry->set('event', $events);
+
+		(new Schema($registry))->migrate();
+
+		$this->repository = new ContentRepository($config->get('content_dir'));
+		$registry->set('repository', $this->repository);
+
+		$renderer = new MarkdownRenderer((bool) $config->get('raw_html'), SiteData::load($config->get('data_file')), $config->get('content_dir'), new DirectiveRegistry((array) $config->get('directives')), new Glossary($config->get('glossary_file')));
+		$registry->set('renderer', $renderer);
+
+		$registry->set('json_search', new SearchIndexer($this->repository, $renderer, $config->get('cache_dir') . '/search-index.json'));
+
+		$index = new ContentIndex($registry);
+		$registry->set('index', $index);
+
+		$this->search = new SqliteSearchService($registry);
+		$registry->set('search', $this->search);
+
+		$template = new Template($config->get('template_engine', 'template'), $config);
+		$template->addPath(dirname(__DIR__, 2) . '/frontend/view/template/');
+
+		$this->builder = new StaticSiteBuilder($this->config, $this->repository, $renderer, $this->search, $template, $events);
 	}
 
 	public function run(array $arguments): int

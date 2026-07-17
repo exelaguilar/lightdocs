@@ -3,6 +3,12 @@
   "description": "A lightweight PHP and Markdown-first documentation platform.",
   "type": "project",
   "license": "MIT",
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/exelaguilar/tailwind-php.git"
+    }
+  ],
   "require": {
     "php": "^8.4",
     "ext-dom": "*",
@@ -12,26 +18,13 @@
     "ext-pdo_sqlite": "*",
     "league/commonmark": "^2.8",
     "symfony/yaml": "^7.3 || ^8.0",
+    "tailwindphp/tailwindphp": "dev-main",
     "tempest/highlight": "^2.0",
     "vlucas/phpdotenv": "^5.6"
   },
   "autoload": {
     "psr-4": {},
-    "classmap": [
-      "upload/system/framework.php",
-      "upload/admin/startup.php",
-      "upload/frontend/startup.php",
-      "upload/system/vendor.php",
-      "upload/extension",
-      "upload/admin/controller",
-      "upload/frontend/controller",
-      "upload/system/engine",
-      "upload/system/library",
-      "upload/system/model",
-      "upload/system/library/content",
-      "upload/system/library/service",
-      "upload/system/console"
-    ]
+    "classmap": []
   },
   "scripts": {
     "docs:serve": "php -S 127.0.0.1:8080 -t upload upload/router.php",
@@ -39,6 +32,7 @@
     "docs:build": "php bin/docs build build",
     "docs:test": "php tests/smoke.php",
     "docs:doctor": "php bin/docs doctor",
+    "css:build": "php bin/build-css.php",
     "release:build": "bash deploy/release/build.sh",
     "release:build-windows": "powershell -ExecutionPolicy Bypass -File deploy/release/build.ps1"
   },

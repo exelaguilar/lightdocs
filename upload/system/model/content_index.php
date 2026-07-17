@@ -7,9 +7,9 @@ namespace System\Model;
 use System\Library\Content\ContentRepository;
 use System\Library\Content\MarkdownRenderer;
 use System\Library\Content\Page;
-use System\Library\DB;
 use System\Engine\Event;
 use System\Engine\Model;
+use System\Engine\Registry;
 use PDO;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -19,17 +19,21 @@ use Symfony\Component\Yaml\Yaml;
 final class ContentIndex extends Model
 {
 	private PDO $pdo;
+	private Event $events;
+	private ContentRepository $repository;
+	private MarkdownRenderer $renderer;
+	private string $content_dir;
+	private string $upload_dir;
 
-	public function __construct(
-		DB $database,
-		Event $events,
-		private readonly ContentRepository $repository,
-		private readonly MarkdownRenderer $renderer,
-		private readonly string $content_dir,
-		private readonly string $upload_dir,
-	) {
-		parent::__construct($database, $events);
-		$this->pdo = $this->db;
+	public function __construct(Registry $registry)
+	{
+		parent::__construct($registry);
+		$this->pdo = $registry->get('db')->connection();
+		$this->events = $registry->get('event');
+		$this->repository = $registry->get('repository');
+		$this->renderer = $registry->get('renderer');
+		$this->content_dir = (string) $registry->get('config')->get('content_dir');
+		$this->upload_dir = (string) $registry->get('config')->get('upload_dir');
 	}
 
 	public function sync(bool $force = false): array
@@ -62,7 +66,8 @@ final class ContentIndex extends Model
 		}
 
 		$stats = $this->stats();
-		$this->events->dispatch('index.rebuilt', $stats);
+		$event_args = [&$stats];
+		$this->events->trigger('index.rebuilt', $event_args);
 		return $stats;
 	}
 

@@ -3,12 +3,21 @@
   "class": "Extension\\Media\\Extension",
   "version": "1.0.0",
   "description": "Optional image resizing and optimization for uploaded media.",
+  "type": "content",
   "default_enabled": false,
   "contexts": ["admin"],
+  "settings_summary": "When enabled, Media processes newly uploaded JPEG, PNG, GIF, and WebP images before they are stored. Existing uploads are never changed.",
+  "settings_notes": [
+    "Images larger than the maximum width or height are resized proportionally. Smaller images are left as they are.",
+    "JPEG quality and PNG compression only apply when an image is written after resizing.",
+    "PHP GD must be enabled on the server. If it is unavailable, uploads are kept unchanged."
+  ],
   "settings": [
     {"key": "max_width", "label": "Maximum width", "type": "number", "default": 2400, "min": 320, "max": 10000, "description": "Resize larger images before they are published."},
     {"key": "max_height", "label": "Maximum height", "type": "number", "default": 1600, "min": 320, "max": 10000, "description": "Resize taller images before they are published."},
     {"key": "jpeg_quality", "label": "JPEG quality", "type": "number", "default": 85, "min": 50, "max": 100, "description": "Quality used when saving JPEG uploads."},
-    {"key": "png_compression", "label": "PNG compression", "type": "number", "default": 6, "min": 0, "max": 9, "description": "Compression level used when saving PNG uploads."}
+    {"key": "webp_quality", "label": "WebP quality", "type": "number", "default": 85, "min": 50, "max": 100, "description": "Quality used when saving WebP uploads."},
+    {"key": "png_compression", "label": "PNG compression", "type": "number", "default": 6, "min": 0, "max": 9, "description": "Compression level used when saving PNG uploads."},
+    {"key": "process_gif", "label": "Resize GIF images", "type": "boolean", "default": false, "description": "Allow resizing GIF uploads. Animated GIFs may be flattened, so this is disabled by default."}
   ]
 }

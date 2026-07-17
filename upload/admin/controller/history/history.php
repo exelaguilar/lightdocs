@@ -1,56 +1,105 @@
 <?php
+namespace Admin\Controller\History;
 
-declare(strict_types=1);
-
-namespace Admin\Controller;
-
-use System\Library\Service\GitHistory;
-use System\Library\Service\GitSyncPreflight;
-use System\Engine\Event;
-use System\Engine\Request;
-use System\Library\View;
+use System\Engine\Action;
+use System\Engine\Controller;
 use RuntimeException;
 use Throwable;
 
-final class History extends Admin
+/**
+ * Local Git working-tree review and commit flow.
+ *
+ * @package Admin\Controller\History
+ */
+class History extends Controller
 {
-	public function __construct(array $config, View $view, Event $events, private readonly ?GitHistory $history, private readonly ?GitSyncPreflight $git_preflight)
-	{
-		parent::__construct($config, $view, $events);
-	}
+    public function index(): mixed
+    {
+        $this->load->language('common');
+        $this->document->setTitle($this->language->get('heading_history_history'));
 
-	public function index(Request $request): never
-	{
-		$this->permission('content.read');
-		if (!$this->history || !$this->git_preflight) {
-			$this->render('history/history', ['config' => $this->config, 'active_nav' => 'history', 'history' => ['available' => false, 'commits' => [], 'changes' => []], 'csrf' => $_SESSION['csrf'], 'message' => '', 'error' => '', 'preflight' => ['available' => false, 'replacements' => 0]]);
-		}
-		$flash = $this->consumeFlash('history');
-		$message = $flash['message'];
-		$error = $flash['error'];
-		$preflight = $this->git_preflight->inspect('sanitized');
-		if ($request->method === 'POST') {
-			$this->csrf($request);
-			try {
-				$action = (string) $request->input('action');
-				if ($action === 'initialize') {
-					$this->history->initialize((string) $request->input('author_name'), (string) $request->input('author_email'));
-					$message = 'Local Git repository initialized. Review the working tree before creating the first commit.';
-				} elseif ($action === 'commit') {
-					$acknowledged = $preflight['replacements'] === 0 || !empty($request->post['acknowledge_secret_history']);
-					$hash = $this->history->commit((string) $request->input('message'), $acknowledged);
-					$message = 'Created local commit ' . $hash . '. Nothing was uploaded or pushed.';
-				} else {
-					throw new RuntimeException('The Local Git action was missing or invalid. Reload the page and try again.');
-				}
-			} catch (Throwable $exception) {
-				$error = $exception->getMessage();
-			}
-			$this->redirectWithFlash('/admin/history', 'history', $message, $error);
-		}
-		$this->render('history/history', [
-			'config' => $this->config, 'active_nav' => 'history', 'history' => $this->history->inspect(),
-			'csrf' => $_SESSION['csrf'], 'message' => $message, 'error' => $error, 'preflight' => $preflight,
-		]);
-	}
+        $data = [
+            'message' => '',
+            'error' => '',
+            'config' => $this->config->all(),
+            'csrf' => (string)$this->session->get('csrf_token', ''),
+        ];
+
+        if (!$this->git_history || !$this->git_preflight) {
+            $data['history'] = ['available' => false, 'state' => 'disabled', 'commits' => [], 'changes' => []];
+            $data['preflight'] = ['available' => false, 'replacements' => 0];
+            $data['header'] = $this->load->controller('common/header', ['active_nav' => 'history']);
+            $data['footer'] = $this->load->controller('common/footer');
+            $this->response->setOutput($this->load->view('history/history', $data));
+            return null;
+        }
+
+        $preflight = $this->git_preflight->inspect('sanitized');
+
+        if (strtoupper((string)($this->request->server['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+            if (!$this->user->hasPermission('modify', 'history/history')) {
+                return new Action('error/permission');
+            }
+
+            $message = '';
+            $error = '';
+
+            try {
+                $action = (string)$this->request->post('action', 'string');
+                if ($action === 'initialize') {
+                    $this->git_history->initialize((string)$this->request->post('author_name', 'string'), (string)$this->request->post('author_email', 'string'));
+                    $message = 'Local Git repository initialized. Review the working tree before creating the first commit.';
+                } elseif ($action === 'commit') {
+                    $acknowledged = $preflight['replacements'] === 0 || !empty($this->request->post['acknowledge_secret_history']);
+                    $hash = $this->git_history->commit((string)$this->request->post('message', 'string'), $acknowledged);
+                    $message = 'Created local commit ' . $hash . '. Nothing was uploaded or pushed.';
+                } else {
+                    throw new RuntimeException('The Local Git action was missing or invalid. Reload the page and try again.');
+                }
+            } catch (Throwable $exception) {
+                $error = $exception->getMessage();
+            }
+
+            if ($message !== '') $this->session->addNotification('success', $message);
+            if ($error !== '') $this->session->addNotification('danger', $error);
+            $this->response->redirect($this->url->link('history/history'));
+        }
+
+        $data['history'] = $this->prepareHistoryView($this->git_history->inspect());
+        $data['preflight'] = $preflight;
+        $data['header'] = $this->load->controller('common/header', ['active_nav' => 'history']);
+        $data['footer'] = $this->load->controller('common/footer');
+
+        $this->response->setOutput($this->load->view('history/history', $data));
+        return null;
+    }
+
+    /** Shapes raw git inspection data into labels and tone classes for the template. */
+    private function prepareHistoryView(array $history): array
+    {
+        $history['state'] = (string)($history['state'] ?? 'disabled');
+        $history['change_count'] = count($history['changes'] ?? []);
+        $history['commit_count'] = count($history['commits'] ?? []);
+        $history['state_label'] = match ($history['state']) {
+            'clean' => 'Working tree clean',
+            'dirty' => 'Changes ready to review',
+            'not_repository' => 'Repository not initialized',
+            'unavailable' => 'Git unavailable',
+            default => 'Local Git disabled',
+        };
+        $history['commits'] = array_map(static function (array $commit): array {
+            $commit['date_label'] = date('M j, Y H:i', strtotime((string)($commit['date'] ?? '')));
+            return $commit;
+        }, $history['commits'] ?? []);
+        $history['changes'] = array_map(static function (array $change): array {
+            $change['tone_classes'] = match (true) {
+                in_array($change['tone'] ?? '', ['added', 'new'], true) => 'text-[#15803d]',
+                in_array($change['tone'] ?? '', ['modified', 'renamed'], true) => 'text-[#b45309]',
+                in_array($change['tone'] ?? '', ['deleted', 'conflict'], true) => 'text-destructive',
+                default => 'text-foreground',
+            };
+            return $change;
+        }, $history['changes'] ?? []);
+        return $history;
+    }
 }

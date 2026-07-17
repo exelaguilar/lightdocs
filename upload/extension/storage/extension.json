@@ -3,6 +3,7 @@
   "class": "Extension\\Storage\\Extension",
   "version": "1.0.0",
   "description": "Optional S3-compatible publication for uploaded assets while keeping a local mirror.",
+  "type": "storage",
   "default_enabled": false,
   "contexts": ["admin", "public"],
   "settings": [
@@ -13,6 +14,7 @@
     {"key": "access_key", "label": "Access key", "type": "text", "default": "", "description": "Credential used only for the S3 upload request."},
     {"key": "secret_key", "label": "Secret key", "type": "password", "default": "", "description": "Leave blank to keep the current secret key."},
     {"key": "public_base_url", "label": "Public base URL", "type": "url", "default": "", "description": "Optional public URL prefix for published assets."},
-    {"key": "prefix", "label": "Object prefix", "type": "text", "default": "lightdocs", "description": "Folder-like prefix placed before asset names."}
+    {"key": "prefix", "label": "Object prefix", "type": "text", "default": "lightdocs", "description": "Folder-like prefix placed before asset names."},
+    {"key": "timeout", "label": "Upload timeout seconds", "type": "number", "default": 15, "min": 1, "max": 120, "description": "Maximum time permitted for an individual remote asset upload."}
   ]
 }

@@ -1,81 +1,149 @@
 <?php
+namespace Admin\Controller\Common;
 
-declare(strict_types=1);
+use System\Engine\Action;
+use System\Engine\Controller;
 
-namespace Admin\Controller;
-
-use System\Engine\Event;
-use System\Engine\Request;
-use System\Engine\Response;
-use System\Library\User;
-use System\Library\View;
-
-final class Roles extends Admin
+/**
+ * Role (user group) management with route-based access/modify permissions.
+ *
+ * @package Admin\Controller\Common
+ */
+class Roles extends Controller
 {
-	public function __construct(array $config, View $view, Event $events, private readonly User $accounts)
-	{
-		parent::__construct($config, $view, $events);
-	}
+    public function index(): void
+    {
+        $this->load->language('common');
+        $this->document->setTitle($this->language->get('heading_common_roles'));
+        $this->load->model('common/user');
 
-	public function index(Request $request): never
-	{
-		$this->permission('users.manage');
-		$name = strtolower(trim((string) $request->query('role', '')));
-		if ($name !== '') {
-			Response::redirect('/admin/roles/edit?role=' . rawurlencode($name));
-		}
-		$message = (string) $request->query('status') === 'saved' ? 'Role permissions saved.' : '';
-		$this->render('common/roles', [
-			'config' => $this->config,
-			'roles' => $this->accounts->roles(),
-			'active_nav' => 'roles',
-			'message' => $message,
-			'error' => '',
-		]);
-	}
+        $groups = $this->model_common_user->getGroups();
+        $protected_roles = 0;
+        $assigned_users = 0;
+        $permission_areas = 0;
 
-	public function create(Request $request): never
-	{
-		$this->renderForm($request, null, true);
-	}
+        $data = [
+            'roles' => array_map(static function (array $group) use (&$protected_roles, &$assigned_users, &$permission_areas): array {
+                $protected = !empty($group['is_protected']);
+                $user_count = (int)$group['user_count'];
+                $permission_count = count($group['permission']['access']);
 
-	public function edit(Request $request): never
-	{
-		$this->permission('users.manage');
-		$name = strtolower(trim((string) $request->query('role', '')));
-		$role = $name === '' ? null : $this->accounts->role($name);
-		if ($role === null) {
-			Response::text('Role not found.', 404);
-		}
-		$this->renderForm($request, $role, false);
-	}
+                if ($protected) {
+                    $protected_roles++;
+                }
+                $assigned_users += $user_count;
+                $permission_areas += $permission_count;
 
-	private function renderForm(Request $request, ?array $role, bool $create): never
-	{
-		$this->permission('users.manage');
-		$message = '';
-		$error = '';
-		if ($request->method === 'POST') {
-			$this->csrf($request);
-			try {
-				$this->accounts->saveRole((string) $request->input('name'), (string) $request->input('label'), (string) $request->input('description'), is_array($request->input('permissions', [])) ? $request->input('permissions', []) : []);
-				Response::redirect('/admin/roles/edit?role=' . rawurlencode((string) $request->input('name')) . '&status=saved');
-			} catch (\Throwable $exception) {
-				$error = $exception->getMessage();
-			}
-		}
-		if ((string) $request->query('status') === 'saved') {
-			$message = 'Role permissions saved.';
-		}
-		$this->render('common/role_form', [
-			'config' => $this->config,
-			'role' => $role,
-			'create' => $create,
-			'available_permissions' => $this->accounts->availablePermissions(),
-			'active_nav' => 'roles',
-			'csrf' => $_SESSION['csrf'],
-			'message' => $message,
-			'error' => $error,
-		]);
-	}
+                return [
+                    'id' => (int)$group['user_group_id'],
+                    'name' => (string)$group['name'],
+                    'description' => (string)$group['description'],
+                    'permission_count' => $permission_count,
+                    'user_count' => $user_count,
+                    'protected' => $protected,
+                    'edit_url' => '/admin/roles/edit?role=' . (int)$group['user_group_id'],
+                ];
+            }, $groups),
+            'stats' => [
+                'total' => count($groups),
+                'protected' => $protected_roles,
+                'assigned_users' => $assigned_users,
+                'permission_areas' => $permission_areas,
+            ],
+            'config' => $this->config->all(),
+            'csrf' => (string)$this->session->get('csrf_token', ''),
+            'message' => '',
+            'error' => '',
+        ];
+        $data['header'] = $this->load->controller('common/header', ['active_nav' => 'roles']);
+        $data['footer'] = $this->load->controller('common/footer');
+
+        $this->response->setOutput($this->load->view('common/roles', $data));
+    }
+
+    public function create(): mixed
+    {
+        return $this->form(null, true);
+    }
+
+    public function edit(): mixed
+    {
+        $this->load->model('common/user');
+
+        $id = (int)$this->request->get('role', 'int');
+        $group = $id > 0 ? $this->model_common_user->getGroup($id) : null;
+
+        if ($group === null) {
+            return new Action('error/not_found');
+        }
+
+        return $this->form($group, false);
+    }
+
+    /** @param array<string, mixed>|null $group */
+    private function form(?array $group, bool $create): mixed
+    {
+        $text = $this->load->language('common');
+        $this->document->setTitle($this->language->get('heading_common_role_form'));
+        $this->load->model('common/user');
+
+        $error = '';
+
+        if (strtoupper((string)($this->request->server['REQUEST_METHOD'] ?? 'GET')) === 'POST') {
+            if (!$this->user->hasPermission('modify', 'common/roles')) {
+                return new Action('error/permission');
+            }
+
+            try {
+                $access = $this->request->post('access', 'array');
+                $modify = $this->request->post('modify', 'array');
+
+                $id = $this->model_common_user->saveGroup(
+                    $create ? 0 : (int)($group['user_group_id'] ?? 0),
+                    (string)$this->request->post('name', 'string'),
+                    (string)$this->request->post('description', 'string'),
+                    ['access' => array_map('strval', $access), 'modify' => array_map('strval', $modify)]
+                );
+
+                $this->session->addNotification('success', 'Role permissions saved.');
+                $this->response->redirect($this->url->link('common/roles.edit', ['role' => $id]));
+            } catch (\Throwable $exception) {
+                $error = $exception->getMessage();
+            }
+        }
+
+        $selected = $group ?? ['user_group_id' => 0, 'name' => '', 'description' => '', 'permission' => ['access' => [], 'modify' => []], 'is_protected' => 0];
+        $is_protected = !empty($selected['is_protected']);
+
+        $available_permissions = array_map(static function (string $route) use ($text, $selected): array {
+            $key = 'permission_' . str_replace('/', '_', $route);
+            return [
+                'route' => $route,
+                'label' => (string)($text[$key] ?? $route),
+                'access_checked' => in_array($route, $selected['permission']['access'], true),
+                'modify_checked' => in_array($route, $selected['permission']['modify'], true),
+            ];
+        }, $this->model_common_user->getPermissionRoutes());
+
+        $data = [
+            'selected' => $selected,
+            'create' => $create,
+            'is_protected' => $is_protected,
+            'error' => $error,
+            'message' => '',
+            'config' => $this->config->all(),
+            'csrf' => (string)$this->session->get('csrf_token', ''),
+        ];
+        $data['role_fields'] = $this->load->view('common/role_form_fields', [
+            'selected' => $selected,
+            'create' => $create,
+            'is_protected' => $is_protected,
+            'available_permissions' => $available_permissions,
+        ]);
+        $data['header'] = $this->load->controller('common/header', ['active_nav' => 'roles']);
+        $data['footer'] = $this->load->controller('common/footer');
+
+        $this->response->setOutput($this->load->view('common/role_form', $data));
+        return null;
+    }
 }

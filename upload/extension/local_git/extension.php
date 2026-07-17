@@ -23,7 +23,7 @@ final class Extension implements ExtensionInterface
 
 	public function register(ExtensionManager $extensions): void
 	{
-		$history = new GitHistory($this->context->config['site_root'], (bool) ($this->context->settings['history_enabled'] ?? true));
+		$history = new GitHistory($this->context->config['site_root'], (bool) ($this->context->settings['history_enabled'] ?? true), (int) ($this->context->settings['history_limit'] ?? 30));
 		$extensions->service('local_git.history', $history);
 		$extensions->service('local_git.preflight', new GitSyncPreflight($this->context->config['content_dir'], $this->context->repository));
 	}

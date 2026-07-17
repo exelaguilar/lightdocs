@@ -1,65 +1,36 @@
-<?php
-
-$initial = mb_strtoupper(mb_substr($config['name'], 0, 1));
-?>
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Roles · <?= $e($config['name']) ?></title>
-  <link rel="stylesheet" href="/frontend/view/stylesheet/app.css?v=<?= @filemtime(dirname(__DIR__, 4) . '/frontend/view/stylesheet/app.css') ?: 1 ?>">
-  <style>:root { --brand: <?= $e($config['accent']) ?>; }</style>
-</head>
-<body class="editor-body">
-<?php require __DIR__ . '/../common/header.php'; ?>
-<main class="admin-dashboard roles-page">
-  <header class="page-header">
-    <div>
-      <span class="panel-eyebrow">Access control</span>
-      <h1>Roles</h1>
-      <p>Define the access policies assigned to Studio users.</p>
+Exit code: 0
+Wall time: 0.1 seconds
+Output:
+<?= $header ?>
+<main class="mx-auto grid w-[min(calc(100%-3rem),82rem)] gap-6 py-7 pb-10 text-sm max-[900px]:w-[min(calc(100%-2rem),82rem)] max-[640px]:gap-5 max-[640px]:py-5">
+  <header class="flex items-end justify-between gap-6 max-[640px]:items-stretch max-[640px]:flex-col">
+    <div class="grid gap-1">
+      <nav class="flex items-center gap-2 text-xs text-muted-foreground" aria-label="Breadcrumb"><a class="transition-colors hover:text-foreground" href="/admin">Workspace</a><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><span class="text-foreground">Roles</span></nav>
+      <h1 class="m-0 text-2xl font-semibold tracking-[-0.03em] text-foreground">Roles</h1>
+      <p class="m-0 text-sm leading-6 text-muted-foreground">Define the access policies assigned to Studio users.</p>
     </div>
-    <div class="page-header-actions">
-      <a class="button secondary-button" href="/admin/users">Manage users</a>
-      <a class="button" href="/admin/roles/add">Add role</a>
-    </div>
+    <div class="flex items-center gap-2 max-[640px]:flex-col"><a class="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-border bg-card px-3.5 py-2 text-sm font-semibold leading-5 text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground max-[640px]:w-full" href="/admin/users"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Manage users</span></a><a class="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-primary bg-primary px-3.5 py-2 text-sm font-semibold leading-5 text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 max-[640px]:w-full" href="/admin/roles/add"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Add role</span></a></div>
   </header>
-  <?php if ($message): ?><p class="form-success" role="status"><?= $e($message) ?></p><?php endif; ?>
-  <?php if ($error): ?><p class="form-error" role="alert"><?= $e($error) ?></p><?php endif; ?>
-  <section class="dashboard-panel table-page-card">
-    <header>
-      <div>
-        <p class="panel-eyebrow">Role directory</p>
-        <h2>Studio roles</h2>
-      </div>
-      <span class="status-pill"><?= count($roles) ?> role<?= count($roles) === 1 ? '' : 's' ?></span>
-    </header>
-    <section class="table-toolbar" aria-label="Role table controls">
-      <p><strong>All roles</strong><span>Permissions apply to every user assigned to the role.</span></p>
-      <input class="table-search" type="search" placeholder="Filter roles" data-table-filter="roles">
-    </section>
+
+  <?php if (!empty($message)): ?><div class="rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm" role="status"><?= $e($message) ?></div><?php endif; ?>
+  <?php if (!empty($error)): ?><div class="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive" role="alert"><?= $e($error) ?></div><?php endif; ?>
+
+  <section class="grid grid-cols-4 divide-x divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm max-[760px]:grid-cols-2 max-[760px]:divide-x-0 max-[760px]:divide-y max-[640px]:rounded-lg" aria-label="Role summary">
+    <?php foreach ([['label' => 'Total roles', 'value' => $stats['total'], 'note' => 'Access policies'], ['label' => 'Protected', 'value' => $stats['protected'], 'note' => 'Built-in roles'], ['label' => 'Assigned users', 'value' => $stats['assigned_users'], 'note' => 'Across all roles'], ['label' => 'Permission areas', 'value' => $stats['permission_areas'], 'note' => 'Configured access']] as $stat): ?>
+      <div class="grid gap-1 px-5 py-4 max-[640px]:px-4"><span class="text-xs font-medium text-muted-foreground"><?= $e($stat['label']) ?></span><strong class="text-xl font-semibold tracking-[-0.02em] text-foreground"><?= (int)$stat['value'] ?></strong><span class="text-xs text-muted-foreground"><?= $e($stat['note']) ?></span></div>
+    <?php endforeach; ?>
+  </section>
+
+  <section class="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm max-[640px]:rounded-lg">
+    <header class="flex items-center justify-between gap-4 border-b border-border px-5 py-4 max-[640px]:px-4"><div class="grid gap-0.5"><h2 class="m-0 text-base font-semibold tracking-[-0.01em]">Access policies</h2><p class="m-0 text-xs text-muted-foreground">Roles determine which areas users can view and modify.</p></div></header>
+    <div class="table-toolbar flex items-center justify-end border-b border-border px-5 py-3 max-[640px]:px-4"><label class="relative block w-64 max-w-full"><span class="sr-only">Search roles</span><svg class="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input class="min-h-9 w-full rounded-md border border-input bg-card py-2 pl-8 pr-3 text-xs text-foreground shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20" type="search" placeholder="Search roles..." aria-label="Search roles" data-table-filter="roles"></label></div>
     <?php if (!$roles): ?>
-      <div class="table-empty">No roles have been created yet.</div>
+      <div class="flex flex-col items-center justify-center gap-2 p-10 text-center text-sm text-muted-foreground"><p class="m-0">No roles have been created yet.</p><a class="text-primary underline-offset-4 hover:underline" href="/admin/roles/add">Create the first role</a></div>
     <?php else: ?>
-      <div class="admin-table-wrap table-borderless">
-        <table class="admin-table" data-table="roles">
-          <thead><tr><th>Role</th><th>Description</th><th>Permissions</th><th class="table-actions">Action</th></tr></thead>
-          <tbody>
-          <?php foreach ($roles as $role): ?>
-            <tr>
-              <td><strong><?= $e($role['label']) ?></strong><small><code><?= $e($role['name']) ?></code></small></td>
-              <td><?= $e($role['description']) ?></td>
-              <td><?= (int) $role['permission_count'] ?> enabled</td>
-              <td class="table-actions"><a class="table-action-button" href="/admin/roles/edit?role=<?= rawurlencode($role['name']) ?>">Edit</a></td>
-            </tr>
-          <?php endforeach; ?>
-          </tbody>
-        </table>
-      </div>
-      <footer class="table-pagination"><span>Showing <?= count($roles) ?> role<?= count($roles) === 1 ? '' : 's' ?></span><span>1 page</span></footer>
+      <div class="overflow-x-auto"><table class="w-full min-w-[42rem] border-collapse text-sm" data-table="roles" data-table-label="roles"><thead class="bg-muted/40"><tr class="border-b border-border text-left"><th class="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground max-[640px]:px-4">Role</th><th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Description</th><th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Coverage</th><th class="px-5 py-2.5 text-end text-[11px] font-semibold uppercase tracking-wide text-muted-foreground max-[640px]:px-4">Action</th></tr></thead><tbody>
+        <?php foreach ($roles as $role): ?><tr class="border-b border-border transition-colors hover:bg-muted/40"><td class="px-5 py-3.5 max-[640px]:px-4"><div class="flex items-center gap-3"><span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"><?= $e(mb_strtoupper(mb_substr($role['name'], 0, 1))) ?></span><span class="grid min-w-0 gap-0.5"><strong class="truncate text-sm font-medium text-foreground"><?= $e($role['name']) ?></strong><small class="text-xs text-muted-foreground">#<?= (int)$role['id'] ?><?php if ($role['protected']): ?> &middot; Protected<?php endif; ?></small></span></div></td><td class="max-w-[22rem] truncate px-4 py-3.5 text-xs text-muted-foreground"><?= $e($role['description'] ?: 'No description provided') ?></td><td class="px-4 py-3.5 text-xs text-muted-foreground"><?= (int)$role['permission_count'] ?> area<?= $role['permission_count'] === 1 ? '' : 's' ?> &middot; <?= (int)$role['user_count'] ?> user<?= $role['user_count'] === 1 ? '' : 's' ?></td><td class="px-5 py-3.5 text-end max-[640px]:px-4"><a aria-label="Edit <?= $e($role['name']) ?>" data-tooltip="Edit role" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="<?= $e($role['edit_url']) ?>"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16.5-.8 3.8 3.8-.8L18.5 8a2.1 2.1 0 0 0-3-3L4 16.5Z"/><path d="m14 6 3 3"/></svg><span class="sr-only">Edit</span></a></td></tr><?php endforeach; ?>
+      </tbody></table></div><footer class="flex items-center justify-between border-t border-border px-5 py-3 text-xs text-muted-foreground max-[640px]:px-4"><span data-table-result-count>Showing <?= count($roles) ?> of <?= count($roles) ?> roles</span><span>1 page</span></footer>
     <?php endif; ?>
   </section>
 </main>
-</body>
-</html>
+<?= $footer ?>

@@ -1,41 +1,59 @@
 <?php
 namespace System\Engine;
 
-use RuntimeException;
+use System\Engine\Registry;
+use Exception; // Added for the throw new \Exception statements
 
 class Factory
 {
-	public function __construct(private Registry $registry)
-	{
-	}
+    protected Registry $registry;
 
-	public function registerController(string $route, object $controller): void
-	{
-		$this->registry->set('controller_' . str_replace('/', '_', $route), $controller);
-	}
+    public function __construct(Registry $registry)
+    {
+        $this->registry = $registry;
+    }
 
-	public function registerModel(string $route, object $model): void
-	{
-		$this->registry->set('model_' . str_replace('/', '_', $route), $model);
-	}
+    protected function sanitizeRoute(string $route): string
+    {
+        return preg_replace('/[^a-zA-Z0-9_\/]/', '', $route);
+    }
 
-	public function model(string $route): object
-	{
-		$key = 'model_' . str_replace('/', '_', $route);
-		$model = $this->registry->get($key);
-		if (!$model) throw new RuntimeException('Model not found: ' . $route);
-		return $model;
-	}
+    public function controller(string $route): object
+    {
+        $route = $this->sanitizeRoute($route);
 
-	public function controller(string $route): object
-	{
-		$key = 'controller_' . str_replace('/', '_', $route);
-		$controller = $this->registry->get($key);
+        $class = ucfirst(APP_CONTEXT) . '\\Controller\\' . str_replace(['_', '/'], ['', '\\'], ucwords($route, '_/'));
 
-		if (!$controller) {
-			throw new RuntimeException('Controller not found: ' . $route);
-		}
+        if (class_exists($class)) {
+            return new $class($this->registry);
+        }
 
-		return $controller;
-	}
+        throw new Exception("Controller class $class not found.");
+    }
+
+    public function model(string $route): object
+    {
+        $route = $this->sanitizeRoute($route);
+
+        $class = '\\' . ucfirst(APP_CONTEXT) . '\\Model\\' . str_replace(['_', '/'], ['', '\\'], ucwords($route, '_/'));
+
+        if (class_exists($class)) {
+            return new $class($this->registry);
+        }
+
+        throw new Exception("Model class $class not found.");
+    }
+
+    public function library(string $route, array $args = []): object
+    {
+        $route = $this->sanitizeRoute($route);
+
+        $class = 'System\\Library\\' . str_replace(['_', '/'], ['', '\\'], ucwords($route, '_/'));
+
+        if (class_exists($class)) {
+            return new $class(...$args);
+        }
+
+        throw new Exception("Library class $class not found.");
+    }
 }

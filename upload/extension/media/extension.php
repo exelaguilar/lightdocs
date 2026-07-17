@@ -28,6 +28,7 @@ final class Extension implements ExtensionInterface, MediaProcessor
 	public function process(string $path, string $mime): void
 	{
 		if (!function_exists('imagecreatefromjpeg') || !str_starts_with($mime, 'image/')) return;
+		if ($mime === 'image/gif' && empty($this->context->settings['process_gif'])) return;
 		$dimensions = @getimagesize($path);
 		if (!is_array($dimensions) || empty($dimensions[0]) || empty($dimensions[1])) return;
 		$max_width = max(320, (int) ($this->context->settings['max_width'] ?? 2400));
@@ -56,12 +57,13 @@ final class Extension implements ExtensionInterface, MediaProcessor
 		}
 		imagecopyresampled($target, $source, 0, 0, 0, 0, $width, $height, $dimensions[0], $dimensions[1]);
 		$jpeg_quality = max(50, min(100, (int) ($this->context->settings['jpeg_quality'] ?? 85)));
+		$webp_quality = max(50, min(100, (int) ($this->context->settings['webp_quality'] ?? 85)));
 		$png_compression = max(0, min(9, (int) ($this->context->settings['png_compression'] ?? 6)));
 		match ($mime) {
 			'image/jpeg' => imagejpeg($target, $path, $jpeg_quality),
 			'image/png' => imagepng($target, $path, $png_compression),
 			'image/gif' => imagegif($target, $path),
-			'image/webp' => function_exists('imagewebp') ? imagewebp($target, $path, $jpeg_quality) : false,
+			'image/webp' => function_exists('imagewebp') ? imagewebp($target, $path, $webp_quality) : false,
 			default => false,
 		};
 		imagedestroy($source);
