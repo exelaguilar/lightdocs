@@ -25,7 +25,7 @@ Lightdocs turns ordinary Markdown files into a polished, searchable documentatio
 
 Your Markdown remains the source of truth. Lightdocs adds navigation, full-text search, page relationships, reusable snippets, runbook tools, local revision history, private content controls, and static exports without locking the content into a proprietary database.
 
-The current release is [v0.1.11](https://github.com/exelaguilar/lightdocs/releases/tag/v0.1.11). The recommended production install is the checksum-verified Proxmox LXC helper or native Debian installer; pin `LIGHTDOCS_VERSION=0.1.11` when you want a repeatable deployment.
+The current release is [v0.2.0](https://github.com/exelaguilar/lightdocs/releases/tag/v0.2.0). The recommended production install is the checksum-verified Proxmox LXC helper or native Debian installer; pin `LIGHTDOCS_VERSION=0.2.0` when you want a repeatable deployment.
 
 ## Why Lightdocs?
 
@@ -98,7 +98,7 @@ The current release is [v0.1.11](https://github.com/exelaguilar/lightdocs/releas
 This is the recommended installation for a homelab. Run the following command in the **Proxmox host shell as `root`**, not inside an existing container:
 
 ```bash
-LIGHTDOCS_VERSION=0.1.11 bash -c "$(curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/proxmox/install-lxc.sh)"
+LIGHTDOCS_VERSION=0.2.0 bash -c "$(curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/proxmox/install-lxc.sh)"
 ```
 
 The helper will:
@@ -263,7 +263,7 @@ lightdocs version
 lightdocs backup /var/backups/lightdocs/pre-update.tar.gz
 cp -a /var/lib/lightdocs/storage/lightdocs.sqlite \
   /var/backups/lightdocs/lightdocs.sqlite.pre-update
-lightdocs update 0.1.11
+lightdocs update 0.2.0
 lightdocs doctor
 ```
 

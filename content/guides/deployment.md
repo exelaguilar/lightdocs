@@ -27,7 +27,7 @@ Run the helper from the Proxmox host as root:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/exelaguilar/lightdocs/main/deploy/proxmox/install-lxc.sh)"
 ```
 
-It creates an unprivileged container, prompts for Proxmox resources and networking, installs a checksum-verified release, and prints the URL and generated administrator credential. Set `LIGHTDOCS_VERSION=0.1.11` before the command when you want to pin the current release. Override `LIGHTDOCS_REPOSITORY` when deploying from a fork.
+It creates an unprivileged container, prompts for Proxmox resources and networking, installs a checksum-verified release, and prints the URL and generated administrator credential. Set `LIGHTDOCS_VERSION=0.2.0` before the command when you want to pin the current release. Override `LIGHTDOCS_REPOSITORY` when deploying from a fork.
 
 The runtime remains small because the [micro-MVC architecture](architecture.md) uses explicit PHP classes and a disposable local index instead of an application server, ORM daemon, or frontend toolchain. The architecture guide also identifies which directories must be writable and which generated state may be safely rebuilt.
 
@@ -59,7 +59,7 @@ Before an upgrade, run `lightdocs doctor` and create a native backup. The portab
 lightdocs doctor
 lightdocs backup /var/backups/lightdocs/pre-update.tar.gz
 cp -a /var/lib/lightdocs/storage/lightdocs.sqlite /var/backups/lightdocs/lightdocs.sqlite.pre-update
-lightdocs update 0.1.11
+lightdocs update 0.2.0
 lightdocs doctor
 ```
 
