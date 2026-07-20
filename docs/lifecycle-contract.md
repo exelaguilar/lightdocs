@@ -40,9 +40,11 @@ configuration. Its absence is nonfatal.
 ## CLI phases
 
 1. `bin/docs` fixes `APP_CONTEXT` to `frontend` and runs `startup.php`.
-2. It registers `System`, `Frontend`, and `Extension` directly.
-3. `Console` loads `default.php` followed by `frontend.php`; it does not load
-   `config.local.php`.
+2. It asks the application-local Kernel to create the Registry, load
+   `default.php` followed by `frontend.php`, and register the configured
+   `System`, `Admin`, `Frontend`, and `Extension` namespace map.
+3. CLI boot explicitly disables optional `config.local.php`, preserving the
+   pre-Kernel CLI configuration contract.
 4. `Console` constructs the Registry and database and runs schema migration
    before command selection, then constructs content/search/render/build services.
 5. `Console::run()` dispatches the command inside its command-level `try/catch`.
@@ -126,10 +128,12 @@ application boot coverage.
 
 ## CSS build
 
-`bin/build-css.php` fixes frontend context, runs `startup.php`, registers only
-`System`, loads `default.php` then `frontend.php`, and builds admin and frontend
-styles without constructing the database. Two consecutive builds preserve the
-tracked generated-file hashes when inputs are unchanged and both exit 0.
+`bin/build-css.php` fixes frontend context, runs `startup.php`, and uses the
+Kernel to load `default.php` then `frontend.php` and register the configured
+namespace map. It explicitly disables optional `config.local.php` and builds
+admin and frontend styles without constructing the database. Two consecutive
+builds preserve the tracked generated-file hashes when inputs are unchanged and
+both exit 0.
 
 ## Constraints for a future boot-only Kernel
 

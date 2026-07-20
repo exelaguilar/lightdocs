@@ -261,10 +261,10 @@ $suite->test('duplicate framework boot duplicates autoload callback and output',
     TestSuite::assertContains('"autoload_after_second":3', $result->stdout, 'Duplicate autoload registration changed.');
 });
 
-$suite->test('real CLI entrypoint registers System, Frontend and Extension', static function () use ($fixtures, $decode): void {
+$suite->test('real CLI entrypoint registers the configured namespace map', static function () use ($fixtures, $decode): void {
     $data = $decode(Subprocess::run($fixtures . '/cli_namespace_scenario.php'));
     TestSuite::assertSame('frontend', $data['context'], 'CLI context changed.');
-    TestSuite::assertSame(['System', 'Frontend', 'Extension'], $data['namespaces'], 'CLI namespaces changed.');
+    TestSuite::assertSame(['System', 'Admin', 'Frontend', 'Extension'], $data['namespaces'], 'CLI namespaces changed.');
 });
 
 $suite->test('real CLI success, unknown command, caught command error and config.local exclusion', static function () use ($root): void {
@@ -335,10 +335,8 @@ $suite->test('real CSS build is successful and idempotent', static function () u
     TestSuite::assertSame($before, $middle, 'First CSS build changed tracked output without input changes.');
     TestSuite::assertSame($middle, $after, 'CSS build is not idempotent.');
     $source = (string) file_get_contents($root . '/bin/build-css.php');
-    TestSuite::assertContains("load('default.php')", $source, 'CSS default configuration load changed.');
-    TestSuite::assertContains("load('frontend.php')", $source, 'CSS frontend configuration load changed.');
-    TestSuite::assertTrue(strpos($source, "load('default.php')") < strpos($source, "load('frontend.php')"), 'CSS config load order changed.');
-    TestSuite::assertContains("register('System'", $source, 'CSS System namespace registration changed.');
+    TestSuite::assertContains('new \\System\\Engine\\Kernel', $source, 'CSS Kernel boot changed.');
+    TestSuite::assertContains('loadLocalConfig: false', $source, 'CSS local-config exclusion changed.');
     TestSuite::assertTrue(!str_contains($source, 'new \\System\\Library\\DB') && !str_contains($source, 'new System\\Library\\DB'), 'CSS build gained a database dependency.');
 });
 

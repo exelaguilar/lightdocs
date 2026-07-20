@@ -6,12 +6,14 @@ define('APP_CONTEXT', 'frontend');
 
 require dirname(__DIR__) . '/upload/system/startup.php';
 
-$autoloader = new \System\Engine\Autoloader();
-$autoloader->register('System', DIR_SYSTEM);
-
-$config = new \System\Engine\Config();
-$config->load('default.php');
-$config->load('frontend.php');
+$kernel = new \System\Engine\Kernel(
+    context: APP_CONTEXT,
+    systemRoot: DIR_SYSTEM,
+    applicationRoot: DIR_ROOT,
+    loadLocalConfig: false,
+);
+$registry = $kernel->boot();
+$config = $registry->get('config');
 
 $bytes = (new System\Library\Service\CssBuilder($config->all()))->build();
 

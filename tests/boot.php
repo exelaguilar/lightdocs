@@ -7,10 +7,10 @@ declare(strict_types=1);
  *
  * Invocation: php tests/boot.php
  *
- * Verifies that the framework bootstrap chain (Composer vendor autoload ->
- * framework autoloader -> System namespace resolution -> Registry -> Config
- * cascade -> configured namespace registration -> a handful of DB-free core
- * services) reaches a valid checkpoint, independent of:
+ * Verifies that the real application-local Kernel performs the DB-free base
+ * boot (System autoloading -> Registry -> Config cascade -> configured
+ * namespace registration) before a handful of DB-free core services reach a
+ * valid checkpoint, independent of:
  *   - the local development SQLite database and its extension-enabled state
  *     (tests/smoke.php depends on this; this script never touches 'db')
  *   - any HTTP request/response cycle or a running web server
@@ -39,35 +39,25 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
     }
 };
 
-// --- Framework autoloader: construct + register the 'System' namespace,
-// exactly as system/framework.php does before anything else can load. ---
-$autoloader = new \System\Engine\Autoloader();
-$autoloader->register('System', DIR_SYSTEM);
+$kernel = new \System\Engine\Kernel(
+    context: APP_CONTEXT,
+    systemRoot: DIR_SYSTEM,
+    applicationRoot: DIR_ROOT,
+    loadLocalConfig: false,
+);
+$registry = $kernel->boot();
+$autoloader = $registry->get('autoloader');
+$config = $registry->get('config');
 
 $check(
     class_exists(\System\Engine\Registry::class, true),
-    'System\\Engine\\Registry did not resolve through the framework autoloader.'
+    'System\\Engine\\Registry did not resolve through the Kernel autoloader.'
 );
-
-// --- Registry + Config cascade (default.php -> frontend.php), matching
-// framework.php's load order exactly. No 'db' key is ever set below. ---
-$registry = new \System\Engine\Registry();
-$registry->set('autoloader', $autoloader);
-
-$config = new \System\Engine\Config();
-$config->load('default.php');
-$config->load('frontend.php');
-$registry->set('config', $config);
 
 $check($config->get('app_context') === 'frontend', 'default.php + frontend.php cascade did not produce app_context=frontend.');
 $check(is_array($config->get('namespaces')), 'default.php did not define a "namespaces" array for autoloader registration.');
 $check($config->get('database_path') !== null, 'default.php did not define database_path (config content, not a live connection).');
 $check(is_array($config->get('pre_actions')), 'frontend.php did not define a pre_actions array.');
-
-// --- Configured namespace registration, matching framework.php's loop. ---
-foreach ((array) $config->get('namespaces', []) as $namespace => $dir) {
-    $autoloader->register((string) $namespace, DIR_ROOT . $dir);
-}
 
 $check(
     class_exists(\Admin\Controller\Startup\Router::class, true),

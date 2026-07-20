@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace System\Console;
 
 use RuntimeException;
+use LogicException;
 use Throwable;
 use System\Library\Content\ContentRepository;
 use System\Library\Content\MarkdownRenderer;
@@ -32,14 +33,12 @@ final class Console
 	private SearchService $search;
 	private StaticSiteBuilder $builder;
 
-	public function __construct()
+	public function __construct(Registry $registry)
 	{
-		$registry = new Registry();
-
-		$config = new Config();
-		$config->load('default.php');
-		$config->load('frontend.php');
-		$registry->set('config', $config);
+		$config = $registry->get('config');
+		if (!$config instanceof Config) {
+			throw new LogicException('Console requires a booted Registry with Config.');
+		}
 		$this->config = $config->all();
 
 		$database = new DB($config->get('database_path'));
