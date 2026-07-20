@@ -8,7 +8,7 @@ use RuntimeException;
 use System\Engine\AssetStorage;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 
 final class Extension implements ExtensionInterface, AssetStorage
 {
@@ -21,7 +21,7 @@ final class Extension implements ExtensionInterface, AssetStorage
 		return 'storage';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->service('storage.assets', $this);
 	}

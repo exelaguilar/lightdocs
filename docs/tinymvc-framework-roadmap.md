@@ -525,6 +525,132 @@ v0.5.0 with a targeted Composer update and restore those local files from the
 parent commit. The package release is additive, so other package consumers
 can remain on v0.5.0 independently.
 
+## Phase F completion record (2026-07-20) - extension platform, TinyMVC v0.7.0
+
+**Decision: ship the middle layer.** Phase F does not copy Lightdocs'
+domain-coupled manager into TinyMVC and does not copy OpenCart's commerce
+marketplace. It promotes the stable runtime contract and adds strict,
+versioned metadata/discovery boundaries. Lightdocs remains the only production
+consumer; the runnable starter is the second independently bootable shape.
+Nevernote remained strictly read-only at `cf931e3`; its active dirty feature
+work was observed and untouched.
+
+### OpenCart 5 audit and disposition
+
+The audit used official OpenCart `master` pinned at
+`6a7d20c3e43ac4e7ccf2ece636c6b2814b159fef`. This line is OpenCart 5: its
+`upload/index.php` defines `VERSION` as `5.0.0.0`. The extension architecture
+is a set of separated mechanisms rather than one general manager: `.ocmod.zip`
+package acquisition and `install.json`, installed-package records and status,
+owned-path records, typed commerce extension activation, startup namespace /
+template / language / config path registration, and persisted events/startups.
+
+TinyMVC adapted the useful non-commerce seams: versioned manifest identity,
+explicit resource maps, deterministic discovery, and separation of discovery
+from construction/activation. It rejected commerce categories and marketplace
+controllers as framework API. Persistent activation, DB schema, install/remove
+mutation, path ownership, chunked extraction, and rollback remain
+application-owned; installer resource limits/path ownership are explicitly a
+follow-up hardening phase, not omitted because no consumer needs them.
+The complete adopt/adapt/defer/reject table is shipped in the package at
+`docs/extension-platform.md`.
+
+### Package API and files
+
+TinyMVC v0.7.0 (`d0b0c5684ec1adcfe1d568426f59a5627a7f5c44`)
+adds four PHP 8.0-compatible framework files:
+
+- `ExtensionInterface`: `name(): string` and
+  `register(ExtensionRegistrarInterface): void`.
+- `ExtensionRegistrarInterface`: the portable contributions currently proven
+  by Lightdocs - `service()`, `on()`, and `asset()`, each returning `self`.
+- `ExtensionManifest`: `fromFile()` / `fromArray()` plus typed accessors for
+  schema, identity, version, description, type, enablement default, contexts,
+  requirements, capabilities, resources, source, and the complete application-
+  extensible metadata. It throws `RuntimeException` for unreadable/invalid JSON
+  files and `InvalidArgumentException` for invalid schema or fields.
+- `ExtensionDiscovery`: deterministic immediate-child discovery returning
+  `name => ExtensionManifest`; missing roots are empty, invalid present
+  manifests fail explicitly, and duplicate names throw `RuntimeException`.
+
+Schema version 1 requires `schema_version`, `name`, `class`, Semantic Version,
+and a nonempty description. Optional framework fields cover type,
+`default_enabled`, contexts, requirements, capabilities, and safe relative
+namespace/template/language/config resource maps. Unknown top-level fields are
+preserved for application settings, navigation, and event metadata. The JSON
+Schema ships under `resources/schema/extension-manifest-v1.schema.json`; the
+runtime validator enforces the boot- and path-safety-critical subset without a
+new dependency.
+
+The package also ships a DB-free starter under `examples/starter/`. It boots
+Kernel context `app`, discovers a `hello` extension, applies its declared
+namespace mount, constructs it, and registers a service, listener, and asset
+through a tiny application-local registrar. This proves intended new apps can
+use the contract without inheriting Lightdocs' DB, content repository, settings
+UI, or ZIP installer.
+
+`docs/versioning-policy.md` records Semantic Versioning, pre-1.0 deprecation,
+PHP-floor, compatibility-evidence, immutable-tag, and rollback rules. A missing
+second production consumer is evidence to weigh, not an automatic admission
+veto. The PHP floor remains `>=8.0`; blocking CI run `29767742712` passed all
+five PHP 8.0, 8.1, 8.2, 8.3, and 8.4 jobs.
+
+### Tests and Lightdocs integration
+
+TinyMVC added 27 tests (127 total / 288 assertions) covering portable
+registration, typed/default manifest access, application metadata retention,
+invalid JSON/core fields, duplicate list values, Semantic Version validation,
+relative-resource path safety, deterministic discovery, missing roots,
+invalid-present and duplicate-name failures, and the executable starter.
+`composer check` exits 0.
+
+Lightdocs changed `^0.6` to `^0.7`; the targeted authenticated Composer update
+changed TinyMVC only (`v0.6.0 => v0.7.0`). Its concrete `ExtensionManager` now
+implements the package registrar, consumes package discovery/manifests, and
+uses strict manifest validation during ZIP installation. The local
+`extension_interface.php` was deleted. Nine extension implementations now
+type their portable `register()` parameter as the package registrar; all nine
+manifests declare `schema_version: 1`.
+
+No existing behavior assertion was removed or weakened. The lifecycle fixture
+manifest gained only the now-required schema version and description, and its
+non-SemVer `test` value became valid prerelease `1.0.0-test`; the same extension,
+startup, event, dispatch, and response sequence remains asserted byte-for-byte.
+The fixture extension's parameter type changed from the concrete manager to the
+package registrar. New `tests/extension_platform.php` adds five assertions:
+all nine manifests and their deterministic order, package value-object use,
+schema v1, manager/registrar conformance, and package rather than local
+interface resolution. `tests/package_resolution.php` now covers all 29 package
+classes/interfaces and uses `interface_exists()` where appropriate.
+
+Final real-PHP validation:
+
+| Command | Exit/result |
+| --- | --- |
+| `tests/package_resolution.php` | 0; 29/29 package paths |
+| `tests/boot.php` | 0 |
+| `tests/kernel.php` | 0; 18/18 |
+| `tests/extension_platform.php` | 0; 5/5 |
+| `tests/lifecycle_harness.php` | 0; 6/6 |
+| `tests/lifecycle.php` | 0; 36/36 |
+| `composer validate --strict` | 0 |
+| `bin/build-css.php` (twice) | 0/0; 141004 reported bytes both runs |
+| `tests/smoke.php` | expected 1; identical two Local Git diagnostics |
+
+Tracked CSS was unchanged: admin 67249 bytes / SHA-256
+`326A93973A52A4D62F95C8D33708E1206B2B2A22D5F7F5FA35329F81B34C1536`,
+frontend 73759 bytes / SHA-256
+`C1A746A192AA8E9055BA2FC8036096C67BC3935C6EB47FF9FD35DD7FAA9BC089`.
+The smoke diagnostics remain exactly manager registration and history-service
+registration for Local Git; no new failure appeared. Composer authentication
+was ephemeral and removed from the environment after the targeted update.
+
+Rollback boundary: revert the single Lightdocs Phase F integration commit to
+restore the local interface, concrete extension parameter types, permissive
+local manifest discovery, `^0.6`, and the v0.6.0 lock; or pin v0.6.0 and restore
+those files from the parent commit. TinyMVC v0.7.0 is additive and immutable,
+so an application may remain on v0.6.0 independently.
+
 ## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free

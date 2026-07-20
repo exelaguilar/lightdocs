@@ -7,7 +7,7 @@ namespace Extension\Audit;
 use PDO;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 
 final class Extension implements ExtensionInterface
 {
@@ -23,7 +23,7 @@ final class Extension implements ExtensionInterface
 		return 'audit';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->service('audit.log', $this);
 		foreach ($this->eventNames() as $event) {

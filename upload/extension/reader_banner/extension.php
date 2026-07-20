@@ -6,7 +6,7 @@ namespace Extension\ReaderBanner;
 
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 use System\Library\Content\Page;
 
 final class Extension implements ExtensionInterface
@@ -20,7 +20,7 @@ final class Extension implements ExtensionInterface
 		return 'reader_banner';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->asset('public', 'script', '/extension/reader_banner/view/javascript/reader_banner.js');
 		$extensions->on('frontend/page/content/after', function (mixed &$payload): void {

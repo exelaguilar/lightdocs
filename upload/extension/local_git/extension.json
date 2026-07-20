@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "name": "local_git",
   "class": "Extension\\LocalGit\\Extension",
   "version": "1.0.0",

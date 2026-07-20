@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "name": "reader_banner",
   "class": "Extension\\ReaderBanner\\Extension",
   "version": "1.0.0",

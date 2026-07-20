@@ -7,7 +7,7 @@ namespace Extension\Lifecycle;
 use Lightdocs\Tests\Support\TraceRecorder;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 
 final class Extension implements ExtensionInterface
 {
@@ -21,7 +21,7 @@ final class Extension implements ExtensionInterface
         return 'lifecycle';
     }
 
-    public function register(ExtensionManager $manager): void
+    public function register(ExtensionRegistrarInterface $manager): void
     {
         $trace = new TraceRecorder((string) getenv('LIGHTDOCS_TEST_TRACE'));
         $trace->record('extension.listeners.declared');

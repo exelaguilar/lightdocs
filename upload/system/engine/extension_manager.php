@@ -11,7 +11,7 @@ use System\Library\DB;
 use System\Library\ExtensionState;
 use ZipArchive;
 
-final class ExtensionManager
+final class ExtensionManager implements ExtensionRegistrarInterface
 {
 	/** @var array<string,array<string,mixed>> */
 	private array $manifests = [];
@@ -52,7 +52,9 @@ final class ExtensionManager
 		$this->state = new ExtensionState($database);
 		$this->current_directives = $directives;
 		$this->directory = rtrim((string) ($config['extension_dir'] ?? DIR_ROOT . 'extension'), '/\\');
-		$this->discover($this->directory);
+		foreach ((new ExtensionDiscovery($this->directory))->discover() as $manifest) {
+			$this->manifests[$manifest->name()] = $manifest->all();
+		}
 
 		foreach ($this->manifests as $name => $manifest) {
 			$this->state->syncExtension($name, (string) ($manifest['version'] ?? ''), (bool) ($manifest['default_enabled'] ?? false));
@@ -73,19 +75,6 @@ final class ExtensionManager
 			$extension = new $class(new ExtensionContext($config, $repository, $directives, $database, $this->state->settings($name)));
 			if (!$extension instanceof ExtensionInterface) throw new RuntimeException('Extension class is invalid: ' . $name);
 			$this->add($extension);
-		}
-	}
-
-	private function discover(string $directory): void
-	{
-		if (!is_dir($directory)) return;
-		foreach (scandir($directory) ?: [] as $name) {
-			if ($name === '.' || $name === '..' || !is_dir($directory . '/' . $name)) continue;
-			$path = $directory . '/' . $name . '/extension.json';
-			if (!is_file($path)) continue;
-			$manifest = json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
-			if (!is_array($manifest) || !preg_match('/^[a-z0-9_]+$/', (string) ($manifest['name'] ?? ''))) continue;
-			$this->manifests[(string) $manifest['name']] = $manifest;
 		}
 	}
 
@@ -357,10 +346,8 @@ final class ExtensionManager
 		} finally { $zip->close(); }
 		$manifest_path = is_file($temporary . '/extension.json') ? $temporary . '/extension.json' : (($matches = glob($temporary . '/*/extension.json') ?: []) ? $matches[0] : '');
 		if ($manifest_path === '') throw new RuntimeException('The extension archive must contain extension.json.');
-		$manifest = json_decode((string) file_get_contents($manifest_path), true);
-		$name = is_array($manifest) ? (string) ($manifest['name'] ?? '') : '';
-		$class = is_array($manifest) ? (string) ($manifest['class'] ?? '') : '';
-		if (!preg_match('/^[a-z0-9_]+$/', $name) || $class === '') throw new RuntimeException('The extension manifest is invalid.');
+		$manifest = ExtensionManifest::fromFile($manifest_path);
+		$name = $manifest->name();
 		$source = dirname($manifest_path);
 		$target = $this->directory . '/' . $name;
 		if (is_dir($target) && !is_file($target . '/.lightdocs-installed')) throw new RuntimeException('A bundled extension with that name cannot be replaced.');

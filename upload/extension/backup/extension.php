@@ -9,7 +9,7 @@ use RecursiveIteratorIterator;
 use System\Engine\BackupProvider;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 use ZipArchive;
 
 final class Extension implements ExtensionInterface, BackupProvider
@@ -23,7 +23,7 @@ final class Extension implements ExtensionInterface, BackupProvider
 		return 'backup';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->service('backup.provider', $this);
 	}

@@ -7,7 +7,7 @@ namespace Extension\RemoteSync;
 use RuntimeException;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 use System\Engine\RemoteRepositoryProvider;
 
 final class Extension implements ExtensionInterface, RemoteRepositoryProvider
@@ -21,7 +21,7 @@ final class Extension implements ExtensionInterface, RemoteRepositoryProvider
 		return 'remote_sync';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->service('remote.repository', $this);
 	}

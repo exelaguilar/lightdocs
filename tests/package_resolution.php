@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Package-source resolution test for the TinyMVC extraction (Phase 1 core,
- * plus the Phase A-E additions through Kernel in v0.6.0).
+ * plus the Phase A-F additions through the extension platform in v0.7.0).
  *
  * Invocation: php tests/package_resolution.php
  *
@@ -24,7 +24,7 @@ declare(strict_types=1);
  * Config, a database, or anything else the fuller bootstrap constructs.
  *
  * For every class this checks:
- *   1. class_exists()
+ *   1. class_exists() or interface_exists()
  *   2. ReflectionClass construction succeeds
  *   3. the reflected file is inside the tiny-mvc-framework package
  *   4. the reflected file's basename is the expected lowercase filename
@@ -74,6 +74,10 @@ $classes = [
     'System\\Engine\\Config' => ['basename' => 'config.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/config.php'],
     'System\\Engine\\Controller' => ['basename' => 'controller.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/controller.php'],
     'System\\Engine\\Event' => ['basename' => 'event.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/event.php'],
+    'System\\Engine\\ExtensionDiscovery' => ['basename' => 'extension_discovery.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_discovery.php'],
+    'System\\Engine\\ExtensionInterface' => ['basename' => 'extension_interface.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_interface.php'],
+    'System\\Engine\\ExtensionManifest' => ['basename' => 'extension_manifest.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_manifest.php'],
+    'System\\Engine\\ExtensionRegistrarInterface' => ['basename' => 'extension_registrar_interface.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_registrar_interface.php'],
     'System\\Engine\\Factory' => ['basename' => 'factory.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/factory.php'],
     'System\\Engine\\Front' => ['basename' => 'front.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/front.php'],
     'System\\Engine\\Kernel' => ['basename' => 'kernel.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/kernel.php'],
@@ -101,8 +105,8 @@ $rows = [];
 foreach ($classes as $fqcn => $expect) {
     $row = ['class' => $fqcn, 'resolved' => '(none)'];
 
-    if (!class_exists($fqcn, true)) {
-        $failures[] = "{$fqcn}: class_exists() returned false — did not resolve at all.";
+    if (!class_exists($fqcn, true) && !interface_exists($fqcn, true)) {
+        $failures[] = "{$fqcn}: class_exists()/interface_exists() returned false — did not resolve at all.";
         $rows[] = $row;
         continue;
     }

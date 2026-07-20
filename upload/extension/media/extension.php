@@ -6,7 +6,7 @@ namespace Extension\Media;
 
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 use System\Engine\MediaProcessor;
 
 final class Extension implements ExtensionInterface, MediaProcessor
@@ -20,7 +20,7 @@ final class Extension implements ExtensionInterface, MediaProcessor
 		return 'media';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->service('media.processor', $this);
 	}

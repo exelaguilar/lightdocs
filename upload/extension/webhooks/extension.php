@@ -7,7 +7,7 @@ namespace Extension\Webhooks;
 use PDO;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 use System\Engine\WebhookProvider;
 
 final class Extension implements ExtensionInterface, WebhookProvider
@@ -26,7 +26,7 @@ final class Extension implements ExtensionInterface, WebhookProvider
 		return 'webhooks';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->service('webhook.provider', $this);
 		foreach ($this->eventNames() as $event) {

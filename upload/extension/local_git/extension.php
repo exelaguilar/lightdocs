@@ -8,7 +8,7 @@ use System\Library\Service\GitHistory;
 use System\Library\Service\GitSyncPreflight;
 use System\Engine\ExtensionInterface;
 use System\Engine\ExtensionContext;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 
 final class Extension implements ExtensionInterface
 {
@@ -21,7 +21,7 @@ final class Extension implements ExtensionInterface
 		return 'local_git';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$history = new GitHistory($this->context->config['site_root'], (bool) ($this->context->settings['history_enabled'] ?? true), (int) ($this->context->settings['history_limit'] ?? 30));
 		$extensions->service('local_git.history', $history);

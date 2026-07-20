@@ -7,7 +7,7 @@ namespace Extension\Mail;
 use RuntimeException;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionManager;
+use System\Engine\ExtensionRegistrarInterface;
 use System\Engine\MailProvider;
 
 final class Extension implements ExtensionInterface, MailProvider
@@ -21,7 +21,7 @@ final class Extension implements ExtensionInterface, MailProvider
 		return 'mail';
 	}
 
-	public function register(ExtensionManager $extensions): void
+	public function register(ExtensionRegistrarInterface $extensions): void
 	{
 		$extensions->service('mail.provider', $this);
 	}

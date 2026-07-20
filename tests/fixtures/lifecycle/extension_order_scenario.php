@@ -39,9 +39,11 @@ $extensionDirectory = $temporary . '/extension/lifecycle';
 @mkdir($extensionDirectory, 0700, true);
 copy(__DIR__ . '/extension_fixture.php', $extensionDirectory . '/extension.php');
 file_put_contents($extensionDirectory . '/extension.json', json_encode([
+    'schema_version' => 1,
     'name' => 'lifecycle',
     'class' => 'Extension\\Lifecycle\\Extension',
-    'version' => 'test',
+    'version' => '1.0.0-test',
+    'description' => 'Lifecycle ordering fixture.',
     'type' => 'test',
     'default_enabled' => true,
     'contexts' => ['public'],
