@@ -11,12 +11,14 @@ use System\Engine\Loader;
 use System\Engine\Front;
 use System\Engine\Startup;
 use System\Engine\ExtensionAdministration;
+use System\Engine\ExtensionAuthorization;
 use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionCapabilityRegistry;
 use System\Engine\ExtensionDiscovery;
 use System\Engine\ExtensionManager;
 use System\Engine\ExtensionManifest;
 use System\Engine\ExtensionPackageInstaller;
+use System\Engine\ExtensionPackageTrust;
 use System\Library\DB;
 use System\Library\ErrorHandler;
 use System\Library\Log;
@@ -186,9 +188,11 @@ $extension_manager = new ExtensionManager(
     new ExtensionDiscovery($config->get('extension_dir')),
     $extension_state,
     capabilities: $extension_capabilities,
-    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.8.0'],
+    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.9.0'],
     autoloader: $registry->get('autoloader'),
     packages: new ExtensionPackageInstaller($config->get('extension_dir')),
+    authorizer: new ExtensionAuthorization($registry),
+    trust: new ExtensionPackageTrust((string) $config->get('extension_trust_mode'), (array) $config->get('extension_trusted_signers')),
 );
 $extension_manager->recover();
 $extension_runtime = $extension_manager->boot(APP_CONTEXT === 'frontend' ? 'public' : (string) APP_CONTEXT);

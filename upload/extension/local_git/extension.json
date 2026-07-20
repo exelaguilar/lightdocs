@@ -1,10 +1,10 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "name": "local_git",
   "class": "Extension\\LocalGit\\Extension",
   "version": "1.0.0",
   "description": "Local-only Git history and sanitized content preflight.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.8"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.9"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "type": "developer",
   "default_enabled": true,

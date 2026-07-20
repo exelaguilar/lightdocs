@@ -46,7 +46,7 @@ $extensionDirectory = $temporary . '/extension/lifecycle';
 @mkdir($extensionDirectory . '/src', 0700, true);
 copy(__DIR__ . '/extension_fixture.php', $extensionDirectory . '/src/extension.php');
 file_put_contents($extensionDirectory . '/extension.json', json_encode([
-    'schema_version' => 2,
+    'schema_version' => 3,
     'name' => 'lifecycle',
     'class' => 'Extension\\Lifecycle\\Extension',
     'version' => '1.0.0-test',
@@ -54,7 +54,7 @@ file_put_contents($extensionDirectory . '/extension.json', json_encode([
     'type' => 'test',
     'default_enabled' => true,
     'contexts' => ['public'],
-    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.8'],
+    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.9'],
     'capabilities' => ['requires' => ['lightdocs.application']],
     'resources' => ['namespaces' => ['Extension\\Lifecycle' => 'src']],
 ], JSON_THROW_ON_ERROR));
@@ -99,7 +99,7 @@ $manager = new ExtensionManager(
     new ExtensionDiscovery(dirname($extensionDirectory)),
     $state,
     capabilities: $capabilities,
-    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.8.0'],
+    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.9.0'],
     autoloader: $autoloader,
 );
 $runtime = $manager->boot('public');

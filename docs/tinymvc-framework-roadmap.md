@@ -835,6 +835,82 @@ namespace aliases/migration, Response reconciliation, optional helpers, Callback
 extension/provider genericization, persistence abstractions, and Nevernote adoption have not
 begun.
 
+## Phase H completion record (2026-07-20) - extension governance, TinyMVC v0.9.0
+
+**Decision: promote governance, not application identity.** TinyMVC commit
+`d3acddc` / annotated tag `v0.9.0` adds the next robust extension-manager layer:
+manifest-v3 dependency and conflict declarations, deterministic topological load
+order, lifecycle mutation authorization, detached package signatures, trusted
+signers, catalog/update metadata, and a pre-staging compressed-archive byte limit.
+Dependency integrity is checked both during boot and before enable/disable,
+enabled upgrade, or uninstall, so a mutation cannot knowingly persist an
+unbootable graph.
+
+The user/role boundary was explicitly re-audited rather than preserved to avoid
+editing Lightdocs. Lightdocs and Nevernote currently have nearly identical
+`System\Library\User` classes, but both encode bootstrap IDs, session keys,
+route-list ACLs, protected `admin_user_group` rows, and application SQL.
+Nevernote's more OpenCart-shaped surrounding domain additionally owns normalized
+`admin_permission` storage, permission-version invalidation, TOTP, trusted
+devices, login logs, and reset policy. Current OpenCart master likewise loads
+concrete user/user-group tables and session state in its `User`. Those are three
+examples of application identity infrastructure, not evidence for making one
+schema a TinyMVC default.
+
+TinyMVC therefore owns `ExtensionOperationAuthorizerInterface`: it supplies the
+operation plus typed manifest and optional installation context before any
+mutation. Lightdocs adds local `ExtensionAuthorization`, injected into its
+manager, which resolves the current user lazily, requires an authenticated user,
+and maps every lifecycle mutation to `modify tools/extensions`. Missing users and
+denied grants fail closed. User authentication, users, user groups, super-admin
+policy, route grants, and their persistence remain application-owned. A future
+shared identity system, if pursued, must be an optional module with replaceable
+identity, credential, session, and grant stores; it must not be a copied `User`.
+
+Manifest schema v3 adds `dependencies.requires`, `dependencies.conflicts`,
+`dependencies.load_after`, and declarative `permissions`. Required and conflict
+constraints use Composer Semver. Stable lexical ordering breaks topological ties;
+missing/incompatible dependencies, active conflicts, and cycles fail before
+extension construction. Permissions are review metadata, not a claim that
+arbitrary PHP is sandboxed.
+
+Package trust signs the lowercase archive SHA-256 string with a detached base64
+OpenSSL SHA-256 signature. `ExtensionPackageTrust` supports `allow_unsigned` and
+`require_signature`, validates signer IDs against application-supplied public
+keys, and runs before filesystem mutation. Typed HTTPS catalog entries bind name,
+version, channel, URI, hash, and optional proof; the catalog selects deterministic
+newer updates but deliberately performs no HTTP, authentication, billing, or UI.
+Lightdocs exposes trust mode and signer configuration through
+`LIGHTDOCS_EXTENSION_TRUST_MODE` and
+`LIGHTDOCS_EXTENSION_TRUSTED_SIGNERS`; unsigned behavior remains the explicit
+compatibility default.
+
+Lightdocs migrated all nine bundled manifests and its lifecycle fixture to schema
+v3 / TinyMVC `^0.9`, injects its authorization and trust policy, and expands the
+package-resolution proof from 48 to 57 package classes. The focused authorization
+test has three assertions: no user denied, authenticated user without the modify
+grant denied, and an allowed decision mapped to the exact Lightdocs ACL tuple.
+No pre-existing assertion was removed or weakened.
+
+Package validation: `composer validate --strict` exit 0; `composer check` exit 0;
+180 tests / 421 assertions. Lightdocs validation: package resolution exit 0 (57
+classes); boot exit 0; Kernel 18/18 exit 0; extension platform 6/6 exit 0;
+authorization 3/3 exit 0; lifecycle harness 6/6 exit 0; lifecycle 36/36 exit 0;
+strict Composer validation exit 0; CSS build twice exit 0 and remained 141004
+reported bytes; smoke retained the known exit 1 and the identical two Local Git
+diagnostics. TinyMVC GitHub Actions run `29773907789` is the five-job PHP 8.0-8.4
+release gate.
+
+The isolated database lifecycle-hook correctness gate remains deferred. A safe
+implementation needs a persistent prepare/commit/rollback worker and journaled
+indeterminate recovery; a one-shot subprocess API would create false atomicity.
+Catalog transport/UI, key provisioning/rotation, and that hook protocol are the
+next extension-platform work. General identity-module design is separate.
+
+Rollback boundary: revert the single Lightdocs Phase H integration commit and pin
+TinyMVC `^0.8` / v0.8.1; all nine manifests revert to schema v2 with it. The package
+rollback boundary is tag v0.8.1. Nevernote remained read-only throughout.
+
 ## Phase 1.5 completion record (2026-07-19)
 
 Phase 1.5 made the extracted package independently versioned, independently testable, and

@@ -502,6 +502,15 @@ LIGHTDOCS_UPLOAD_DIR=/var/lib/lightdocs/storage/uploads
 LIGHTDOCS_ENV_FILE=/etc/lightdocs/lightdocs.env
 ```
 
+Extension lifecycle mutations are authorized through the existing
+`modify tools/extensions` administrator permission. ZIP provenance is separately
+configurable: `LIGHTDOCS_EXTENSION_TRUST_MODE` accepts `allow_unsigned` (the
+compatibility default) or `require_signature`, while
+`LIGHTDOCS_EXTENSION_TRUSTED_SIGNERS` is a JSON object mapping signer IDs to PEM
+public keys. Requiring signatures intentionally rejects unsigned web uploads;
+trusted catalog/download transport can supply the detached proof through the
+TinyMVC package API.
+
 ## Useful commands
 
 Project checkout:

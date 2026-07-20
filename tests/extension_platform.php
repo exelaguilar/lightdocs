@@ -29,7 +29,7 @@ $expected = ['audit', 'backup', 'local_git', 'mail', 'media', 'reader_banner', '
 
 $check(array_keys($manifests) === $expected, 'all nine bundled manifests are discovered deterministically');
 $check(count(array_filter($manifests, static fn ($manifest): bool => $manifest instanceof ExtensionManifest)) === 9, 'all bundled manifests use the package value object');
-$check(count(array_filter($manifests, static fn (ExtensionManifest $manifest): bool => $manifest->schemaVersion() === 2)) === 9, 'all bundled manifests declare schema version 2');
+$check(count(array_filter($manifests, static fn (ExtensionManifest $manifest): bool => $manifest->schemaVersion() === 3)) === 9, 'all bundled manifests declare schema version 3');
 $check(is_subclass_of(System\Library\ExtensionState::class, ExtensionInstallationRepositoryInterface::class), 'Lightdocs persistence implements the package installation repository contract');
 $check((new ReflectionMethod(System\Engine\ExtensionInterface::class, 'register'))->getParameters()[0]->getType()?->getName() === ExtensionContext::class, 'portable extensions receive the package-owned runtime context');
 

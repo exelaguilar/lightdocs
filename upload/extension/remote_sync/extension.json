@@ -1,10 +1,10 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "name": "remote_sync",
   "class": "Extension\\RemoteSync\\Extension",
   "version": "1.0.0",
   "description": "Optional, manually-triggered synchronization with a remote Git repository.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.8"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.9"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "type": "integration",
   "default_enabled": false,

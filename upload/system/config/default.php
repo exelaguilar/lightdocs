@@ -54,6 +54,8 @@ $custom_directives = require __DIR__ . '/directives.php';
 if (!is_array($custom_directives)) $custom_directives = [];
 
 $environment = $env('APP_ENV', 'production');
+$extension_trusted_signers = json_decode($env('LIGHTDOCS_EXTENSION_TRUSTED_SIGNERS', '{}'), true);
+if (!is_array($extension_trusted_signers)) throw new RuntimeException('LIGHTDOCS_EXTENSION_TRUSTED_SIGNERS must be a JSON object of signer IDs to PEM public keys.');
 
 return [
     // Autoloading — app-tree namespace → directory (relative to DIR_ROOT).
@@ -86,6 +88,8 @@ return [
     'project_root' => $root,
     'application_root' => dirname(__DIR__, 2),
     'extension_dir' => dirname(__DIR__, 2) . '/extension',
+    'extension_trust_mode' => $env('LIGHTDOCS_EXTENSION_TRUST_MODE', 'allow_unsigned'),
+    'extension_trusted_signers' => $extension_trusted_signers,
     'site_root' => $site_root,
     'state_root' => $state_root,
     'content_dir' => $content_root,

@@ -1,10 +1,10 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "name": "media",
   "class": "Extension\\Media\\Extension",
   "version": "1.0.0",
   "description": "Optional image resizing and optimization for uploaded media.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.8"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.9"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "type": "content",
   "default_enabled": false,
