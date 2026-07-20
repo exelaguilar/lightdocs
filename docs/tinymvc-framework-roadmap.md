@@ -155,7 +155,87 @@ the Phase 0 `front.php` fix; it is not marked as adopted.
 **Result**: one production definition of each of the 18 classes exists, in the package;
 `composer validate --strict` passes for both the package and Lightdocs.
 
-## Phase 1.6 distribution record (2026-07-20; Lightdocs commit blocked)
+## Phase 1.7 Lightdocs integration record (2026-07-20)
+
+Lightdocs consumes the private repository at
+`https://github.com/exelaguilar/tiny-mvc-framework.git` through a committed Composer VCS
+repository and the release constraint `^0.1`. The lock file resolves `v0.1.0` at framework
+commit `2181a80b45eb733ca039d4babb1b750e805588cb`; production does not use `dev-main`, a
+Composer path repository, or `../tiny-mvc-framework`.
+
+The application integration was organized on `tinymvc/lightdocs-integration` from
+`cd673681fee1fafdc3b2904f85ccca1ab7044660` as these functional commits:
+
+| Commit | Purpose | Validation |
+|---|---|---|
+| `4b8c7778205555424e8533d37369744335565c53` | Align the application-context bootstrap, rename `public.php` to `frontend.php`, and configure application namespaces | PHP syntax, deterministic boot, CSS build, smoke |
+| `f38cfe16f5a1cd7ecd3818de7701f5d50fabed65` | Add parameterized route matching and URL generation | PHP syntax, deterministic boot, smoke |
+| `0766016e52bd97dfd3f6107a6daca1f96e0fedcd` | Preserve the account-recovery, admin operations, audit/webhook/mail, schema, UI, and generated-style work | 44 PHP syntax checks, JSON parsing, deterministic CSS build, boot, smoke |
+| `666d1b271ad50dcb76ccedb711f26beaafe4a883` | Consume TinyMVC `v0.1.0`, add package-resolution coverage, and delete exactly 18 duplicate local definitions | strict Composer validation, optimized autoload, 18 class/path/hash checks, boot, CSS, smoke |
+
+The final roadmap-only commit records the clean-install proof and rollback boundary; its exact
+SHA is reported with the completed local merge because a Git commit cannot contain its own
+hash. Local `main` is fast-forwarded to the completed integration history without pushing it;
+the integration branch is retained for review.
+
+### Bootstrap and package resolution
+
+`framework.php` now loads `(APP_CONTEXT or frontend) . '.php'`. `default.php` owns the
+complete `Admin`, `Frontend`, and `Extension` namespace map, which is registered only after
+the System namespace makes Config and Registry available. CLI, CSS, smoke, and deterministic
+boot consumers consistently load `frontend.php`. There are no executable references to
+`public.php`, `load('public')`, or `config/public`; historical references later in this document
+describe the earlier transition only.
+
+`tests/package_resolution.php` checks all 18 extracted classes. Each must resolve to its exact
+lowercase `upload/vendor/exelaguilar/tiny-mvc-framework-private/system/{engine,helper,library}`
+path, remain outside Lightdocs' former local trees and the superseded package `src/` tree, and
+not resolve from the conventional sibling checkout. Both generated Composer autoload metadata
+files contain exactly 18 matching entries. The installed file hashes match the files at
+`v0.1.0`; TinyMVC production sources have no diff from that tag.
+
+### Clean remote-install proof
+
+A fresh clone at
+`C:\Users\Jason Aguilar\AppData\Local\Temp\lightdocs-phase17-clean-20260720-0830` had no
+`C:\Users\Jason Aguilar\AppData\Local\Temp\tiny-mvc-framework` sibling. Composer used an
+ephemeral GitHub OAuth value obtained from the signed-in GitHub CLI keyring; it downloaded
+TinyMVC `v0.1.0` as an archive from `api.github.com`. No credential or authenticated URL was
+written to a tracked file. `composer install`, strict validation, optimized autoload generation,
+package resolution, boot, CSS build, and smoke all exited 0. Package reflection pointed only
+inside the clean clone's Composer vendor directory. The clean smoke test passed 11 public pages,
+36 indexed documents, and 367 headings. Generated CSS changes caused by the clean default
+environment stayed inside the disposable clone and were not substituted for the normal
+workspace's validated generated baseline.
+
+### Development, authentication, deployment, and rollback
+
+The primary local-development workflow is release based: develop and test TinyMVC in its own
+repository, then publish an internal tag and update Lightdocs with a targeted Composer command.
+For short-lived integration testing, a developer may temporarily select an authenticated
+framework branch, run the targeted update, and restore `^0.1` before committing. No Composer
+merge plugin or committed local override is used.
+
+Machines installing Lightdocs need read access to the private GitHub repository through a
+non-committed Composer/GitHub credential mechanism. The developer workstation is authenticated;
+staging authentication and a real staging deployment/rollback test remain deployment gates.
+Lightdocs has not been pushed or deployed by this phase.
+
+To roll back only TinyMVC adoption, revert
+`666d1b271ad50dcb76ccedb711f26beaafe4a883`; that removes the package dependency and restores
+the 18 local files while retaining the context bootstrap. At release level, select a prior
+known-good internal tag, change the constraint only if needed, run a targeted Composer update,
+regenerate optimized autoload metadata, run package-resolution and boot tests, verify reflected
+paths, and deploy the resulting locked state. Revert the bootstrap commit only after package
+adoption has also been reverted or compatibility with the old context shape is proven.
+Application features can be rolled back independently through their logical commits.
+
+Phase 2 remains explicitly deferred: autoloader extraction, bootstrap registration-order
+redesign, Kernel/`Kernel::boot()`, namespace migration or aliases, Response reconciliation,
+optional-helper and CallbackAction extraction, extension/provider genericization, database,
+cache, and migration abstractions, and Nevernote adoption were not begun.
+
+## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free
 HTTPS repository URLs. The prior public, unrelated repository at that identity was deleted with
