@@ -1,5 +1,5 @@
 <?php
-// config/public.php — public reader (frontend) context configuration.
+// config/frontend.php — public reader (frontend) context configuration.
 
 return [
     'app_context' => 'frontend',

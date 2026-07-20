@@ -56,6 +56,15 @@ if (!is_array($custom_directives)) $custom_directives = [];
 $environment = $env('APP_ENV', 'production');
 
 return [
+    // Autoloading — app-tree namespace → directory (relative to DIR_ROOT).
+    // Registered once, for every context, so a context can load classes from
+    // another (e.g. Extension) regardless of which one is currently active.
+    'namespaces' => [
+        'Admin' => 'admin/',
+        'Frontend' => 'frontend/',
+        'Extension' => 'extension/',
+    ],
+
     // Identity
     'name' => $env('DOCS_NAME', (string)($site['name'] ?? 'Lightdocs')),
     'tagline' => $env('DOCS_TAGLINE', (string)($site['tagline'] ?? 'Documentation without the framework tax.')),

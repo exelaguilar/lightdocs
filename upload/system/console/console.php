@@ -38,7 +38,7 @@ final class Console
 
 		$config = new Config();
 		$config->load('default.php');
-		$config->load('public.php');
+		$config->load('frontend.php');
 		$registry->set('config', $config);
 		$this->config = $config->all();
 

@@ -38,7 +38,7 @@ use System\Engine\CallbackAction;
 $registry = new Registry();
 $configuration = new Config();
 $configuration->load('default.php');
-$configuration->load('public.php');
+$configuration->load('frontend.php');
 $registry->set('config', $configuration);
 $config = $configuration->all();
 

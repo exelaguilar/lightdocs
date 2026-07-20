@@ -11,7 +11,7 @@ $autoloader->register('System', DIR_SYSTEM);
 
 $config = new \System\Engine\Config();
 $config->load('default.php');
-$config->load('public.php');
+$config->load('frontend.php');
 
 $bytes = (new System\Library\Service\CssBuilder($config->all()))->build();
 

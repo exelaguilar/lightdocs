@@ -44,11 +44,12 @@ use System\Model\Schema;
 use System\Model\SqliteSearchService;
 
 // === Autoloader ===
+// Only System is registered up front — Config/Registry themselves live
+// there and must be loadable before anything else. The rest of the app-tree
+// namespaces are config-driven (see below) so a new context is a config
+// edit, not a framework.php edit.
 $autoloader = new Autoloader();
-$autoloader->register('Admin', DIR_ROOT . 'admin/');
-$autoloader->register('Frontend', DIR_ROOT . 'frontend/');
 $autoloader->register('System', DIR_SYSTEM);
-$autoloader->register('Extension', DIR_ROOT . 'extension/');
 
 // === Registry & Config ===
 $registry = new Registry();
@@ -56,7 +57,7 @@ $registry->set('autoloader', $autoloader);
 
 $config = new Config();
 $config->load('default.php');
-$config->load((defined('APP_CONTEXT') && APP_CONTEXT === 'admin' ? 'admin' : 'public') . '.php');
+$config->load((defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend') . '.php');
 if (is_file(DIR_SYSTEM . 'config/config.local.php')) {
     $config->load('config.local.php');
 }
@@ -64,6 +65,10 @@ $registry->set('config', $config);
 
 defined('APP_CONTEXT') || define('APP_CONTEXT', $config->get('app_context', 'frontend'));
 $registry->set('app', APP_CONTEXT);
+
+foreach ((array)$config->get('namespaces', []) as $namespace => $dir) {
+    $autoloader->register((string)$namespace, DIR_ROOT . $dir);
+}
 
 // === Database ===
 $db = new DB($config->get('database_path'));
