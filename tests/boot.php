@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  * Invocation: php tests/boot.php
  *
- * Verifies that the real application-local Kernel performs the DB-free base
+ * Verifies that the package Kernel performs the DB-free base
  * boot (System autoloading -> Registry -> Config cascade -> configured
  * namespace registration) before a handful of DB-free core services reach a
  * valid checkpoint, independent of:
@@ -43,7 +43,8 @@ $kernel = new \System\Engine\Kernel(
     context: APP_CONTEXT,
     systemRoot: DIR_SYSTEM,
     applicationRoot: DIR_ROOT,
-    loadLocalConfig: false,
+    localConfigFile: null,
+    enforceApplicationConstants: true,
 );
 $registry = $kernel->boot();
 $autoloader = $registry->get('autoloader');

@@ -10,7 +10,8 @@ $kernel = new \System\Engine\Kernel(
     context: APP_CONTEXT,
     systemRoot: DIR_SYSTEM,
     applicationRoot: DIR_ROOT,
-    loadLocalConfig: false,
+    localConfigFile: null,
+    enforceApplicationConstants: true,
 );
 $registry = $kernel->boot();
 $config = $registry->get('config');

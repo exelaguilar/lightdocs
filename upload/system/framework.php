@@ -50,6 +50,7 @@ $kernel = new Kernel(
     context: defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend',
     systemRoot: DIR_SYSTEM,
     applicationRoot: DIR_ROOT,
+    enforceApplicationConstants: true,
 );
 $registry = $kernel->boot();
 $config = $registry->get('config');

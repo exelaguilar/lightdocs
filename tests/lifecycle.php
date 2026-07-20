@@ -342,7 +342,7 @@ $suite->test('real CSS build is successful and idempotent', static function () u
     TestSuite::assertSame($middle, $after, 'CSS build is not idempotent.');
     $source = (string) file_get_contents($root . '/bin/build-css.php');
     TestSuite::assertContains('new \\System\\Engine\\Kernel', $source, 'CSS Kernel boot changed.');
-    TestSuite::assertContains('loadLocalConfig: false', $source, 'CSS local-config exclusion changed.');
+    TestSuite::assertContains('localConfigFile: null', $source, 'CSS local-config exclusion changed.');
     TestSuite::assertTrue(!str_contains($source, 'new \\System\\Library\\DB') && !str_contains($source, 'new System\\Library\\DB'), 'CSS build gained a database dependency.');
 });
 

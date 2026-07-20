@@ -45,9 +45,6 @@ $_SERVER['HTTPS'] = (
 // package class, so no direct engine/autoloader.php require remains.
 require_once(DIR_SYSTEM . 'vendor.php');
 
-// Application-local coordinator for the shared DB-free boot prefix.
-require_once(DIR_SYSTEM . 'engine/kernel.php');
-
 use Dotenv\Dotenv;
 
 // Local development uses .env in the project. Packaged installations can keep

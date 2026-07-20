@@ -408,6 +408,123 @@ Rollback boundary: revert the single Lightdocs integration commit (restores
 the local file, the startup require line, the fixture requires, and the
 `^0.4` constraint + lock), or pin `v0.4.0` at release level.
 
+## Phase E completion record (2026-07-20) - Kernel promotion, TinyMVC v0.6.0
+
+**Decision: PROMOTED.** Every objective package-neutrality condition was met.
+The application-local `upload/system/engine/kernel.php` was replaced by the
+package's `System\Engine\Kernel`; `request_scheme.php` remains local and was
+not revisited. Nevernote remained strictly read-only and unadopted.
+
+### Package-neutral API and boundary
+
+The constructor shipped as:
+
+```php
+new Kernel(
+    string $context,
+    string $systemRoot,
+    string $applicationRoot,
+    ?string $configDirectory = null,
+    array $configFiles = ['default.php', '{context}.php'],
+    ?string $localConfigFile = 'config.local.php',
+    ?string $namespacesConfigKey = 'namespaces',
+    array $namespaceMap = [],
+    bool $enforceApplicationConstants = false,
+    string $appContextConfigKey = 'app_context',
+);
+```
+
+The default config directory is `systemRoot . 'config/'` and is passed
+explicitly to `Config`, removing the `DIR_SYSTEM` equality requirement from
+package-neutral mode. Required config filenames are ordered and replace the
+`{context}` token; the optional local filename loads last only when non-null
+and present. Namespace paths remain relative to `applicationRoot`; callers
+may supply an explicit map, a config key, or both (explicit entries first,
+config entries second). Missing namespace directories remain lazy failures.
+
+`enforceApplicationConstants` is the one opt-in application-policy switch.
+Its default `false` mode neither requires nor reads `DIR_SYSTEM`, `DIR_ROOT`,
+or `APP_CONTEXT`, and stores the constructor context as Registry `app`.
+Lightdocs passes `true`, preserving all prior behavior: both root constants
+must exist and normalize equal to the supplied roots, an existing conflicting
+`APP_CONTEXT` is rejected before initialization, an absent one is defined
+from `appContextConfigKey` after config loading, and a config-produced
+conflict is rejected. Public methods remain `boot(): Registry`,
+`isBooted(): bool`, and `context(): string`.
+
+The Kernel remains boot-only: validation, initial `System` registration,
+Registry creation, config sequencing, optional constant policy, namespace
+registration, boot state, and Registry return. It contains no dispatch,
+responses, database/logging, migrations, extensions, dependency injection,
+or application composition.
+
+### PHP floor and promotion character
+
+This is explicitly a **reworked promotion**, not a byte-identical move. The
+Lightdocs prototype's PHP 8.1 `readonly` properties became plain private
+typed properties with no setters. Effective immutability is unchanged and
+the package floor remains PHP `>=8.0`. The first CI run exposed a PHP 8.0-only
+test compatibility issue (`ReflectionProperty` required `setAccessible(true)`);
+production code was unaffected. Commit `467dc9d` added that compatibility
+call, the newly-created release tag was moved before consumption to the fixed
+commit, and blocking CI run `29762944073` passed PHP 8.0, 8.1, 8.2, 8.3, and
+8.4.
+
+### Tests, fixtures, and Lightdocs assertion changes
+
+TinyMVC added `tests/Engine/KernelTest.php`: 13 tests / 43 assertions against
+committed `tests/Fixture/kernel/` trees. The Lightdocs-shaped fixture proves
+Registry/autoloader/config/app registration, default -> context -> local
+override order, local-disabled mode, context validation before config load,
+missing-file pass-through, one attempt per instance, failed boot state,
+strict APP_CONTEXT definition/conflict, namespace order and lazy invalid
+paths, and the absence of application composition. A subprocess boots with
+no `DIR_SYSTEM`, `DIR_ROOT`, or `APP_CONTEXT` defined. The Nevernote-shaped
+fixture boots context `app` with `namespaceMap: ['App' => 'app/']`, no
+`config.local.php`, and no change to Nevernote. Package total: 100 tests / 215
+assertions.
+
+All 18 Lightdocs Kernel scenarios remain and pass. No behavioral assertion
+was removed or weakened. Exact assertion-level edits:
+
+- The prohibited-dependency test now loads Composer and reflects the package
+  Kernel source instead of reading the deleted local path. One source-file
+  existence assertion was added; the same six prohibited dependency strings
+  are still asserted.
+- The lifecycle CSS source assertion now requires
+  `localConfigFile: null` instead of the removed
+  `loadLocalConfig: false` spelling. Both express the same requirement that
+  CLI/tooling exclude `config.local.php`; idempotence, tracked hashes, and
+  no-DB assertions are unchanged.
+
+Fixture construction sites changed only to enable
+`enforceApplicationConstants: true` and to use a null local-config filename;
+their output expectations did not change.
+
+### Consumption, gates, validation, and rollback
+
+Lightdocs changed `^0.5` to `^0.6` and a targeted authenticated Composer
+update changed only TinyMVC (`v0.5.0 => v0.6.0`, final reference `467dc9d`).
+The pre-deletion package-resolution run exited 1 with exactly four expected
+Kernel failures: the direct startup require bound the local class, so it was
+outside the package, inside the former local tree, at the wrong exact path,
+and still present. The other 24 classes resolved correctly. Removing that
+require and deleting the local Kernel were therefore one coupled gate. The
+post-deletion run resolves all 25 classes from the installed package.
+
+Final validation: package resolution 25/25, boot checkpoint, Kernel 18/18,
+lifecycle harness 6/6, lifecycle 36/36, and strict Composer validation all
+exit 0 using the real PHP executable. CSS built twice at the reported 141004
+bytes with both tracked SHA-256 hashes unchanged. Smoke exits 1 only with the
+same two pre-existing Local Git extension-state diagnostics: manager
+registration and history-service registration. No credential was persisted.
+
+Rollback boundary: revert the single Lightdocs integration commit to restore
+the local Kernel, startup require, `^0.5` constraint, and v0.5.0 lock; or pin
+v0.5.0 with a targeted Composer update and restore those local files from the
+parent commit. The package release is additive, so other package consumers
+can remain on v0.5.0 independently.
+
 ## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free

@@ -17,7 +17,6 @@ define('DIR_ROOT', $applicationRoot);
 define('DIR_SYSTEM', $systemRoot);
 
 require $projectRoot . '/upload/vendor/autoload.php';
-require $projectRoot . '/upload/system/engine/kernel.php';
 
 $context = match ($mode) {
     'admin' => 'admin',
@@ -35,7 +34,8 @@ $kernel = new \System\Engine\Kernel(
     context: $context,
     systemRoot: $kernelSystemRoot,
     applicationRoot: $kernelApplicationRoot,
-    loadLocalConfig: $mode !== 'no-local',
+    localConfigFile: $mode !== 'no-local' ? 'config.local.php' : null,
+    enforceApplicationConstants: true,
 );
 
 if ($mode === 'failed-state') {
@@ -87,7 +87,13 @@ if ($mode === 'duplicate-instance') {
 }
 
 if ($mode === 'second-instance') {
-    $second = new \System\Engine\Kernel($context, $systemRoot, $applicationRoot, $mode !== 'no-local');
+    $second = new \System\Engine\Kernel(
+        context: $context,
+        systemRoot: $systemRoot,
+        applicationRoot: $applicationRoot,
+        localConfigFile: $mode !== 'no-local' ? 'config.local.php' : null,
+        enforceApplicationConstants: true,
+    );
     $secondRegistry = $second->boot();
     $result['second_instance'] = [
         'booted' => $second->isBooted(),
@@ -98,7 +104,12 @@ if ($mode === 'second-instance') {
 
 if ($mode === 'second-context') {
     try {
-        (new \System\Engine\Kernel('admin', $systemRoot, $applicationRoot))->boot();
+        (new \System\Engine\Kernel(
+            context: 'admin',
+            systemRoot: $systemRoot,
+            applicationRoot: $applicationRoot,
+            enforceApplicationConstants: true,
+        ))->boot();
         $result['second_context'] = 'succeeded';
     } catch (Throwable $throwable) {
         $result['second_context'] = get_class($throwable) . ': ' . $throwable->getMessage();

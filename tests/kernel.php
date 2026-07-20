@@ -11,6 +11,7 @@ use Lightdocs\Tests\Support\TemporaryDirectory;
 use Lightdocs\Tests\Support\TestSuite;
 
 $root = dirname(__DIR__);
+require $root . '/upload/vendor/autoload.php';
 $fixture = __DIR__ . '/fixtures/kernel/boot_scenario.php';
 $suite = new TestSuite('Application boot Kernel');
 
@@ -142,7 +143,9 @@ $suite->test('config-declared context cannot change an undefined process context
 });
 
 $suite->test('Kernel source has no prohibited application dependencies', static function () use ($root): void {
-    $source = (string) file_get_contents($root . '/upload/system/engine/kernel.php');
+    $kernelFile = (new ReflectionClass(\System\Engine\Kernel::class))->getFileName();
+    TestSuite::assertTrue(is_string($kernelFile), 'Package Kernel has no source file.');
+    $source = (string) file_get_contents((string) $kernelFile);
     foreach (['System\\Library\\DB', 'Schema', 'ExtensionManager', 'Front', 'Response', 'Action('] as $forbidden) {
         TestSuite::assertTrue(!str_contains($source, $forbidden), "Kernel references prohibited application work: {$forbidden}");
     }

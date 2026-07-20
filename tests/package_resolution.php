@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Package-source resolution test for the TinyMVC extraction (Phase 1 core,
- * plus the Phase A Url/RoutePattern batch consumed from v0.2.0).
+ * plus the Phase A-E additions through Kernel in v0.6.0).
  *
  * Invocation: php tests/package_resolution.php
  *
@@ -76,6 +76,7 @@ $classes = [
     'System\\Engine\\Event' => ['basename' => 'event.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/event.php'],
     'System\\Engine\\Factory' => ['basename' => 'factory.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/factory.php'],
     'System\\Engine\\Front' => ['basename' => 'front.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/front.php'],
+    'System\\Engine\\Kernel' => ['basename' => 'kernel.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/kernel.php'],
     'System\\Engine\\Loader' => ['basename' => 'loader.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/loader.php'],
     'System\\Engine\\Model' => ['basename' => 'model.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/model.php'],
     'System\\Engine\\Proxy' => ['basename' => 'proxy.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/proxy.php'],
