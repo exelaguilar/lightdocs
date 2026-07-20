@@ -33,6 +33,15 @@ class Export extends Controller
                 $profile = (string)$this->request->post('profile', 'string') ?: 'public';
                 $download_file = $this->exports->archive($profile, !empty($this->request->post['acknowledge_secrets']));
                 $message = ucfirst($profile) . ' export is ready. The download link is single-use.';
+
+                $payload = [
+                    'profile' => $profile,
+                    'file' => basename($download_file),
+                    'actor_id' => (int)($this->session->get('user_id') ?? 0),
+                    'actor' => (string)$this->session->get('username', 'admin'),
+                ];
+                $event_args = [&$payload];
+                $this->event->trigger('export.completed', $event_args);
             } catch (Throwable $exception) {
                 $error = $exception->getMessage();
             }

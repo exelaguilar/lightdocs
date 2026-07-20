@@ -45,7 +45,7 @@
     <div class="table-toolbar flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3 max-[640px]:items-stretch max-[640px]:px-4">
       <div class="flex items-center gap-1 rounded-md bg-muted p-1 max-[640px]:w-full" aria-label="Filter users by status">
         <label class="sr-only" for="user-status-filter">Status</label>
-        <select id="user-status-filter" class="h-8 w-full cursor-pointer rounded-md border border-input bg-card px-2.5 text-xs font-medium text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" data-table-type-filter="users">
+        <select id="user-status-filter" class="min-h-9 w-full cursor-pointer rounded-md border border-input bg-card px-2.5 text-xs font-medium text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" data-table-type-filter="users">
           <option value="">All users</option>
           <option value="active">Active</option>
           <option value="disabled">Disabled</option>
@@ -84,7 +84,7 @@
                 <td class="px-4 py-3.5 text-xs text-muted-foreground"><?= $e($user['role_label']) ?></td>
                 <td class="px-4 py-3.5 text-xs text-muted-foreground"><?php if ($user['last_login']): ?><time datetime="<?= $e($user['last_login']) ?>"><?= $e($user['last_login_label']) ?></time><?php else: ?>Never<?php endif; ?></td>
                 <td class="px-4 py-3.5"><span class="inline-flex items-center gap-1.5 text-xs font-medium <?= $user['enabled'] ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground' ?>"><span class="h-1.5 w-1.5 rounded-full <?= $user['enabled'] ? 'bg-emerald-500' : 'bg-muted-foreground/50' ?>"></span><?= $user['enabled'] ? 'Active' : 'Disabled' ?></span></td>
-                <td class="px-5 py-3.5 text-end max-[640px]:px-4"><a aria-label="Edit <?= $e($user['display_name']) ?>" data-tooltip="Edit user" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="/admin/users/edit?id=<?= (int)$user['id'] ?>"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16.5-.8 3.8 3.8-.8L18.5 8a2.1 2.1 0 0 0-3-3L4 16.5Z"/><path d="m14 6 3 3"/></svg><span class="sr-only">Edit</span></a></td>
+                <td class="px-5 py-3.5 text-end max-[640px]:px-4"><a aria-label="Edit <?= $e($user['display_name']) ?>" data-tooltip="Edit user" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" href="<?= $e($user['edit_url']) ?>"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 16.5-.8 3.8 3.8-.8L18.5 8a2.1 2.1 0 0 0-3-3L4 16.5Z"/><path d="m14 6 3 3"/></svg><span class="sr-only">Edit</span></a></td>
               </tr>
             <?php endforeach; ?>
           </tbody>

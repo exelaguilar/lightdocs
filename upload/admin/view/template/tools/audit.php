@@ -1,10 +1,10 @@
 <?= $header ?>
 <main class="mx-auto grid w-[min(calc(100%-3rem),82rem)] gap-6 py-7 pb-10 text-sm max-[900px]:w-[min(calc(100%-2rem),82rem)] max-[640px]:gap-5 max-[640px]:py-5">
-  <div class="flex items-center gap-2 text-xs text-muted-foreground">
-    <a class="transition-colors hover:text-foreground" href="/admin/dashboard">Workspace</a>
-    <span aria-hidden="true">/</span>
+  <nav class="flex items-center gap-2 text-xs text-muted-foreground" aria-label="Breadcrumb">
+    <a class="transition-colors hover:text-foreground" href="/admin">Workspace</a>
+    <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
     <span class="font-medium text-foreground">Audit log</span>
-  </div>
+  </nav>
 
   <header class="flex items-end justify-between gap-4 max-[640px]:items-stretch max-[640px]:flex-col">
     <div class="min-w-0">

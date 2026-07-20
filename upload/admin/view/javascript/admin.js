@@ -1059,3 +1059,20 @@ if (adminTooltipTargets.length) {
 		if (event.key === 'Escape') hideAdminTooltip();
 	});
 }
+
+$$('[data-admin-broadcast]').forEach((banner) => {
+	const storageKey = 'lightdocs-admin-broadcast-dismissed:' + (banner.dataset.adminBroadcastId || 'default');
+	try {
+		if (localStorage.getItem(storageKey) === '1') {
+			banner.remove();
+			return;
+		}
+	} catch {}
+
+	banner.querySelector('[data-admin-broadcast-dismiss]')?.addEventListener('click', () => {
+		try {
+			localStorage.setItem(storageKey, '1');
+		} catch {}
+		banner.remove();
+	});
+});

@@ -22,8 +22,10 @@ class Roles extends Controller
         $assigned_users = 0;
         $permission_areas = 0;
 
+        $url = $this->url;
+
         $data = [
-            'roles' => array_map(static function (array $group) use (&$protected_roles, &$assigned_users, &$permission_areas): array {
+            'roles' => array_map(static function (array $group) use (&$protected_roles, &$assigned_users, &$permission_areas, $url): array {
                 $protected = !empty($group['is_protected']);
                 $user_count = (int)$group['user_count'];
                 $permission_count = count($group['permission']['access']);
@@ -41,7 +43,7 @@ class Roles extends Controller
                     'permission_count' => $permission_count,
                     'user_count' => $user_count,
                     'protected' => $protected,
-                    'edit_url' => '/admin/roles/edit?role=' . (int)$group['user_group_id'],
+                    'edit_url' => $url->link('common/roles.edit', ['role' => (int)$group['user_group_id']]),
                 ];
             }, $groups),
             'stats' => [
@@ -98,12 +100,22 @@ class Roles extends Controller
                 $access = $this->request->post('access', 'array');
                 $modify = $this->request->post('modify', 'array');
 
+                $name = (string)$this->request->post('name', 'string');
                 $id = $this->model_common_user->saveGroup(
                     $create ? 0 : (int)($group['user_group_id'] ?? 0),
-                    (string)$this->request->post('name', 'string'),
+                    $name,
                     (string)$this->request->post('description', 'string'),
                     ['access' => array_map('strval', $access), 'modify' => array_map('strval', $modify)]
                 );
+
+                $payload = [
+                    'role_id' => $id,
+                    'name' => $name,
+                    'actor_id' => (int)($this->session->get('user_id') ?? 0),
+                    'actor' => (string)$this->session->get('username', 'admin'),
+                ];
+                $event_args = [&$payload];
+                $this->event->trigger($create ? 'role.created' : 'role.updated', $event_args);
 
                 $this->session->addNotification('success', 'Role permissions saved.');
                 $this->response->redirect($this->url->link('common/roles.edit', ['role' => $id]));

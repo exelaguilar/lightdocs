@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Extension\Webhooks;
 
+use PDO;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
 use System\Engine\ExtensionManager;
@@ -11,8 +12,13 @@ use System\Engine\WebhookProvider;
 
 final class Extension implements ExtensionInterface, WebhookProvider
 {
+	private const RETENTION_DAYS = 30;
+
+	private PDO $db;
+
 	public function __construct(private readonly ExtensionContext $context)
 	{
+		$this->db = $context->database->connection();
 	}
 
 	public function name(): string
@@ -34,15 +40,72 @@ final class Extension implements ExtensionInterface, WebhookProvider
 		}
 	}
 
+	/** Delivers an event to every configured endpoint. One endpoint failing never blocks the others. */
 	public function send(string $event, array $payload): void
 	{
-		$url = trim((string) ($this->context->settings['endpoint_url'] ?? ''));
-		$secret = (string) ($this->context->settings['secret'] ?? '');
-		if ($url === '' || $secret === '' || !str_starts_with(strtolower($url), 'https://')) return;
+		foreach ($this->endpoints() as [$url, $secret]) {
+			try {
+				$this->deliver($url, $secret, $event, $payload);
+			} catch (\Throwable) {
+				// Recorded as a failed delivery below; never propagated to the caller.
+			}
+		}
+	}
+
+	/** @return list<array<string,mixed>> */
+	public function recent(int $limit = 20): array
+	{
+		$statement = $this->db->prepare('SELECT endpoint, event, status_code, success, error, duration_ms, created_at FROM webhook_deliveries ORDER BY id DESC LIMIT :limit');
+		$statement->bindValue(':limit', max(1, min(100, $limit)), PDO::PARAM_INT);
+		$statement->execute();
+		return $statement->fetchAll();
+	}
+
+	private function deliver(string $url, string $secret, string $event, array $payload): void
+	{
 		$body = json_encode(['event' => $event, 'payload' => !empty($this->context->settings['include_payload']) ? $payload : [], 'sent_at' => gmdate(DATE_ATOM)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 		$headers = 'Content-Type: application/json' . "\r\n" . 'X-Lightdocs-Event: ' . $event . "\r\n" . 'X-Lightdocs-Signature: sha256=' . hash_hmac('sha256', $body, $secret) . "\r\n";
 		$options = ['http' => ['method' => 'POST', 'header' => $headers, 'content' => $body, 'timeout' => max(1, min(30, (int) ($this->context->settings['timeout'] ?? 5))), 'ignore_errors' => true]];
-		file_get_contents($url, false, stream_context_create($options));
+		$started = microtime(true);
+		// An unreachable endpoint is an expected, already-logged outcome here (see record() below),
+		// not an application error — suppressed so it doesn't spam the PHP error log per delivery.
+		$response = @file_get_contents($url, false, stream_context_create($options));
+		$status_code = 0;
+		if (preg_match('/\s(\d{3})\s/', $http_response_header[0] ?? '', $matches)) $status_code = (int) $matches[1];
+		$success = $status_code >= 200 && $status_code < 300;
+		$error = $response === false ? 'The endpoint could not be reached.' : ($success ? '' : 'The endpoint returned status ' . $status_code . '.');
+		$this->record($url, $event, $status_code, $success, $error, (int) round((microtime(true) - $started) * 1000));
+	}
+
+	private function record(string $url, string $event, int $status_code, bool $success, string $error, int $duration_ms): void
+	{
+		$statement = $this->db->prepare('INSERT INTO webhook_deliveries (endpoint, event, status_code, success, error, duration_ms, created_at) VALUES (:endpoint, :event, :status_code, :success, :error, :duration_ms, :created_at)');
+		$statement->execute(['endpoint' => $this->redact($url), 'event' => $event, 'status_code' => $status_code, 'success' => $success ? 1 : 0, 'error' => $error, 'duration_ms' => $duration_ms, 'created_at' => time()]);
+		$cleanup = $this->db->prepare('DELETE FROM webhook_deliveries WHERE created_at < :cutoff');
+		$cleanup->execute(['cutoff' => time() - (self::RETENTION_DAYS * 86400)]);
+	}
+
+	/** Strips query strings so a signed URL or token-bearing endpoint never lands in the delivery log. */
+	private function redact(string $url): string
+	{
+		$parts = parse_url($url);
+		if (!is_array($parts) || empty($parts['host'])) return $url;
+		return ($parts['scheme'] ?? 'https') . '://' . $parts['host'] . ($parts['path'] ?? '');
+	}
+
+	/** @return list<array{0:string,1:string}> Validated [url, secret] pairs, one per non-empty line. */
+	private function endpoints(): array
+	{
+		$lines = preg_split('/\r?\n/', (string) ($this->context->settings['endpoints'] ?? '')) ?: [];
+		$endpoints = [];
+		foreach ($lines as $line) {
+			$line = trim($line);
+			if ($line === '') continue;
+			[$url, $secret] = array_pad(preg_split('/\s+/', $line, 2) ?: [], 2, '');
+			if (!str_starts_with(strtolower($url), 'https://') || trim($secret) === '') continue;
+			$endpoints[] = [$url, trim($secret)];
+		}
+		return $endpoints;
 	}
 
 	/** @return list<string> */

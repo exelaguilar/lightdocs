@@ -53,5 +53,16 @@
       </div>
     </div>
   </header>
+  <?php if ($broadcasts): ?>
+    <div class="grid gap-2 px-6 pt-4 max-[640px]:px-3" data-admin-broadcasts>
+      <?php foreach ($broadcasts as $notice): ?>
+        <?php $tone_classes = ['success' => 'border-emerald-300 bg-emerald-50 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100', 'warning' => 'border-amber-300 bg-amber-100 text-amber-950 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100', 'danger' => 'border-destructive/40 bg-destructive/10 text-destructive', 'info' => 'border-border bg-card text-foreground'][$notice['tone']] ?? 'border-border bg-card text-foreground'; ?>
+        <div class="flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5 text-sm shadow-sm <?= $tone_classes ?>" role="status" data-admin-broadcast data-admin-broadcast-id="<?= (int)$notice['id'] ?>">
+          <p class="m-0"><?= $e($notice['message']) ?></p>
+          <button class="grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded-md text-lg leading-none opacity-70 hover:opacity-100" type="button" data-admin-broadcast-dismiss aria-label="Dismiss notice">&times;</button>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
   <dialog class="m-auto rounded-xl border border-border bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/20 backdrop:backdrop-blur-sm" data-admin-command-dialog aria-label="<?= $e($text['text_open_command_menu']) ?>"><div class="w-[min(34rem,calc(100vw-2rem))] p-2"><div class="flex items-center gap-2 border-b border-border px-2 py-2"><svg viewBox="0 0 24 24" class="h-4 w-4" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input class="min-w-0 flex-1 bg-transparent text-sm outline-none" type="search" placeholder="<?= $e($text['text_command_placeholder']) ?>" data-admin-command-input><kbd class="text-xs text-muted-foreground">Esc</kbd></div><nav class="mt-2 grid gap-1" aria-label="Admin commands"><?php foreach ($header['commands'] as $command): ?><a class="rounded-md px-3 py-2 text-sm hover:bg-muted" data-admin-command-item href="<?= $e($command['href']) ?>"<?= $command['external'] ? ' target="_blank"' : '' ?>><?= $e($command['label']) ?></a><?php endforeach; ?></nav></div></dialog>
 <?php endif; ?>

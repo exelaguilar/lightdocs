@@ -1,0 +1,58 @@
+<?= $header ?>
+<main class="mx-auto grid w-[min(calc(100%-3rem),82rem)] gap-6 py-7 pb-10 text-sm max-[900px]:w-[min(calc(100%-2rem),82rem)] max-[640px]:gap-5 max-[640px]:py-5">
+  <header class="flex items-end justify-between gap-6 max-[640px]:items-stretch max-[640px]:flex-col">
+    <div class="grid gap-1">
+      <nav class="flex items-center gap-2 text-xs text-muted-foreground" aria-label="Breadcrumb"><a class="transition-colors hover:text-foreground" href="/admin">Workspace</a><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg><span class="text-foreground">Broadcast</span></nav>
+      <h1 class="m-0 text-2xl font-semibold tracking-[-0.03em] text-foreground">Broadcast</h1>
+      <p class="m-0 text-sm leading-6 text-muted-foreground">Post a short notice to signed-in Studio users, optionally scoped to a role.</p>
+    </div>
+  </header>
+
+  <section class="grid grid-cols-2 divide-x divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm max-[480px]:grid-cols-1" aria-label="Broadcast summary">
+    <div class="grid gap-1 px-5 py-4 max-[480px]:px-4"><span class="text-xs font-medium text-muted-foreground">Total notices</span><strong class="text-xl font-semibold tracking-[-0.02em] text-foreground"><?= (int)$stats['total'] ?></strong><span class="text-xs text-muted-foreground">All time</span></div>
+    <div class="grid gap-1 px-5 py-4 max-[480px]:border-t max-[480px]:px-4"><span class="text-xs font-medium text-muted-foreground">Currently active</span><strong class="text-xl font-semibold tracking-[-0.02em] text-foreground"><?= (int)$stats['active'] ?></strong><span class="text-xs text-muted-foreground">Visible right now</span></div>
+  </section>
+
+  <section class="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm max-[640px]:rounded-lg">
+    <header class="border-b border-border px-5 py-4 max-[640px]:px-4"><p class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">New notice</p><h2 class="mt-1 text-base font-semibold tracking-[-0.01em] text-foreground">Post an announcement</h2></header>
+    <form method="post" action="<?= $e($create_url) ?>" class="grid gap-4 px-5 py-5 max-[640px]:px-4">
+      <input type="hidden" name="csrf_token" value="<?= $e($csrf) ?>">
+      <div class="grid gap-1.5"><label class="text-xs font-medium text-foreground" for="broadcast-message">Message</label><input class="min-h-9 w-full rounded-md border border-input bg-card px-2.5 py-2 text-sm text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" id="broadcast-message" name="message" maxlength="280" required autofocus placeholder="Scheduled maintenance tonight at 10pm UTC."></div>
+      <div class="grid grid-cols-3 gap-4 max-[640px]:grid-cols-1">
+        <div class="grid gap-1.5"><label class="text-xs font-medium text-foreground" for="broadcast-tone">Tone</label><select class="min-h-9 w-full cursor-pointer rounded-md border border-input bg-card px-2.5 py-2 text-sm text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" id="broadcast-tone" name="tone"><option value="info">Info</option><option value="success">Success</option><option value="warning">Warning</option><option value="danger">Danger</option></select></div>
+        <div class="grid gap-1.5"><label class="text-xs font-medium text-foreground" for="broadcast-group">Visible to</label><select class="min-h-9 w-full cursor-pointer rounded-md border border-input bg-card px-2.5 py-2 text-sm text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" id="broadcast-group" name="user_group_id"><option value="">Everyone</option><?php foreach ($groups as $group): ?><option value="<?= (int)$group['user_group_id'] ?>"><?= $e($group['name']) ?></option><?php endforeach; ?></select></div>
+        <div class="grid gap-1.5"><label class="text-xs font-medium text-foreground" for="broadcast-expires">Expires after</label><select class="min-h-9 w-full cursor-pointer rounded-md border border-input bg-card px-2.5 py-2 text-sm text-foreground shadow-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20" id="broadcast-expires" name="expires_in_hours"><option value="24">1 day</option><option value="72">3 days</option><option value="168">1 week</option><option value="0">Never</option></select></div>
+      </div>
+      <button class="inline-flex min-h-9 w-fit items-center justify-center gap-2 rounded-md border border-primary bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90" type="submit"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><span>Post notice</span></button>
+    </form>
+  </section>
+
+  <section class="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm max-[640px]:rounded-lg">
+    <header class="flex items-center justify-between gap-4 border-b border-border px-5 py-4 max-[640px]:px-4"><div class="grid gap-0.5"><h2 class="m-0 text-base font-semibold tracking-[-0.01em]">All notices</h2><p class="m-0 text-xs text-muted-foreground">Most recent first.</p></div></header>
+    <?php if (!$notices): ?>
+      <div class="flex flex-col items-center justify-center gap-2 p-10 text-center text-sm text-muted-foreground"><p class="m-0">No notices have been posted yet.</p></div>
+    <?php else: ?>
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[52rem] border-collapse text-sm"><thead class="bg-muted/40"><tr class="border-b border-border text-left"><th class="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground max-[640px]:px-4">Message</th><th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Visible to</th><th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Posted</th><th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Expires</th><th class="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</th><th class="px-5 py-2.5 text-end text-[11px] font-semibold uppercase tracking-wide text-muted-foreground max-[640px]:px-4">Actions</th></tr></thead><tbody>
+        <?php foreach ($notices as $notice): ?>
+          <?php $live = $notice['active'] && !$notice['is_expired']; ?>
+          <tr class="border-b border-border transition-colors hover:bg-muted/40">
+            <td class="max-w-[22rem] truncate px-5 py-3 text-sm text-foreground max-[640px]:px-4" title="<?= $e($notice['message']) ?>"><?= $e($notice['message']) ?></td>
+            <td class="px-4 py-3 text-xs text-muted-foreground"><?= $e($notice['scope_label']) ?></td>
+            <td class="px-4 py-3 text-xs text-muted-foreground"><?= $e($notice['created_label']) ?></td>
+            <td class="px-4 py-3 text-xs text-muted-foreground"><?= $e($notice['expires_label']) ?></td>
+            <td class="px-4 py-3"><span class="inline-flex items-center gap-1.5 text-xs font-medium <?= $live ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground' ?>"><span class="h-1.5 w-1.5 rounded-full <?= $live ? 'bg-emerald-500' : 'bg-muted-foreground/50' ?>"></span><?= $live ? 'Active' : ($notice['is_expired'] ? 'Expired' : 'Inactive') ?></span></td>
+            <td class="px-5 py-3 text-end max-[640px]:px-4">
+              <div class="flex items-center justify-end gap-1.5">
+                <?php if ($live): ?><form method="post" action="<?= $e($expire_url) ?>"><input type="hidden" name="csrf_token" value="<?= $e($csrf) ?>"><input type="hidden" name="id" value="<?= (int)$notice['id'] ?>"><button aria-label="Expire notice" data-tooltip="Expire now" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="submit"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg><span class="sr-only">Expire</span></button></form><?php endif; ?>
+                <form method="post" action="<?= $e($delete_url) ?>" data-confirm="Delete this notice permanently?"><input type="hidden" name="csrf_token" value="<?= $e($csrf) ?>"><input type="hidden" name="id" value="<?= (int)$notice['id'] ?>"><button aria-label="Delete notice" data-tooltip="Delete" class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" type="submit"><svg class="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg><span class="sr-only">Delete</span></button></form>
+              </div>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody></table>
+      </div>
+    <?php endif; ?>
+  </section>
+</main>
+<?= $footer ?>

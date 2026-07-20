@@ -101,6 +101,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 	id INTEGER PRIMARY KEY, event TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'core', payload_json TEXT NOT NULL DEFAULT '{}', created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS audit_logs_created_idx ON audit_logs(created_at DESC);
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+	id INTEGER PRIMARY KEY, endpoint TEXT NOT NULL, event TEXT NOT NULL, status_code INTEGER NOT NULL DEFAULT 0,
+	success INTEGER NOT NULL DEFAULT 0, error TEXT NOT NULL DEFAULT '', duration_ms INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS webhook_deliveries_created_idx ON webhook_deliveries(created_at DESC);
 CREATE TABLE IF NOT EXISTS page_feedback (
 	page_path TEXT NOT NULL, visitor_hash TEXT NOT NULL, vote TEXT NOT NULL CHECK(vote IN ('good', 'bad')),
 	created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(page_path, visitor_hash)
@@ -125,6 +130,17 @@ CREATE TABLE IF NOT EXISTS admin_user (
 	ip TEXT NOT NULL DEFAULT '', last_login INTEGER,
 	date_added INTEGER NOT NULL, date_modified INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS admin_password_resets (
+	token TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES admin_user(user_id) ON DELETE CASCADE,
+	expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS admin_password_resets_user_idx ON admin_password_resets(user_id);
+CREATE TABLE IF NOT EXISTS admin_notices (
+	id INTEGER PRIMARY KEY, message TEXT NOT NULL, tone TEXT NOT NULL DEFAULT 'info',
+	user_group_id INTEGER, created_by INTEGER NOT NULL DEFAULT 0,
+	created_at INTEGER NOT NULL, expires_at INTEGER, active INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS admin_notices_active_idx ON admin_notices(active, expires_at);
 CREATE TABLE IF NOT EXISTS admin_user_group (
 	user_group_id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, description TEXT NOT NULL DEFAULT '',
 	permission TEXT NOT NULL DEFAULT '{}', permissions_version INTEGER NOT NULL DEFAULT 1,
@@ -164,9 +180,62 @@ SQL);
 	} catch (PDOException) {
 		// The column already exists on current installations.
 	}
+	try {
+		$this->pdo->exec("ALTER TABLE admin_user ADD COLUMN email TEXT NOT NULL DEFAULT ''");
+	} catch (PDOException) {
+		// The column already exists on current installations.
+	}
 	$this->pdo->exec("UPDATE documents SET status = CASE WHEN draft = 1 THEN 'draft' ELSE 'published' END WHERE status = 'published' AND publish_at IS NULL");
+	$this->migrateAuditDefaultEvents();
+	$this->migrateWebhookEndpoint();
 	$statement = $this->pdo->prepare('INSERT OR IGNORE INTO schema_migrations(version, applied_at) VALUES (:version, :applied_at)');
-	foreach ([2, 3, 4, 5] as $version) $statement->execute(['version' => $version, 'applied_at' => gmdate(DATE_ATOM)]);
+	foreach ([2, 3, 4, 5, 6, 7] as $version) $statement->execute(['version' => $version, 'applied_at' => gmdate(DATE_ATOM)]);
+	}
+
+	/**
+	 * One-time correction: the audit extension's default "events" list never
+	 * covered authentication, user/role management, or export activity —
+	 * installs that never customized this setting were missing a meaningful
+	 * share of what an audit trail should record. Only touches rows that
+	 * still hold a known stock default (the original three-event list, or
+	 * this migration's own short-lived intermediate value from 2026-07-18);
+	 * any real customization is left untouched.
+	 */
+	private function migrateAuditDefaultEvents(): void
+	{
+		$original = json_encode('content.changed,index.rebuilt,settings.saved', JSON_THROW_ON_ERROR);
+		$superseded = json_encode('content.changed,security/session_invalidated,security/csrf_violated,security/login_success,security/login_failed,security/logout,user.created,user.updated,role.created,role.updated,export.completed', JSON_THROW_ON_ERROR);
+		$new = json_encode('content.changed,index.rebuilt,settings.saved,security/session_invalidated,security/csrf_violated,security/login_success,security/login_failed,security/logout,user.created,user.updated,role.created,role.updated,export.completed', JSON_THROW_ON_ERROR);
+		$statement = $this->pdo->prepare("UPDATE extension_settings SET value_json = :new, updated_at = :updated_at WHERE extension = 'audit' AND setting_key = 'events' AND value_json IN (:original, :superseded)");
+		$statement->execute(['new' => $new, 'original' => $original, 'superseded' => $superseded, 'updated_at' => time()]);
+	}
+
+	/**
+	 * One-time migration: webhooks moved from a single endpoint_url/secret
+	 * pair to a multi-line "endpoints" field. Carries forward an existing
+	 * single-endpoint configuration so upgrading never silently drops a
+	 * working webhook.
+	 */
+	private function migrateWebhookEndpoint(): void
+	{
+		$select = $this->pdo->prepare("SELECT value_json FROM extension_settings WHERE extension = 'webhooks' AND setting_key = :key");
+
+		$select->execute(['key' => 'endpoints']);
+		$endpoints = $select->fetchColumn();
+		if ($endpoints === false || json_decode((string) $endpoints, true) !== '') {
+			return; // Never configured, already migrated, or already customized.
+		}
+
+		$select->execute(['key' => 'endpoint_url']);
+		$url = trim((string) json_decode((string) ($select->fetchColumn() ?: '""'), true));
+		$select->execute(['key' => 'secret']);
+		$secret = trim((string) json_decode((string) ($select->fetchColumn() ?: '""'), true));
+		if ($url === '' || $secret === '') {
+			return;
+		}
+
+		$this->pdo->prepare("UPDATE extension_settings SET value_json = :value, updated_at = :updated_at WHERE extension = 'webhooks' AND setting_key = 'endpoints'")
+			->execute(['value' => json_encode($url . ' ' . $secret, JSON_THROW_ON_ERROR), 'updated_at' => time()]);
 	}
 
 	/**
@@ -185,7 +254,7 @@ SQL);
 			'events.manage' => ['access' => ['tools/events'], 'modify' => ['tools/events']],
 			'settings.manage' => ['access' => ['settings/settings'], 'modify' => ['settings/settings']],
 			'users.manage' => ['access' => ['common/users', 'common/roles'], 'modify' => ['common/users', 'common/roles']],
-			'developer.manage' => ['access' => ['tools/developer', 'tools/audit', 'tools/backups', 'tools/remote_sync'], 'modify' => ['tools/developer', 'tools/audit', 'tools/backups', 'tools/remote_sync']],
+			'developer.manage' => ['access' => ['tools/developer', 'tools/audit', 'tools/backups', 'tools/remote_sync', 'tools/logs', 'tools/system', 'tools/broadcast'], 'modify' => ['tools/developer', 'tools/audit', 'tools/backups', 'tools/remote_sync', 'tools/logs', 'tools/system', 'tools/broadcast']],
 		];
 		$permission = ['access' => [], 'modify' => []];
 		foreach ($named as $name) {

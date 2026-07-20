@@ -1,16 +1,15 @@
 {
   "name": "webhooks",
   "class": "Extension\\Webhooks\\Extension",
-  "version": "1.0.0",
-  "description": "Optional signed HTTP notifications for framework events.",
+  "version": "1.1.0",
+  "description": "Optional signed HTTP notifications for framework events, delivered to one or more endpoints with a recent-delivery log.",
   "type": "integration",
   "default_enabled": false,
   "contexts": ["admin", "public"],
   "settings": [
-    {"key": "endpoint_url", "label": "Endpoint URL", "type": "url", "default": "", "description": "HTTPS endpoint that receives JSON event notifications."},
-    {"key": "secret", "label": "Signing secret", "type": "password", "default": "", "description": "Used to create the X-Lightdocs-Signature HMAC header."},
-    {"key": "events", "label": "Events", "type": "text", "default": "content.changed,settings.saved,index.rebuilt", "description": "Comma-separated event names to send."},
-    {"key": "include_payload", "label": "Include event payload", "type": "boolean", "default": true, "description": "Send event metadata to the endpoint. Disable this when only the event name and delivery time are needed."},
+    {"key": "endpoints", "label": "Endpoints", "type": "textarea", "default": "", "description": "One HTTPS endpoint per line: URL and signing secret separated by a space, e.g. https://example.com/hook s3cr3t. Every endpoint receives every selected event, each with its own HMAC signature."},
+    {"key": "events", "label": "Events", "type": "text", "default": "content.changed,settings.saved,index.rebuilt,security/login_failed", "description": "Comma-separated event names to send to every endpoint."},
+    {"key": "include_payload", "label": "Include event payload", "type": "boolean", "default": true, "description": "Send event metadata to each endpoint. Disable this when only the event name and delivery time are needed."},
     {"key": "timeout", "label": "Timeout seconds", "type": "number", "default": 5, "min": 1, "max": 30, "description": "Maximum time allowed for each delivery attempt."}
   ]
 }

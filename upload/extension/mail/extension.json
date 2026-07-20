@@ -1,0 +1,19 @@
+{
+  "name": "mail",
+  "class": "Extension\\Mail\\Extension",
+  "version": "1.0.0",
+  "description": "Sends transactional email (password resets, notifications) over SMTP.",
+  "type": "integration",
+  "default_enabled": false,
+  "contexts": ["admin"],
+  "settings": [
+    {"key": "host", "label": "SMTP host", "type": "text", "default": "", "description": "Hostname of your SMTP relay, e.g. smtp.mailgun.org."},
+    {"key": "port", "label": "Port", "type": "number", "default": 587, "min": 1, "max": 65535, "description": "587 for STARTTLS, 465 for implicit TLS, 25 for unencrypted."},
+    {"key": "encryption", "label": "Encryption", "type": "select", "default": "tls", "options": [{"value": "tls", "label": "STARTTLS"}, {"value": "ssl", "label": "Implicit TLS (SSL)"}, {"value": "none", "label": "None"}], "description": "How the connection is secured."},
+    {"key": "username", "label": "Username", "type": "text", "default": "", "description": "Leave blank if your relay does not require authentication."},
+    {"key": "password", "label": "Password", "type": "password", "default": "", "description": "Leave blank to keep the current password."},
+    {"key": "from_email", "label": "From address", "type": "text", "default": "", "description": "Envelope and header From address."},
+    {"key": "from_name", "label": "From name", "type": "text", "default": "", "description": "Optional display name shown alongside the From address."},
+    {"key": "timeout", "label": "Timeout seconds", "type": "number", "default": 10, "min": 1, "max": 60, "description": "Maximum time allowed for the SMTP connection and dialog."}
+  ]
+}

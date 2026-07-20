@@ -20,8 +20,10 @@ class Users extends Controller
         $active_users = 0;
         $role_ids = [];
 
+        $url = $this->url;
+
         $data = [
-            'users' => array_map(static function (array $user) use (&$active_users, &$role_ids): array {
+            'users' => array_map(static function (array $user) use (&$active_users, &$role_ids, $url): array {
                 $enabled = (int)$user['status'] === 1;
                 $role_id = (int)($user['user_group_id'] ?? 0);
 
@@ -41,6 +43,7 @@ class Users extends Controller
                     'status_key' => $enabled ? 'active' : 'disabled',
                     'last_login' => $user['last_login'] ? date(DATE_ATOM, (int)$user['last_login']) : '',
                     'last_login_label' => $user['last_login'] ? date('M j, Y', (int)$user['last_login']) : 'Never',
+                    'edit_url' => $url->link('common/users.edit', ['id' => (int)$user['user_id']]),
                 ];
             }, $users),
             'stats' => [
@@ -78,13 +81,19 @@ class Users extends Controller
                 $display_name = trim((string)$this->request->post('display_name', 'string'));
                 $password = (string)$this->request->post('password', 'string');
                 $group_id = (int)$this->request->post('user_group_id', 'int');
+                $email = trim((string)$this->request->post('email', 'string'));
 
                 if (!preg_match('/^[a-z0-9._-]{3,80}$/i', $username) || $display_name === '' || strlen($password) < 12) {
                     throw new \RuntimeException('Use a valid username, display name, and a password of at least 12 characters.');
                 }
+                if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    throw new \RuntimeException('Use a valid email address.');
+                }
 
                 $parts = preg_split('/\s+/', $display_name, 2) ?: [];
-                $this->model_common_user->addUser($username, (string)($parts[0] ?? ''), (string)($parts[1] ?? ''), $password, $group_id);
+                $new_id = $this->model_common_user->addUser($username, (string)($parts[0] ?? ''), (string)($parts[1] ?? ''), $password, $group_id, $email);
+
+                $this->fireUserEvent('user.created', (int)$new_id, $username, $group_id);
 
                 $this->session->addNotification('success', 'User created.');
                 $this->response->redirect($this->url->link('common/users'));
@@ -147,7 +156,11 @@ class Users extends Controller
                 $parts = preg_split('/\s+/', $display_name, 2) ?: [];
                 $username = trim((string)$this->request->post('username', 'string'));
 
-                $this->model_common_user->editUser($id, $username, (string)($parts[0] ?? ''), (string)($parts[1] ?? ''), (int)$this->request->post('user_group_id', 'int'), $enabled, (string)$this->request->post('password', 'string'));
+                $group_id = (int)$this->request->post('user_group_id', 'int');
+                $email = trim((string)$this->request->post('email', 'string'));
+                $this->model_common_user->editUser($id, $username, (string)($parts[0] ?? ''), (string)($parts[1] ?? ''), $group_id, $enabled, (string)$this->request->post('password', 'string'), $email);
+
+                $this->fireUserEvent('user.updated', $id, $username, $group_id, $enabled);
 
                 $this->session->addNotification('success', 'User updated.');
                 $this->response->redirect($this->url->link('common/users'));
@@ -180,5 +193,20 @@ class Users extends Controller
 
         $this->response->setOutput($this->load->view('common/user_form', $data));
         return null;
+    }
+
+    /** Announces a user account change with the acting administrator attached. */
+    private function fireUserEvent(string $event, int $user_id, string $username, int $user_group_id, ?bool $enabled = null): void
+    {
+        $payload = [
+            'user_id' => $user_id,
+            'username' => $username,
+            'user_group_id' => $user_group_id,
+            'enabled' => $enabled,
+            'actor_id' => (int)($this->session->get('user_id') ?? 0),
+            'actor' => (string)$this->session->get('username', 'admin'),
+        ];
+        $event_args = [&$payload];
+        $this->event->trigger($event, $event_args);
     }
 }

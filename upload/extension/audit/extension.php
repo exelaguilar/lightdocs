@@ -102,6 +102,6 @@ final class Extension implements ExtensionInterface
 	private function eventNames(): array
 	{
 		$names = array_map('trim', explode(',', (string) ($this->context->settings['events'] ?? 'content.changed,index.rebuilt,settings.saved')));
-		return array_values(array_unique(array_filter($names, static fn (string $event): bool => preg_match('/^[a-z][a-z0-9_.-]{2,80}$/', $event) === 1)));
+		return array_values(array_unique(array_filter($names, static fn (string $event): bool => preg_match('#^[a-z][a-z0-9_./-]{2,80}$#', $event) === 1)));
 	}
 }

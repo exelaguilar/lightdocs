@@ -25,6 +25,9 @@ class Header extends Controller
         'developer' => '<path d="m8 9-3 3 3 3M16 9l3 3-3 3M14 6l-4 12"/>',
         'export' => '<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',
         'extension' => '<path d="M12 3a2 2 0 0 1 2 2v1h3a2 2 0 0 1 2 2v3h1a2 2 0 1 1 0 4h-1v3a2 2 0 0 1-2 2h-3v-1a2 2 0 1 0-4 0v1H7a2 2 0 0 1-2-2v-3H4a2 2 0 1 1 0-4h1V8a2 2 0 0 1 2-2h3V5a2 2 0 0 1 2-2Z"/>',
+        'logs' => '<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5M8 17h3"/>',
+        'system' => '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10M9 16v4M15 16v4"/><circle cx="8" cy="9" r="0.75" fill="currentColor" stroke="none"/>',
+        'broadcast' => '<path d="M4 10v4a1 1 0 0 0 1 1h2l5 4V5L7 9H5a1 1 0 0 0-1 1Z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>',
     ];
 
     /**
@@ -60,6 +63,7 @@ class Header extends Controller
             'body_class' => (string)($context['body_class'] ?? ''),
             'styles' => $this->document->getStyles(),
             'notifications' => $this->session?->getNotifications() ?? [],
+            'broadcasts' => $shell ? $this->activeBroadcasts() : [],
         ];
 
         if ($shell) {
@@ -105,6 +109,9 @@ class Header extends Controller
             'text_group_developer' => [
                 ['route' => 'tools/developer', 'label' => 'text_nav_developer', 'icon_name' => 'developer', 'active' => 'developer'],
                 ['route' => 'tools/events', 'label' => 'text_nav_events', 'icon_name' => 'extension', 'active' => 'events'],
+                ['route' => 'tools/logs', 'label' => 'text_nav_logs', 'icon_name' => 'logs', 'active' => 'logs'],
+                ['route' => 'tools/system', 'label' => 'text_nav_system', 'icon_name' => 'system', 'active' => 'system'],
+                ['route' => 'tools/broadcast', 'label' => 'text_nav_broadcast', 'icon_name' => 'broadcast', 'active' => 'broadcast'],
             ],
         ];
 
@@ -191,5 +198,30 @@ class Header extends Controller
     private function icon(string $name): string
     {
         return '<svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' . (self::ICONS[$name] ?? self::ICONS['extension']) . '</svg>';
+    }
+
+    /**
+     * Active broadcast notices for the signed-in user's role, shaped for the
+     * dismissible banner in the header template. Each item is client-side
+     * dismissed (localStorage) rather than server-tracked per user.
+     *
+     * @return list<array{id: int, message: string, tone: string}>
+     */
+    private function activeBroadcasts(): array
+    {
+        if (!$this->user->isLogged()) {
+            return [];
+        }
+
+        $this->load->model('tools/broadcast');
+        $group_id = (int)($this->session->get('user_group_id') ?? 0);
+
+        return array_map(static function (array $notice): array {
+            return [
+                'id' => (int)$notice['id'],
+                'message' => (string)$notice['message'],
+                'tone' => (string)$notice['tone'],
+            ];
+        }, $this->model_tools_broadcast->getActiveNoticesForGroup($group_id > 0 ? $group_id : null));
     }
 }

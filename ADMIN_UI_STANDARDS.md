@@ -380,15 +380,68 @@ literal-class seeding would have fixed that one). Fixed the theme mapping and
 added a small hidden seed element in `common/header.php` for the handful of
 dynamic values that need it; see §3 before adding new dynamic color logic.
 
-**Known gap, not fixed, flagged for the owner**: `data-tooltip`/`data-side`/
-`data-arrow` attributes are used on 10+ icon-only buttons across `header.php` and
-`editor.php` expecting a hover tooltip, but there is not, and never was in this
-migration, any JavaScript or complete CSS implementing it (the only related CSS
-was a bare z-index rule with no `content`/positioning, now removed since it did
-nothing). Building a real tooltip system is a new feature, not a refactor, so it
-was left alone rather than guessed at — icon-only buttons currently have no
-visible hover affordance beyond the browser's default (none, since `data-tooltip`
-isn't the native `title` attribute).
+**Gap closed (2026-07-17)**: a real tooltip system now exists in `admin.js`
+(`adminTooltipTargets`/`showAdminTooltip`/`positionAdminTooltip`, appended near
+the end of the file). It attaches to every `[data-tooltip]`,
+`button[aria-label]`, `a[aria-label]`, and `summary[aria-label]`, renders a
+single shared `#admin-tooltip` element with `role="tooltip"`, flips between
+top/bottom/left/right based on available space, clamps inside the viewport
+with a 4px margin, responds to `mouseenter`/`focus` (and hides on
+`mouseleave`/`blur`/click/Escape/scroll-reposition), and sets
+`aria-describedby` on the target while visible. No further tooltip
+infrastructure work is needed; only add `data-tooltip` (or rely on
+`aria-label`) to new icon-only controls going forward.
+
+### 2026-07-17 — broken breadcrumb links, corrupted icon, height mismatches, legacy pages
+Verified the header account dropdown (the previously reported critical overflow
+bug) is already fixed and holds at 1280px/768px/375px/320px with the menu open —
+`document.documentElement.scrollWidth` never exceeds `innerWidth` at any tested
+width. Found and fixed new, previously undocumented defects while auditing every
+admin page:
+- **Breadcrumb "Workspace" links 404'd on 8 pages**: `media.php`, `graph.php`,
+  `health.php`, `audit.php`, `export.php` (both the breadcrumb and the "Return
+  to overview" button), and `history.php`/`profile.php` linked to
+  `/admin/dashboard`, which was never a registered route (`routes.admin.php`
+  only maps `/admin` to `common/dashboard`) — every click 404'd. Fixed all
+  instances to `/admin` and, since these 7 pages plus `dashboard.php` still used
+  an older bare `<div>`/literal-`/` breadcrumb instead of the established
+  `<nav aria-label="Breadcrumb">` + SVG-chevron pattern, upgraded the markup to
+  match every other page for a real `nav` landmark and visual consistency.
+- **Corrupted save icon in `navigation.php`**: the "Save navigation" button's
+  SVG path ended `...a2 2 0 0 1-2-2h11"` instead of the correct
+  `...a2 2 0 0 1-2 2Z"` used identically in five other files
+  (`glossary_form.php`, `extension_settings.php`, `settings.php`,
+  `role_form.php`, `user_form.php`) — an unclosed, malformed path. Fixed to
+  match.
+- **Filter select / search input height mismatches**: `extensions.php`'s type
+  filter (`min-h-8`) sat next to its own search box (`min-h-9`) in the same
+  toolbar row; `users.php`'s status filter used `h-8` next to a `min-h-9`
+  search box. Both didn't match the established `min-h-9`/`px-2.5 py-2`
+  filter-select pattern used on `roles.php`/`events.php`/`audit.php`. Fixed
+  both to `min-h-9` — confirmed via `getComputedStyle().height` in the browser
+  (both now render at 36px, matching their row's search input).
+- **`backups.php` and `remote_sync.php` were still the pre-standardization
+  layout**: no breadcrumb `nav` at all, bare unstyled `<h2>`/`<p>` tags (no
+  Tailwind classes — rendered with default UA browser typography), buttons at
+  `px-3 py-1.5` instead of the standard `min-h-9 px-3.5 py-2 text-sm
+  font-semibold`, and — the concrete bug — both aside panels carried
+  conflicting duplicate padding classes on one element
+  (`class="... p-5 ... shadow-sm p-4"`, `p-5` and `p-4` on the same node,
+  precedence decided by generation order rather than markup order per §4).
+  Rewrote both pages' shell markup to the established breadcrumb/header/card
+  pattern used elsewhere (`rounded-xl` major surfaces, `min-h-9` buttons,
+  compact `text-[11px] uppercase tracking-wide` table headers), preserving all
+  PHP variables and logic untouched. Verified live by temporarily enabling the
+  `backup` and `remote_sync` extensions (both are disabled by default in this
+  dev environment, which is why the pages normally 404 to
+  `error/not_found`), confirming no overflow and correct (20px) aside padding
+  via `getComputedStyle()`, then reverting both extensions to their original
+  disabled state.
+
+All changes verified with `php -l`, `composer css:build`, `composer docs:test`
+(11 pages / 36 documents / 367 headings, unchanged), `composer docs:validate`
+(36 pages), and `git diff --check` (only pre-existing LF/CRLF warnings, no
+real errors).
 
 ## 7a. Shared shell overflow and menu positioning (2026-07-17)
 

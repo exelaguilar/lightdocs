@@ -86,7 +86,7 @@ class Extensions extends Controller
             $extension['contexts_label'] = implode(' / ', array_map(static fn(string $context): string => $context === 'public' ? 'Public reader' : 'Content Studio', $extension['contexts'] ?? []));
             $extension['initial'] = mb_strtoupper(mb_substr((string)$extension['name'], 0, 1));
             $extension['status_label'] = $extension['enabled'] ? ($extension['loaded'] ? 'Enabled' : 'Unavailable') : 'Disabled';
-            $extension['settings_url'] = in_array($extension['name'], $setting_names, true) ? '/admin/extensions/' . rawurlencode((string)$extension['name']) . '/settings' : '';
+            $extension['settings_url'] = in_array($extension['name'], $setting_names, true) ? $this->url->link('tools/extension_settings', ['name' => (string)$extension['name']]) : '';
         }
         unset($extension);
         $types = array_values(array_unique(array_column($extensions, 'type')));

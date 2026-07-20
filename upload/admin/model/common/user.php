@@ -43,6 +43,9 @@ class User extends Model
         'tools/audit',
         'tools/backups',
         'tools/remote_sync',
+        'tools/logs',
+        'tools/system',
+        'tools/broadcast',
     ];
 
     /** @return list<string> */
@@ -116,6 +119,75 @@ class User extends Model
         $this->db->query('DELETE FROM login_attempts WHERE username = :username AND ip_address = :ip', [':username' => trim($username), ':ip' => $ip_address]);
     }
 
+    // === Password reset ===
+
+    /**
+     * Issues a one-hour reset token for the enabled account matching a
+     * username or email, if any. Never reveals whether a match was found —
+     * the caller always shows the same generic confirmation message.
+     *
+     * @return array{user_id: int, token: string, email: string}|null
+     */
+    public function generateResetToken(string $username_or_email): ?array
+    {
+        $identifier = trim($username_or_email);
+        if ($identifier === '') {
+            return null;
+        }
+
+        $user = $this->db->query(
+            'SELECT user_id, email FROM admin_user WHERE status = 1 AND (username = :identifier OR (email <> \'\' AND email = :identifier))',
+            [':identifier' => $identifier]
+        )->row;
+
+        if ($user === null || (string)$user['email'] === '') {
+            return null;
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $now = time();
+        $this->db->query('DELETE FROM admin_password_resets WHERE user_id = :id', [':id' => (int)$user['user_id']]);
+        $this->db->query(
+            'INSERT INTO admin_password_resets (token, user_id, expires_at, created_at) VALUES (:token, :id, :expires, :now)',
+            [':token' => $token, ':id' => (int)$user['user_id'], ':expires' => $now + 3600, ':now' => $now]
+        );
+
+        return ['user_id' => (int)$user['user_id'], 'token' => $token, 'email' => (string)$user['email']];
+    }
+
+    /** @return array<string, mixed>|null The user row for a valid, unexpired token. */
+    public function getUserByResetToken(string $token): ?array
+    {
+        if ($token === '') {
+            return null;
+        }
+
+        $reset = $this->db->query(
+            'SELECT user_id FROM admin_password_resets WHERE token = :token AND expires_at > :now',
+            [':token' => $token, ':now' => time()]
+        )->row;
+
+        return $reset === null ? null : $this->getUser((int)$reset['user_id']);
+    }
+
+    /** Sets a new password for the account behind a valid token and consumes it. */
+    public function resetPasswordWithToken(string $token, string $password): int
+    {
+        if (strlen($password) < 12) {
+            throw new RuntimeException('Passwords must be at least 12 characters.');
+        }
+
+        $user = $this->getUserByResetToken($token);
+        if ($user === null) {
+            throw new RuntimeException('This password reset link is invalid or has expired.');
+        }
+
+        $this->db->query('UPDATE admin_user SET password = :password, date_modified = :now WHERE user_id = :id', [':password' => password_hash($password, PASSWORD_DEFAULT), ':now' => time(), ':id' => (int)$user['user_id']]);
+        $this->db->query('DELETE FROM admin_password_resets WHERE user_id = :id', [':id' => (int)$user['user_id']]);
+
+        return (int)$user['user_id'];
+    }
+
     // === Users ===
 
     /** @return array<string, mixed>|null */
@@ -139,7 +211,7 @@ class User extends Model
         return array_map(fn(array $user): array => $this->withDisplayName($user), $rows);
     }
 
-    public function addUser(string $username, string $firstname, string $lastname, string $password, int $user_group_id): int
+    public function addUser(string $username, string $firstname, string $lastname, string $password, int $user_group_id, string $email = ''): int
     {
         if ($this->getGroup($user_group_id) === null) {
             throw new RuntimeException('Unknown user group.');
@@ -147,15 +219,15 @@ class User extends Model
 
         $now = time();
         $this->db->query(
-            'INSERT INTO admin_user (username, password, firstname, lastname, user_group_id, status, date_added, date_modified)
-             VALUES (:username, :password, :firstname, :lastname, :group_id, 1, :now, :now)',
-            [':username' => trim($username), ':password' => password_hash($password, PASSWORD_DEFAULT), ':firstname' => trim($firstname), ':lastname' => trim($lastname), ':group_id' => $user_group_id, ':now' => $now]
+            'INSERT INTO admin_user (username, password, firstname, lastname, user_group_id, status, email, date_added, date_modified)
+             VALUES (:username, :password, :firstname, :lastname, :group_id, 1, :email, :now, :now)',
+            [':username' => trim($username), ':password' => password_hash($password, PASSWORD_DEFAULT), ':firstname' => trim($firstname), ':lastname' => trim($lastname), ':group_id' => $user_group_id, ':email' => trim($email), ':now' => $now]
         );
 
         return $this->db->getLastId();
     }
 
-    public function editUser(int $user_id, string $username, string $firstname, string $lastname, int $user_group_id, bool $status, string $password = ''): void
+    public function editUser(int $user_id, string $username, string $firstname, string $lastname, int $user_group_id, bool $status, string $password = '', string $email = ''): void
     {
         $username = trim($username);
         if ($user_id < 1 || !preg_match('/^[a-z0-9._-]{3,80}$/i', $username) || trim($firstname) === '') {
@@ -163,6 +235,9 @@ class User extends Model
         }
         if ($password !== '' && strlen($password) < 12) {
             throw new RuntimeException('Passwords must be at least 12 characters.');
+        }
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('Use a valid email address.');
         }
         if ($this->getGroup($user_group_id) === null) {
             throw new RuntimeException('Unknown user group.');
@@ -183,8 +258,8 @@ class User extends Model
             throw new RuntimeException('The final enabled administrator cannot be disabled or demoted.');
         }
 
-        $fields = 'username = :username, firstname = :firstname, lastname = :lastname, user_group_id = :group_id, status = :status, date_modified = :now';
-        $params = [':username' => $username, ':firstname' => trim($firstname), ':lastname' => trim($lastname), ':group_id' => $user_group_id, ':status' => $status ? 1 : 0, ':now' => time(), ':id' => $user_id];
+        $fields = 'username = :username, firstname = :firstname, lastname = :lastname, user_group_id = :group_id, status = :status, email = :email, date_modified = :now';
+        $params = [':username' => $username, ':firstname' => trim($firstname), ':lastname' => trim($lastname), ':group_id' => $user_group_id, ':status' => $status ? 1 : 0, ':email' => trim($email), ':now' => time(), ':id' => $user_id];
 
         if ($password !== '') {
             $fields .= ', password = :password';

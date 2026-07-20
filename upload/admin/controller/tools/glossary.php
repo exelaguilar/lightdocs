@@ -33,9 +33,11 @@ class Glossary extends Controller
             $this->response->redirect($this->url->link('tools/glossary'));
         }
 
+        $url = $this->url;
+
         $terms = array_map(static fn(array $term): array => $term + [
                 'url' => '/glossary#' . rawurlencode($term['slug']),
-                'edit_url' => '/admin/glossary/edit?term=' . rawurlencode($term['slug']),
+                'edit_url' => $url->link('tools/glossary.edit', ['term' => $term['slug']]),
             ], $this->glossary->all());
 
         $data = [
