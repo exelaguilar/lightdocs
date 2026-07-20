@@ -4,26 +4,19 @@ declare(strict_types=1);
 
 namespace Extension\ReaderBanner;
 
+use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionRegistrarInterface;
 use System\Library\Content\Page;
 
 final class Extension implements ExtensionInterface
 {
-	public function __construct(private readonly ExtensionContext $context)
-	{
-	}
+	private ExtensionApplication $context;
 
-	public function name(): string
+	public function register(ExtensionContext $context): void
 	{
-		return 'reader_banner';
-	}
-
-	public function register(ExtensionRegistrarInterface $extensions): void
-	{
-		$extensions->asset('public', 'script', '/extension/reader_banner/view/javascript/reader_banner.js');
-		$extensions->on('frontend/page/content/after', function (mixed &$payload): void {
+		$this->context = $this->application($context);
+		$context->events()->listen('frontend/page/content/after', function (mixed &$payload): void {
 			if (!is_array($payload) || !($payload['page'] ?? null) instanceof Page || !isset($payload['content']) || !is_string($payload['content'])) return;
 			$message = trim((string) ($this->context->settings['message'] ?? ''));
 			if ($message === '') return;
@@ -37,6 +30,13 @@ final class Extension implements ExtensionInterface
 			$banner = '<aside class="my-4 flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--reader-banner-accent,var(--brand))_42%,var(--border))] bg-[color-mix(in_srgb,var(--reader-banner-accent,var(--brand))_8%,var(--surface))] px-3 py-2.5 text-[13px] text-[var(--text)] [&>p]:m-0" style="--reader-banner-accent:' . $color . '" data-reader-banner data-reader-banner-key="' . hash('sha256', $message . $color) . '">' . $icon . '<p>' . htmlspecialchars($message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>' . $dismiss . '</aside>';
 			$payload['content'] = (string) ($this->context->settings['location'] ?? 'below_content') === 'above_content' ? $banner . $payload['content'] : $payload['content'] . $banner;
 		}, 'reader_banner.page_content');
+	}
+
+	private function application(ExtensionContext $context): ExtensionApplication
+	{
+		$application = $context->capability('lightdocs.application');
+		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
+		return $application;
 	}
 
 	private function icon(string $name): string

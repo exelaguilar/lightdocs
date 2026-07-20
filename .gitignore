@@ -1,4 +1,5 @@
 /upload/vendor/
+/upload/extension/.tinymvc/
 /build*/
 /dist/
 /site/

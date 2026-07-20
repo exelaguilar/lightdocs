@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace System\Library;
 
 use PDO;
+use System\Engine\ExtensionInstallation;
+use System\Engine\ExtensionInstallationRepositoryInterface;
 
-final class ExtensionState
+final class ExtensionState implements ExtensionInstallationRepositoryInterface
 {
 	private PDO $db;
 
@@ -15,28 +17,55 @@ final class ExtensionState
 		$this->db = $database->connection();
 	}
 
-	public function syncExtension(string $name, string $version, bool $default_enabled): void
+	public function find(string $name): ?ExtensionInstallation
+	{
+		$statement = $this->db->prepare('SELECT * FROM extensions WHERE name = :name');
+		$statement->execute(['name' => $name]);
+		$row = $statement->fetch();
+
+		return is_array($row) ? $this->installation($row) : null;
+	}
+
+	/** @return array<string,ExtensionInstallation> */
+	public function all(): array
+	{
+		$installations = [];
+		foreach ($this->db->query('SELECT * FROM extensions ORDER BY name')->fetchAll() as $row) {
+			$installation = $this->installation($row);
+			$installations[$installation->name()] = $installation;
+		}
+
+		return $installations;
+	}
+
+	public function save(ExtensionInstallation $installation): void
 	{
 		$statement = $this->db->prepare(<<<'SQL'
-INSERT INTO extensions (name, version, enabled, discovered_at, updated_at)
-VALUES (:name, :version, :enabled, :now, :now)
-ON CONFLICT(name) DO UPDATE SET version = excluded.version, updated_at = excluded.updated_at
+INSERT INTO extensions (name, version, source, status, enabled, package_hash, discovered_at, installed_at, updated_at, error)
+VALUES (:name, :version, :source, :status, :enabled, :package_hash, :discovered_at, :installed_at, :updated_at, :error)
+ON CONFLICT(name) DO UPDATE SET version = excluded.version, source = excluded.source, status = excluded.status,
+enabled = excluded.enabled, package_hash = excluded.package_hash, installed_at = excluded.installed_at,
+updated_at = excluded.updated_at, error = excluded.error
 SQL);
 		$now = time();
-		$statement->execute(['name' => $name, 'version' => $version, 'enabled' => $default_enabled ? 1 : 0, 'now' => $now]);
+		$statement->execute([
+			'name' => $installation->name(),
+			'version' => $installation->version(),
+			'source' => $installation->source(),
+			'status' => $installation->status(),
+			'enabled' => $installation->enabled() ? 1 : 0,
+			'package_hash' => $installation->packageHash(),
+			'discovered_at' => $installation->installedAt() ?: $now,
+			'installed_at' => $installation->installedAt(),
+			'updated_at' => $installation->updatedAt() ?: $now,
+			'error' => $installation->error(),
+		]);
 	}
 
-	public function isExtensionEnabled(string $name): bool
+	public function remove(string $name): void
 	{
-		$statement = $this->db->prepare('SELECT enabled FROM extensions WHERE name = :name');
+		$statement = $this->db->prepare('DELETE FROM extensions WHERE name = :name');
 		$statement->execute(['name' => $name]);
-		return (bool) $statement->fetchColumn();
-	}
-
-	public function setExtensionEnabled(string $name, bool $enabled): void
-	{
-		$statement = $this->db->prepare('UPDATE extensions SET enabled = :enabled, updated_at = :updated_at WHERE name = :name');
-		$statement->execute(['name' => $name, 'enabled' => $enabled ? 1 : 0, 'updated_at' => time()]);
 	}
 
 	public function syncSetting(string $extension, string $key, mixed $default): void
@@ -90,11 +119,34 @@ SQL);
 
 	public function extensions(): array
 	{
-		return $this->db->query('SELECT name, version, enabled, discovered_at, updated_at FROM extensions ORDER BY name')->fetchAll();
+		return $this->db->query('SELECT name, version, source, status, enabled, package_hash, discovered_at, installed_at, updated_at, error FROM extensions ORDER BY name')->fetchAll();
 	}
 
 	public function events(): array
 	{
 		return $this->db->query('SELECT code, extension, event, enabled, sort_order FROM extension_events ORDER BY sort_order, code')->fetchAll();
+	}
+
+	/** @param array<string,mixed> $row */
+	private function installation(array $row): ExtensionInstallation
+	{
+		$source = in_array(($row['source'] ?? ''), ['bundled', 'uploaded'], true) ? (string) $row['source'] : 'bundled';
+		$enabled = (bool) ($row['enabled'] ?? false);
+		$status = (string) ($row['status'] ?? '');
+		if (!in_array($status, ExtensionInstallation::statuses(), true)) {
+			$status = $enabled ? ExtensionInstallation::ENABLED : ExtensionInstallation::DISCOVERED;
+		}
+
+		return new ExtensionInstallation(
+			(string) $row['name'],
+			(string) ($row['version'] ?? ''),
+			$source,
+			$status,
+			$enabled,
+			(string) ($row['package_hash'] ?? ''),
+			(int) ($row['installed_at'] ?? $row['discovered_at'] ?? 0),
+			(int) ($row['updated_at'] ?? 0),
+			isset($row['error']) && $row['error'] !== '' ? (string) $row['error'] : null
+		);
 	}
 }

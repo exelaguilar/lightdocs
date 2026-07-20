@@ -5,32 +5,32 @@ declare(strict_types=1);
 namespace Extension\Audit;
 
 use PDO;
+use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionRegistrarInterface;
 
 final class Extension implements ExtensionInterface
 {
 	private PDO $db;
+	private ExtensionApplication $context;
 
-	public function __construct(private readonly ExtensionContext $context)
+	public function register(ExtensionContext $context): void
 	{
-		$this->db = $context->database->connection();
-	}
-
-	public function name(): string
-	{
-		return 'audit';
-	}
-
-	public function register(ExtensionRegistrarInterface $extensions): void
-	{
-		$extensions->service('audit.log', $this);
+		$this->context = $this->application($context);
+		$this->db = $this->context->database->connection();
+		$context->services()->set('audit.log', $this);
 		foreach ($this->eventNames() as $event) {
-			$extensions->on($event, function (mixed $payload, string $name): void {
+			$context->events()->listen($event, function (mixed $payload, string $name): void {
 				$this->record($name, $payload);
 			}, 'audit.' . str_replace('.', '_', $event));
 		}
+	}
+
+	private function application(ExtensionContext $context): ExtensionApplication
+	{
+		$application = $context->capability('lightdocs.application');
+		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
+		return $application;
 	}
 
 	public function recent(int $limit = 50, int $offset = 0, string $event = '', string $source = '', string $search = '', string $sort = 'desc'): array

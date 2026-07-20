@@ -7,25 +7,26 @@ namespace Extension\Backup;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use System\Engine\BackupProvider;
+use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionRegistrarInterface;
 use ZipArchive;
 
 final class Extension implements ExtensionInterface, BackupProvider
 {
-	public function __construct(private readonly ExtensionContext $context)
+	private ExtensionApplication $context;
+
+	public function register(ExtensionContext $context): void
 	{
+		$this->context = $this->application($context);
+		$context->services()->set('backup.provider', $this);
 	}
 
-	public function name(): string
+	private function application(ExtensionContext $context): ExtensionApplication
 	{
-		return 'backup';
-	}
-
-	public function register(ExtensionRegistrarInterface $extensions): void
-	{
-		$extensions->service('backup.provider', $this);
+		$application = $context->capability('lightdocs.application');
+		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
+		return $application;
 	}
 
 	public function create(string $label = 'manual'): array

@@ -15,7 +15,7 @@ final class Startup
 		return $this;
 	}
 
-	public function run(Event $events, ExtensionManager $extensions): void
+	public function run(Event $events, ExtensionAdministration $extensions): void
 	{
 		usort($this->callbacks, static fn (array $a, array $b): int => $a['sort_order'] <=> $b['sort_order'] ?: strcmp($a['name'], $b['name']));
 

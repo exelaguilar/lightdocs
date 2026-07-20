@@ -4,25 +4,26 @@ declare(strict_types=1);
 
 namespace Extension\Media;
 
+use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionRegistrarInterface;
 use System\Engine\MediaProcessor;
 
 final class Extension implements ExtensionInterface, MediaProcessor
 {
-	public function __construct(private readonly ExtensionContext $context)
+	private ExtensionApplication $context;
+
+	public function register(ExtensionContext $context): void
 	{
+		$this->context = $this->application($context);
+		$context->services()->set('media.processor', $this);
 	}
 
-	public function name(): string
+	private function application(ExtensionContext $context): ExtensionApplication
 	{
-		return 'media';
-	}
-
-	public function register(ExtensionRegistrarInterface $extensions): void
-	{
-		$extensions->service('media.processor', $this);
+		$application = $context->capability('lightdocs.application');
+		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
+		return $application;
 	}
 
 	public function process(string $path, string $mime): void

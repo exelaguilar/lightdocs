@@ -13,8 +13,15 @@ use System\Library\Service\GitHistory;
 use System\Library\Service\GitSyncPreflight;
 use System\Library\Service\SecretRedactor;
 use System\Library\DB;
+use System\Library\ExtensionState;
 use System\Engine\Event;
+use System\Engine\ExtensionAdministration;
+use System\Engine\ExtensionApplication;
+use System\Engine\ExtensionCapabilityRegistry;
+use System\Engine\ExtensionDiscovery;
 use System\Engine\ExtensionManager;
+use System\Engine\ExtensionManifest;
+use System\Engine\ExtensionPackageInstaller;
 use System\Engine\Startup;
 use System\Engine\Model;
 use System\Library\Content\DirectiveRegistry;
@@ -47,6 +54,25 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
     if (!$condition) $failures[] = $message;
 };
 
+$buildExtensions = static function (array $config, DB $database, ContentRepository $repository, DirectiveRegistry $directives, \System\Engine\Autoloader $autoloader): ExtensionAdministration {
+    $state = new ExtensionState($database);
+    $startups = new Startup();
+    $capabilities = new ExtensionCapabilityRegistry();
+    $capabilities->register('lightdocs.application', static fn (ExtensionManifest $manifest): ExtensionApplication => new ExtensionApplication(
+        $manifest->name(), $config, $repository, $directives, $database, $state->settings($manifest->name()), $startups
+    ));
+    $manager = new ExtensionManager(
+        new ExtensionDiscovery($config['extension_dir']),
+        $state,
+        capabilities: $capabilities,
+        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.8.0'],
+        autoloader: $autoloader,
+        packages: new ExtensionPackageInstaller($config['extension_dir']),
+    );
+    $runtime = $manager->boot('public');
+    return new ExtensionAdministration($manager, $runtime, $state, $startups);
+};
+
 $repository = new ContentRepository($config['content_dir']);
 $renderer = new MarkdownRenderer((bool) $config['raw_html'], SiteData::load($config['data_file']), $config['content_dir'], $config['directives'], new Glossary($config['glossary_file']));
 $events = new Event($registry);
@@ -65,7 +91,7 @@ $registry->set('repository', $repository);
 $registry->set('renderer', $renderer);
 (new Schema($registry))->migrate();
 $directives = new DirectiveRegistry($config['directives']);
-$extensions = new ExtensionManager($config, $mainDB, $repository, $directives, new Startup());
+$extensions = $buildExtensions($config, $mainDB, $repository, $directives, $autoloader);
 $check(in_array('local_git', $extensions->names(), true), 'The Local Git extension did not register with the system extension manager.');
 $check($extensions->get('local_git.history') instanceof GitHistory, 'The Local Git extension did not register its history service.');
 $extensionRows = $extensions->all();
@@ -77,10 +103,10 @@ $extensionRegistry = new Registry();
 $extensionRegistry->set('config', $configuration);
 $extensionRegistry->set('db', $extensionDb);
 (new Schema($extensionRegistry))->migrate();
-$bannerExtensions = new ExtensionManager($config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), new Startup());
+$bannerExtensions = $buildExtensions($config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), $autoloader);
 $bannerExtensions->setExtensionEnabled('reader_banner', true);
 $bannerExtensions->setSettings('reader_banner', ['message' => 'Smoke banner', 'accent_color' => '#7c3aed', 'icon' => 'check', 'location' => 'above_content', 'page_scope' => 'all', 'dismissible' => false]);
-$bannerExtensions = new ExtensionManager($config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), new Startup());
+$bannerExtensions = $buildExtensions($config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), $autoloader);
 $bannerEvents = new Event($extensionRegistry);
 $bannerExtensions->registerEvents($bannerEvents);
 $bannerAssets = $bannerExtensions->assets();

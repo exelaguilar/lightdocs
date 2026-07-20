@@ -1,9 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "audit",
   "class": "Extension\\Audit\\Extension",
   "version": "1.0.0",
   "description": "Optional local audit trail for framework and content events.",
+  "requires": {"php": ">=8.4", "tinymvc": "^0.8"},
+  "capabilities": {"requires": ["lightdocs.application"]},
   "type": "developer",
   "default_enabled": false,
   "contexts": ["admin", "public"],

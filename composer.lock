@@ -4,8 +4,85 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d32d86e77f23bf8875b3499a1beeb2c2",
+    "content-hash": "c0c9081922fac1c0a4d7a1e4343de755",
     "packages": [
+        {
+            "name": "composer/semver",
+            "version": "3.4.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/composer/semver.git",
+                "reference": "198166618906cb2de69b95d7d47e5fa8aa1b2b95"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/composer/semver/zipball/198166618906cb2de69b95d7d47e5fa8aa1b2b95",
+                "reference": "198166618906cb2de69b95d7d47e5fa8aa1b2b95",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^5.3.2 || ^7.0 || ^8.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^1.11",
+                "symfony/phpunit-bridge": "^3 || ^7"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "3.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Composer\\Semver\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nils Adermann",
+                    "email": "naderman@naderman.de",
+                    "homepage": "http://www.naderman.de"
+                },
+                {
+                    "name": "Jordi Boggiano",
+                    "email": "j.boggiano@seld.be",
+                    "homepage": "http://seld.be"
+                },
+                {
+                    "name": "Rob Bast",
+                    "email": "rob.bast@gmail.com",
+                    "homepage": "http://robbast.nl"
+                }
+            ],
+            "description": "Semver library that offers utilities, version constraint parsing and validation.",
+            "keywords": [
+                "semantic",
+                "semver",
+                "validation",
+                "versioning"
+            ],
+            "support": {
+                "irc": "ircs://irc.libera.chat:6697/composer",
+                "issues": "https://github.com/composer/semver/issues",
+                "source": "https://github.com/composer/semver/tree/3.4.4"
+            },
+            "funding": [
+                {
+                    "url": "https://packagist.com",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/composer",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-08-20T19:15:30+00:00"
+        },
         {
             "name": "dflydev/dot-access-data",
             "version": "v3.0.3",
@@ -83,19 +160,21 @@
         },
         {
             "name": "exelaguilar/tiny-mvc-framework-private",
-            "version": "v0.7.0",
+            "version": "v0.8.1",
             "source": {
                 "type": "git",
                 "url": "git@github.com:exelaguilar/tiny-mvc-framework.git",
-                "reference": "d0b0c5684ec1adcfe1d568426f59a5627a7f5c44"
+                "reference": "eda40c68f55647232e72417e94c3c54f91966e5a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/d0b0c5684ec1adcfe1d568426f59a5627a7f5c44",
-                "reference": "d0b0c5684ec1adcfe1d568426f59a5627a7f5c44",
+                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/eda40c68f55647232e72417e94c3c54f91966e5a",
+                "reference": "eda40c68f55647232e72417e94c3c54f91966e5a",
                 "shasum": ""
             },
             "require": {
+                "composer/semver": "^3.4",
+                "ext-zip": "*",
                 "php": ">=8.0"
             },
             "require-dev": {
@@ -128,10 +207,10 @@
             ],
             "description": "Private OpenCart-style registry-MVC framework extracted from Lightdocs and intended for Lightdocs, Nevernote, and future applications.",
             "support": {
-                "source": "https://github.com/exelaguilar/tiny-mvc-framework/tree/v0.7.0",
+                "source": "https://github.com/exelaguilar/tiny-mvc-framework/tree/v0.8.1",
                 "issues": "https://github.com/exelaguilar/tiny-mvc-framework/issues"
             },
-            "time": "2026-07-20T18:25:39+00:00"
+            "time": "2026-07-20T19:25:20+00:00"
         },
         {
             "name": "graham-campbell/result-type",

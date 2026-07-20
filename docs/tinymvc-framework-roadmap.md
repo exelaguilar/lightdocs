@@ -651,6 +651,140 @@ local manifest discovery, `^0.6`, and the v0.6.0 lock; or pin v0.6.0 and restore
 those files from the parent commit. TinyMVC v0.7.0 is additive and immutable,
 so an application may remain on v0.6.0 independently.
 
+## Phase G completion record (2026-07-20) - transactional extension lifecycle, TinyMVC v0.8.1
+
+**Decision: promote the lifecycle authority, not merely another Lightdocs
+adapter.** The v0.7 contract was intentionally provisional. The OpenCart 5
+audit showed that separating package metadata, installed state, owned paths,
+activation, resource mounts, and events is the durable idea; its commerce
+taxonomy, marketplace controllers, and database schema remain application
+policy. Phase G moves TinyMVC substantially toward that robust shape while
+keeping one isolated extension directory as the ownership boundary.
+Lightdocs was refactored to consume the resulting architecture and was not
+used as a reason to narrow it. Nevernote remained untouched.
+
+### Package lifecycle and security API
+
+TinyMVC v0.8.1 (`eda40c68f55647232e72417e94c3c54f91966e5a`)
+contains 48 framework files and replaces `ExtensionRegistrarInterface` with:
+
+- `ExtensionInterface::register(ExtensionContext): void`; identity comes only
+  from the manifest. The context exposes typed per-extension service, event,
+  and resource registries plus cached application-capability lookup.
+- `ExtensionManager`, `ExtensionRuntime`, factory seam, capability registry,
+  `ExtensionInstallation`, repository interface, and an in-memory adapter.
+  Boot performs deterministic discovery/reconciliation, context filtering,
+  compatibility and required-capability checks, namespace mounting,
+  construction, and contribution aggregation. Install and enable are separate;
+  uploaded packages always begin disabled.
+- Manifest schema v2: Composer-style platform requirements, explicit
+  required/optional/provided capabilities, declarative assets, and the existing
+  safe resource maps. Unknown platforms and invalid constraints fail closed;
+  an upgrade must strictly increase Semantic Version.
+- `ExtensionArchivePolicy`, manual streaming preparer, package installer,
+  receipts/inventories, and recovery report. The installer never calls
+  `ZipArchive::extractTo`. It rejects traversal, absolute/drive/UNC paths,
+  NTFS alternate streams, Windows device/trailing-dot/trailing-space names,
+  control characters, duplicates/case collisions, encryption, symlinks and
+  other special types, excessive depth/path/file/total size, entry count, and
+  compression ratio before mutation. Runtime byte ceilings are rechecked while
+  streaming rather than trusting ZIP metadata alone.
+- Same-volume `.tinymvc` transactions use an exclusive lock, atomic journals,
+  candidates, backups, and receipts outside extension-owned code. Upgrade
+  rollback restores both code and receipt. Recovery verifies the complete file
+  inventory and hashes; unknown journals are quarantined rather than guessed.
+  Bundled directories cannot be replaced or removed. A receipt surviving a
+  process death before repository persistence reconciles as uploaded/disabled.
+
+Arbitrary extension PHP install/upgrade/uninstall hooks are not executed in
+v0.8. This is a correctness boundary, not a current-need veto: an in-process
+upgrade may already have loaded the prior class, and a generic API cannot make
+arbitrary application DB work atomic with filesystem rename. The next hook
+design must use isolated candidate-code execution, an idempotent journaled
+protocol, and an application transaction adapter. The complete rationale and
+filesystem protocol ship in `docs/extension-lifecycle.md`.
+
+The PHP floor remains `>=8.0`. New package source uses plain private properties,
+constructor promotion/named arguments only where PHP 8.0 permits them, and no
+`readonly`, enums, or first-class callable syntax. Composer Semver and ext-zip
+are explicit package dependencies.
+
+### Lightdocs refactor
+
+Lightdocs now requires `^0.8`; targeted authenticated Composer updates
+changed TinyMVC from v0.7.0 through v0.8.0 to v0.8.1 and installed the transitive Semver
+dependency. Authentication was ephemeral and removed immediately. The former
+local manager/context were refactored rather than retained as shadow copies:
+
+- local `ExtensionAdministration` is only the admin/settings/events/navigation
+  presentation facade over package `ExtensionManager`/`ExtensionRuntime`;
+- local `ExtensionApplication` is the object provided through the named
+  `lightdocs.application` capability;
+- `ExtensionState` implements the package installation repository against
+  SQLite while retaining application settings/event storage;
+- schema migration adds source, lifecycle status, package hash, installed
+  timestamp, and error fields without replacing existing extension rows;
+- framework composition supplies discovery, capability provider, platform
+  versions, autoloader, package installer, recovery, and the `frontend` to
+  portable `public` context mapping;
+- all nine extensions use no-argument construction and manifest v2. Their
+  dependencies come through the capability; services/listeners use typed
+  package registries. Reader Banner's JavaScript is now declarative manifest
+  metadata.
+
+The `.tinymvc` control tree is runtime state and is ignored. Uploaded code still
+owns only `upload/extension/<name>/`; settings/data remain application-owned
+after uninstall unless a future explicit purge operation is authorized.
+
+### Assertion-level changes and validation
+
+No existing behavioral assertion was removed or weakened. The lifecycle
+fixture construction changed to package manager/context/capability APIs and its
+manifest changed from schema v1 to v2 with an explicit namespace mount; its
+asserted extension, startup, DB-event, dispatch, and response sequence is
+unchanged and remains green. `extension_platform.php` replaced the obsolete
+registrar-conformance assertion with repository-contract and typed-context
+assertions, changed the schema assertion from v1 to v2, and grew from 5 to 6
+passes. `package_resolution.php` grew from 29 to all 48 package classes and
+interfaces. Smoke construction changed only to exercise the new package
+manager; its assertions were retained.
+
+TinyMVC added 35 tests (162 total / 378 assertions) for manager/runtime state,
+capabilities, schema v2, compatibility, strict upgrade ordering, archive
+security, staging cleanup, receipts, isolated install/upgrade/remove,
+verification, rollback, recovery, and interrupted-install reconciliation.
+`composer check` exits 0.
+
+Final real-PHP Lightdocs validation:
+
+| Command | Exit/result |
+| --- | --- |
+| `composer validate --strict` | 0 |
+| `tests/package_resolution.php` | 0; 48/48 package paths |
+| `tests/boot.php` | 0 |
+| `tests/kernel.php` | 0; 18/18 |
+| `tests/extension_platform.php` | 0; 6/6 |
+| `tests/lifecycle_harness.php` | 0; 6/6 |
+| `tests/lifecycle.php` | 0; 36/36 |
+| `bin/build-css.php` (twice) | 0/0; 141004 reported bytes; hashes unchanged both runs |
+| `tests/smoke.php` | expected 1; identical two Local Git diagnostics only |
+
+Tracked CSS remained admin 67249 bytes / SHA-256
+`326A93973A52A4D62F95C8D33708E1206B2B2A22D5F7F5FA35329F81B34C1536`
+and frontend 73759 bytes / SHA-256
+`C1A746A192AA8E9055BA2FC8036096C67BC3935C6EB47FF9FD35DD7FAA9BC089`.
+
+The immutable v0.8.0 tag exposed one clean-checkout-only starter fixture bug:
+its deleted application manager left an empty directory locally, but Git could
+not carry that directory to Linux. CI run `29771666114` therefore failed the
+same starter-root assertion on all five jobs. Patch release v0.8.1 points the
+Kernel at the committed starter root; local package checks remained 162/162.
+Final package CI run `29771919917` covers the five blocking PHP 8.0-8.4 jobs.
+Rollback is one Lightdocs integration revert, or pin TinyMVC v0.7.0 and restore
+the Phase F manager/context/extension shapes from the parent commit. The
+v0.8.0 and v0.8.1 tags are immutable; a consumer may remain on v0.7.0
+independently.
+
 ## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free

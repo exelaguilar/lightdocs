@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Extension\Webhooks;
 
 use PDO;
+use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionRegistrarInterface;
 use System\Engine\WebhookProvider;
 
 final class Extension implements ExtensionInterface, WebhookProvider
@@ -15,22 +15,15 @@ final class Extension implements ExtensionInterface, WebhookProvider
 	private const RETENTION_DAYS = 30;
 
 	private PDO $db;
+	private ExtensionApplication $context;
 
-	public function __construct(private readonly ExtensionContext $context)
+	public function register(ExtensionContext $context): void
 	{
-		$this->db = $context->database->connection();
-	}
-
-	public function name(): string
-	{
-		return 'webhooks';
-	}
-
-	public function register(ExtensionRegistrarInterface $extensions): void
-	{
-		$extensions->service('webhook.provider', $this);
+		$this->context = $this->application($context);
+		$this->db = $this->context->database->connection();
+		$context->services()->set('webhook.provider', $this);
 		foreach ($this->eventNames() as $event) {
-			$extensions->on($event, function (mixed $payload, string $name): void {
+			$context->events()->listen($event, function (mixed $payload, string $name): void {
 				try {
 					$this->send($name, is_array($payload) ? $payload : ['value' => $payload]);
 				} catch (\Throwable) {
@@ -38,6 +31,13 @@ final class Extension implements ExtensionInterface, WebhookProvider
 				}
 			}, 'webhooks.' . str_replace('.', '_', $event));
 		}
+	}
+
+	private function application(ExtensionContext $context): ExtensionApplication
+	{
+		$application = $context->capability('lightdocs.application');
+		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
+		return $application;
 	}
 
 	/** Delivers an event to every configured endpoint. One endpoint failing never blocks the others. */

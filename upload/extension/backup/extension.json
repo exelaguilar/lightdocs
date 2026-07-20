@@ -1,9 +1,11 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "name": "backup",
   "class": "Extension\\Backup\\Extension",
   "version": "1.0.0",
   "description": "Optional local ZIP backup provider for editable source, assets, and revisions.",
+  "requires": {"php": ">=8.4", "tinymvc": "^0.8"},
+  "capabilities": {"requires": ["lightdocs.application"]},
   "type": "developer",
   "default_enabled": false,
   "contexts": ["admin"],

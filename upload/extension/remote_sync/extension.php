@@ -5,25 +5,26 @@ declare(strict_types=1);
 namespace Extension\RemoteSync;
 
 use RuntimeException;
+use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionRegistrarInterface;
 use System\Engine\RemoteRepositoryProvider;
 
 final class Extension implements ExtensionInterface, RemoteRepositoryProvider
 {
-	public function __construct(private readonly ExtensionContext $context)
+	private ExtensionApplication $context;
+
+	public function register(ExtensionContext $context): void
 	{
+		$this->context = $this->application($context);
+		$context->services()->set('remote.repository', $this);
 	}
 
-	public function name(): string
+	private function application(ExtensionContext $context): ExtensionApplication
 	{
-		return 'remote_sync';
-	}
-
-	public function register(ExtensionRegistrarInterface $extensions): void
-	{
-		$extensions->service('remote.repository', $this);
+		$application = $context->capability('lightdocs.application');
+		if (!$application instanceof ExtensionApplication) throw new RuntimeException('Invalid Lightdocs extension capability.');
+		return $application;
 	}
 
 	public function status(): array

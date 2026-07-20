@@ -5,30 +5,23 @@ declare(strict_types=1);
 namespace Extension\Lifecycle;
 
 use Lightdocs\Tests\Support\TraceRecorder;
+use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionContext;
 use System\Engine\ExtensionInterface;
-use System\Engine\ExtensionRegistrarInterface;
 
 final class Extension implements ExtensionInterface
 {
-    public function __construct(private readonly ExtensionContext $context)
+    public function register(ExtensionContext $context): void
     {
-        (new TraceRecorder((string) getenv('LIGHTDOCS_TEST_TRACE')))->record('extension.discovery.complete');
-    }
-
-    public function name(): string
-    {
-        return 'lifecycle';
-    }
-
-    public function register(ExtensionRegistrarInterface $manager): void
-    {
+        $application = $context->capability('lightdocs.application');
+        if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid fixture capability.');
         $trace = new TraceRecorder((string) getenv('LIGHTDOCS_TEST_TRACE'));
+        $trace->record('extension.discovery.complete');
         $trace->record('extension.listeners.declared');
-        $manager->on('controller/*/before', static function () use ($trace): void {
+        $context->events()->listen('controller/*/before', static function () use ($trace): void {
             $trace->record('extension.listener.observed');
-        });
-        $manager->startup('trace', static function () use ($trace): void {
+        }, 'lifecycle.controller_before');
+        $application->startup('trace', static function () use ($trace): void {
             $trace->record('extension.startup');
         });
     }

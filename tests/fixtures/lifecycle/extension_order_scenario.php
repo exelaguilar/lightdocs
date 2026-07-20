@@ -10,7 +10,14 @@ use Lightdocs\Tests\Support\TraceRecorder;
 use System\Engine\Action;
 use System\Engine\CallbackAction;
 use System\Engine\Event;
+use System\Engine\ExtensionAdministration;
+use System\Engine\ExtensionApplication;
+use System\Engine\ExtensionCapabilityRegistry;
+use System\Engine\ExtensionDiscovery;
+use System\Engine\ExtensionInstallationRepositoryInterface;
 use System\Engine\ExtensionManager;
+use System\Engine\ExtensionManifest;
+use System\Engine\InMemoryExtensionInstallationRepository;
 use System\Engine\Registry;
 use System\Engine\Startup;
 use System\Library\Content\ContentRepository;
@@ -36,10 +43,10 @@ $projectRoot = dirname(__DIR__, 3);
 $temporary = rtrim((string) getenv('LIGHTDOCS_TEST_TEMP'), '/\\');
 $trace = new TraceRecorder((string) getenv('LIGHTDOCS_TEST_TRACE'));
 $extensionDirectory = $temporary . '/extension/lifecycle';
-@mkdir($extensionDirectory, 0700, true);
-copy(__DIR__ . '/extension_fixture.php', $extensionDirectory . '/extension.php');
+@mkdir($extensionDirectory . '/src', 0700, true);
+copy(__DIR__ . '/extension_fixture.php', $extensionDirectory . '/src/extension.php');
 file_put_contents($extensionDirectory . '/extension.json', json_encode([
-    'schema_version' => 1,
+    'schema_version' => 2,
     'name' => 'lifecycle',
     'class' => 'Extension\\Lifecycle\\Extension',
     'version' => '1.0.0-test',
@@ -47,6 +54,9 @@ file_put_contents($extensionDirectory . '/extension.json', json_encode([
     'type' => 'test',
     'default_enabled' => true,
     'contexts' => ['public'],
+    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.8'],
+    'capabilities' => ['requires' => ['lightdocs.application']],
+    'resources' => ['namespaces' => ['Extension\\Lifecycle' => 'src']],
 ], JSON_THROW_ON_ERROR));
 @mkdir($temporary . '/content', 0700, true);
 @mkdir($temporary . '/storage', 0700, true);
@@ -73,10 +83,27 @@ $repository = new ContentRepository($temporary . '/content');
 $directives = new DirectiveRegistry([]);
 
 $trace->record('extension.discovery.begin');
-$extensions = new ExtensionManager([
-    'extension_dir' => dirname($extensionDirectory),
-    'state_root' => $temporary . '/storage',
-], $database, $repository, $directives, new Startup());
+$state = new InMemoryExtensionInstallationRepository();
+$startups = new Startup();
+$capabilities = new ExtensionCapabilityRegistry();
+$capabilities->register('lightdocs.application', static fn (ExtensionManifest $manifest): ExtensionApplication => new ExtensionApplication(
+    $manifest->name(),
+    $config->all(),
+    $repository,
+    $directives,
+    $database,
+    [],
+    $startups,
+));
+$manager = new ExtensionManager(
+    new ExtensionDiscovery(dirname($extensionDirectory)),
+    $state,
+    capabilities: $capabilities,
+    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.8.0'],
+    autoloader: $autoloader,
+);
+$runtime = $manager->boot('public');
+$extensions = new ExtensionAdministration($manager, $runtime, new \System\Library\ExtensionState($database), $startups);
 $extensions->registerEvents($event);
 $trace->record('extension.listeners.registered');
 $extensions->runStartups($event);

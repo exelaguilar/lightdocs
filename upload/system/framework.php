@@ -10,7 +10,13 @@ use System\Engine\Factory;
 use System\Engine\Loader;
 use System\Engine\Front;
 use System\Engine\Startup;
+use System\Engine\ExtensionAdministration;
+use System\Engine\ExtensionApplication;
+use System\Engine\ExtensionCapabilityRegistry;
+use System\Engine\ExtensionDiscovery;
 use System\Engine\ExtensionManager;
+use System\Engine\ExtensionManifest;
+use System\Engine\ExtensionPackageInstaller;
 use System\Library\DB;
 use System\Library\ErrorHandler;
 use System\Library\Log;
@@ -22,6 +28,7 @@ use System\Library\Response;
 use System\Library\Url;
 use System\Library\Document;
 use System\Library\Feedback;
+use System\Library\ExtensionState;
 use System\Library\Content\AssetRepository;
 use System\Library\Content\ContentEditor;
 use System\Library\Content\ContentHealth;
@@ -161,7 +168,31 @@ $settings = new SiteSettings($event, $config->get('settings_paths')['site'], $co
 $registry->set('settings', $settings);
 
 // === Extensions ===
-$extensions = new ExtensionManager($config->all(), $db, $repository, $directives, new Startup());
+$extension_state = new ExtensionState($db);
+$extension_startups = new Startup();
+$extension_capabilities = new ExtensionCapabilityRegistry();
+$extension_capabilities->register('lightdocs.application', static function (ExtensionManifest $manifest) use ($config, $repository, $directives, $db, $extension_state, $extension_startups): ExtensionApplication {
+    return new ExtensionApplication(
+        $manifest->name(),
+        $config->all(),
+        $repository,
+        $directives,
+        $db,
+        $extension_state->settings($manifest->name()),
+        $extension_startups,
+    );
+});
+$extension_manager = new ExtensionManager(
+    new ExtensionDiscovery($config->get('extension_dir')),
+    $extension_state,
+    capabilities: $extension_capabilities,
+    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.8.0'],
+    autoloader: $registry->get('autoloader'),
+    packages: new ExtensionPackageInstaller($config->get('extension_dir')),
+);
+$extension_manager->recover();
+$extension_runtime = $extension_manager->boot(APP_CONTEXT === 'frontend' ? 'public' : (string) APP_CONTEXT);
+$extensions = new ExtensionAdministration($extension_manager, $extension_runtime, $extension_state, $extension_startups);
 $extensions->registerEvents($event);
 $extensions->runStartups($event);
 $registry->set('extensions', $extensions);

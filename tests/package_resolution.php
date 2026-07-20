@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 /**
  * Package-source resolution test for the TinyMVC extraction (Phase 1 core,
- * plus the Phase A-F additions through the extension platform in v0.7.0).
+ * plus the Phase A-G additions through the extension lifecycle in v0.8.0).
  *
  * Invocation: php tests/package_resolution.php
  *
@@ -74,15 +74,34 @@ $classes = [
     'System\\Engine\\Config' => ['basename' => 'config.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/config.php'],
     'System\\Engine\\Controller' => ['basename' => 'controller.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/controller.php'],
     'System\\Engine\\Event' => ['basename' => 'event.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/event.php'],
+    'System\\Engine\\ExtensionArchivePolicy' => ['basename' => 'extension_archive_policy.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_archive_policy.php'],
+    'System\\Engine\\ExtensionCapabilityRegistry' => ['basename' => 'extension_capability_registry.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_capability_registry.php'],
+    'System\\Engine\\ExtensionCompatibility' => ['basename' => 'extension_compatibility.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_compatibility.php'],
+    'System\\Engine\\ExtensionContext' => ['basename' => 'extension_context.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_context.php'],
     'System\\Engine\\ExtensionDiscovery' => ['basename' => 'extension_discovery.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_discovery.php'],
+    'System\\Engine\\ExtensionEventRegistry' => ['basename' => 'extension_event_registry.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_event_registry.php'],
+    'System\\Engine\\ExtensionFactory' => ['basename' => 'extension_factory.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_factory.php'],
+    'System\\Engine\\ExtensionFactoryInterface' => ['basename' => 'extension_factory_interface.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_factory_interface.php'],
+    'System\\Engine\\ExtensionInstallation' => ['basename' => 'extension_installation.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_installation.php'],
+    'System\\Engine\\ExtensionInstallationRepositoryInterface' => ['basename' => 'extension_installation_repository_interface.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_installation_repository_interface.php'],
     'System\\Engine\\ExtensionInterface' => ['basename' => 'extension_interface.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_interface.php'],
+    'System\\Engine\\ExtensionManager' => ['basename' => 'extension_manager.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_manager.php'],
     'System\\Engine\\ExtensionManifest' => ['basename' => 'extension_manifest.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_manifest.php'],
-    'System\\Engine\\ExtensionRegistrarInterface' => ['basename' => 'extension_registrar_interface.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_registrar_interface.php'],
+    'System\\Engine\\ExtensionPackageEntry' => ['basename' => 'extension_package_entry.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_package_entry.php'],
+    'System\\Engine\\ExtensionPackageInstaller' => ['basename' => 'extension_package_installer.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_package_installer.php'],
+    'System\\Engine\\ExtensionPackagePreparer' => ['basename' => 'extension_package_preparer.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_package_preparer.php'],
+    'System\\Engine\\ExtensionReceipt' => ['basename' => 'extension_receipt.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_receipt.php'],
+    'System\\Engine\\ExtensionRecoveryReport' => ['basename' => 'extension_recovery_report.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_recovery_report.php'],
+    'System\\Engine\\ExtensionResourceRegistry' => ['basename' => 'extension_resource_registry.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_resource_registry.php'],
+    'System\\Engine\\ExtensionRuntime' => ['basename' => 'extension_runtime.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_runtime.php'],
+    'System\\Engine\\ExtensionServiceRegistry' => ['basename' => 'extension_service_registry.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/extension_service_registry.php'],
     'System\\Engine\\Factory' => ['basename' => 'factory.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/factory.php'],
     'System\\Engine\\Front' => ['basename' => 'front.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/front.php'],
+    'System\\Engine\\InMemoryExtensionInstallationRepository' => ['basename' => 'in_memory_extension_installation_repository.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/in_memory_extension_installation_repository.php'],
     'System\\Engine\\Kernel' => ['basename' => 'kernel.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/kernel.php'],
     'System\\Engine\\Loader' => ['basename' => 'loader.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/loader.php'],
     'System\\Engine\\Model' => ['basename' => 'model.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/model.php'],
+    'System\\Engine\\PreparedExtension' => ['basename' => 'prepared_extension.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/prepared_extension.php'],
     'System\\Engine\\Proxy' => ['basename' => 'proxy.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/proxy.php'],
     'System\\Engine\\Registry' => ['basename' => 'registry.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/registry.php'],
     'System\\Helper\\ClientIp' => ['basename' => 'client_ip.php', 'formerLocalPath' => DIR_SYSTEM . 'helper/client_ip.php'],

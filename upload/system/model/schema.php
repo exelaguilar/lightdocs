@@ -75,7 +75,8 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 CREATE TABLE IF NOT EXISTS extensions (
 	name TEXT PRIMARY KEY, version TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1,
-	discovered_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+	source TEXT NOT NULL DEFAULT 'bundled', status TEXT NOT NULL DEFAULT 'discovered', package_hash TEXT NOT NULL DEFAULT '',
+	discovered_at INTEGER NOT NULL, installed_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL, error TEXT
 );
 CREATE TABLE IF NOT EXISTS extension_events (
 	code TEXT PRIMARY KEY, extension TEXT NOT NULL, event TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1,
@@ -165,6 +166,20 @@ SQL);
 	} catch (PDOException) {
 		// The column already exists on current installations.
 	}
+	foreach ([
+		"source TEXT NOT NULL DEFAULT 'bundled'",
+		"status TEXT NOT NULL DEFAULT 'discovered'",
+		"package_hash TEXT NOT NULL DEFAULT ''",
+		"installed_at INTEGER NOT NULL DEFAULT 0",
+		"error TEXT",
+	] as $extension_column) {
+		try {
+			$this->pdo->exec('ALTER TABLE extensions ADD COLUMN ' . $extension_column);
+		} catch (PDOException) {
+			// The column already exists on current installations.
+		}
+	}
+	$this->pdo->exec("UPDATE extensions SET source = 'bundled', status = CASE WHEN enabled = 1 THEN 'enabled' ELSE 'discovered' END, installed_at = discovered_at WHERE installed_at = 0");
 	try {
 		$this->pdo->exec("CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(title, description, keywords, plain_text, content='documents', content_rowid='id', tokenize='unicode61 remove_diacritics 2')");
 	} catch (PDOException) {
