@@ -69,6 +69,7 @@ $localLibrary = realpath(DIR_SYSTEM . 'library') ?: (DIR_SYSTEM . 'library');
 /** @var array<string, array{basename: string, formerLocalPath: string}> $classes */
 $classes = [
     'System\\Engine\\Action' => ['basename' => 'action.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/action.php'],
+    'System\\Engine\\CallbackAction' => ['basename' => 'callback_action.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/callback_action.php'],
     'System\\Engine\\Config' => ['basename' => 'config.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/config.php'],
     'System\\Engine\\Controller' => ['basename' => 'controller.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/controller.php'],
     'System\\Engine\\Event' => ['basename' => 'event.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/event.php'],
@@ -82,6 +83,7 @@ $classes = [
     'System\\Helper\\RouteMatcher' => ['basename' => 'route_matcher.php', 'formerLocalPath' => DIR_SYSTEM . 'helper/route_matcher.php'],
     'System\\Helper\\RoutePattern' => ['basename' => 'route_pattern.php', 'formerLocalPath' => DIR_SYSTEM . 'helper/route_pattern.php'],
     'System\\Library\\Request' => ['basename' => 'request.php', 'formerLocalPath' => DIR_SYSTEM . 'library/request.php'],
+    'System\\Library\\Response' => ['basename' => 'response.php', 'formerLocalPath' => DIR_SYSTEM . 'library/response.php'],
     'System\\Library\\Document' => ['basename' => 'document.php', 'formerLocalPath' => DIR_SYSTEM . 'library/document.php'],
     'System\\Library\\Language' => ['basename' => 'language.php', 'formerLocalPath' => DIR_SYSTEM . 'library/language.php'],
     'System\\Library\\Log' => ['basename' => 'log.php', 'formerLocalPath' => DIR_SYSTEM . 'library/log.php'],

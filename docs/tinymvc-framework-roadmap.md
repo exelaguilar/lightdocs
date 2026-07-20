@@ -268,6 +268,48 @@ the two local files and the `^0.1` constraint + lock), or at release level pin
 `Url` continues unchanged, and future adoption remains optional and
 call-compatible.
 
+## Phase B completion record (2026-07-20) — Response + CallbackAction, TinyMVC v0.3.0
+
+Second growth batch. `System\Library\Response` (SHA-256 `4A8E20179365…`, the
+verified strict superset of Nevernote's copy — the added `file()` streaming
+method is the only difference) and `System\Engine\CallbackAction`
+(`AAD9FA1E1120…`) were copied byte-identically into the package as
+`system/library/response.php` and `system/engine/callback_action.php`, with
+19 new package tests. Every emitting Response path — `output()`,
+`redirect()`, `file()` — is characterized through subprocess fixtures under
+`tests/Fixture/response/`, because the CLI SAPI counts the test runner's own
+stdout as "headers sent", which disables status-code setting and compression
+in-process. Package suite: 69 tests, `composer check` green. Released as
+annotated tag `v0.3.0` (package commit `2890835`), pushed with `main`.
+
+**RequestScheme was assessed for this batch and deliberately kept
+application-local.** Evidence: exactly three call sites, all Lightdocs
+app-tree startup controllers; every call site wraps it in the same composite
+`RequestScheme::isSecure(...) || !empty($_SERVER['HTTPS'])`, showing the API
+does not fully own its decision; the duck-typed `object $config` parameter
+and the Lightdocs-specific `config_trusted_proxy_header` key are too immature
+to freeze at package level; no framework class depends on it; and Nevernote
+has no equivalent to deduplicate against. Its future shape is a combined
+proxy-trust helper alongside `ClientIp` (scheme + IP, taking the mode string
+directly), to be designed when a second consumer exists.
+
+Lightdocs consumption repeated the copy → gate → delete sequence: constraint
+`^0.2` → `^0.3`, targeted update (`v0.2.0 => v0.3.0`),
+`tests/package_resolution.php` extended to 22 classes, pre-deletion gate run
+(both classes resolved from the package; only the expected local-presence
+checks failed), locals deleted, autoload regenerated. Post-deletion
+validation: package resolution 22/22, boot, kernel 18/18, lifecycle 36/36 —
+including all eight Response subprocess scenarios now exercising the
+package-resolved class — CSS build twice with unchanged tracked hashes
+(141004 bytes), strict Composer validation, all exit 0. `tests/smoke.php`
+retains its pre-existing environmental extension-state failure, identical
+before and after.
+
+Rollback boundary: revert the single Lightdocs integration commit, or pin
+`v0.2.0` with a targeted update. Nevernote untouched; its Response subset
+continues unchanged, and the package version is drop-in call-compatible if
+adoption ever proceeds.
+
 ## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free
@@ -657,8 +699,10 @@ system/library/response.php           — not identical to Nevernote's copy
 ```
 
 **[UPDATED 2026-07-20]** `system/helper/route_pattern.php` and
-`system/library/url.php` moved to the package in Phase A (v0.2.0) and are no
-longer local. Remaining list continues below unchanged:
+`system/library/url.php` moved to the package in Phase A (v0.2.0);
+`system/engine/callback_action.php` and `system/library/response.php` moved
+in Phase B (v0.3.0). None of the four is local any longer. Remaining list
+continues below unchanged:
 
 ```
 ```
