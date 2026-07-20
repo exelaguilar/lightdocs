@@ -2,9 +2,7 @@
 // system/framework.php
 
 // === Use Statements ===
-use System\Engine\Autoloader;
-use System\Engine\Registry;
-use System\Engine\Config;
+use System\Engine\Kernel;
 use System\Engine\Event;
 use System\Engine\Action;
 use System\Engine\CallbackAction;
@@ -43,32 +41,17 @@ use System\Model\ContentIndex;
 use System\Model\Schema;
 use System\Model\SqliteSearchService;
 
-// === Autoloader ===
+// === DB-free Base Boot ===
 // Only System is registered up front — Config/Registry themselves live
-// there and must be loadable before anything else. The rest of the app-tree
-// namespaces are config-driven (see below) so a new context is a config
-// edit, not a framework.php edit.
-$autoloader = new Autoloader();
-$autoloader->register('System', DIR_SYSTEM);
-
-// === Registry & Config ===
-$registry = new Registry();
-$registry->set('autoloader', $autoloader);
-
-$config = new Config();
-$config->load('default.php');
-$config->load((defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend') . '.php');
-if (is_file(DIR_SYSTEM . 'config/config.local.php')) {
-    $config->load('config.local.php');
-}
-$registry->set('config', $config);
-
-defined('APP_CONTEXT') || define('APP_CONTEXT', $config->get('app_context', 'frontend'));
-$registry->set('app', APP_CONTEXT);
-
-foreach ((array)$config->get('namespaces', []) as $namespace => $dir) {
-    $autoloader->register((string)$namespace, DIR_ROOT . $dir);
-}
+// through the Kernel before application composition. The remaining app-tree
+// namespaces stay config-driven, so a new context remains a config edit.
+$kernel = new Kernel(
+    context: defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend',
+    systemRoot: DIR_SYSTEM,
+    applicationRoot: DIR_ROOT,
+);
+$registry = $kernel->boot();
+$config = $registry->get('config');
 
 // === Database ===
 $db = new DB($config->get('database_path'));

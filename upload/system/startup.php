@@ -46,6 +46,9 @@ require_once(DIR_SYSTEM . 'vendor.php');
 // Engine autoloader class (instantiated and configured in framework.php).
 require_once(DIR_SYSTEM . 'engine/autoloader.php');
 
+// Application-local coordinator for the shared DB-free boot prefix.
+require_once(DIR_SYSTEM . 'engine/kernel.php');
+
 use Dotenv\Dotenv;
 
 // Local development uses .env in the project. Packaged installations can keep

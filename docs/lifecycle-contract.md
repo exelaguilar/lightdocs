@@ -8,9 +8,10 @@ be desirable long term. It is not a specification for new lifecycle features.
 
 1. `startup.php` defines version and directory constants, normalizes HTTPS,
    loads Composer and the `System` autoloader class, then loads the environment.
-2. `framework.php` constructs an autoloader, registers `System`, creates the
-   Registry, and loads `default.php`, the `APP_CONTEXT` config, then optional
-   `config.local.php` in that order.
+2. `framework.php` asks the application-local `System\Engine\Kernel` to
+   construct an autoloader, register `System`, create the Registry, and load
+   `default.php`, the `APP_CONTEXT` config, then optional `config.local.php` in
+   that order.
 3. The configured `Admin`, `Frontend`, and `Extension` namespaces are registered.
 4. Core request, response, logging, database, schema, content, rendering, cache,
    session, event, factory, loader, and Front services are constructed.
@@ -111,7 +112,13 @@ require separate processes in the suite and the application assumes one context
 per process. Requiring `framework.php` twice currently renders twice, constructs
 fresh registries and services, and adds another autoload callback (the tested
 callback count grows from one to two to three). Handler installation is repeated
-by replacement; no duplicate-boot guard exists.
+by replacement; no process-wide full-application duplicate-boot guard exists.
+
+Each Kernel instance permits one boot attempt. A second `boot()` call on that
+instance throws `LogicException`; it never silently reuses partially initialized
+state. A second Kernel instance in the same process and context still constructs
+a distinct Registry and adds an SPL callback, preserving the characterized
+global-state limitation. A conflicting context is rejected.
 
 `tests/boot.php` covers only the deterministic DB-free prefix through Registry,
 Config, namespaces, and selected services. It intentionally does not claim full
