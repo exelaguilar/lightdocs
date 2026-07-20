@@ -23,6 +23,7 @@ require $projectRoot . '/upload/system/engine/kernel.php';
 $context = match ($mode) {
     'admin' => 'admin',
     'missing' => 'does_not_exist',
+    'invalid-context' => '../frontend',
     default => 'frontend',
 };
 if ($mode !== 'undefined') {
@@ -77,6 +78,15 @@ if ($mode === 'second-instance') {
         'different_registry' => $secondRegistry !== $registry,
         'autoload_count' => count(spl_autoload_functions()),
     ];
+}
+
+if ($mode === 'second-context') {
+    try {
+        (new \System\Engine\Kernel('admin', $systemRoot, $applicationRoot))->boot();
+        $result['second_context'] = 'succeeded';
+    } catch (Throwable $throwable) {
+        $result['second_context'] = get_class($throwable) . ': ' . $throwable->getMessage();
+    }
 }
 
 echo json_encode($result, JSON_THROW_ON_ERROR) . PHP_EOL;

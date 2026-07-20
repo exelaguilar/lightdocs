@@ -86,8 +86,8 @@ final class Kernel
 
     private function validateInputs(): void
     {
-        if ($this->context === '') {
-            throw new InvalidArgumentException('Kernel context must not be empty.');
+        if (preg_match('/^[a-z][a-z0-9_-]*$/D', $this->context) !== 1) {
+            throw new InvalidArgumentException('Kernel context must be a lowercase configuration name.');
         }
         if (!is_dir($this->systemRoot)) {
             throw new InvalidArgumentException('Kernel system root does not exist: ' . $this->systemRoot);

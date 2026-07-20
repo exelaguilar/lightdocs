@@ -122,6 +122,10 @@ state. A second Kernel instance in the same process and context still constructs
 a distinct Registry and adds an SPL callback, preserving the characterized
 global-state limitation. A conflicting context is rejected.
 
+Kernel context names must be lowercase configuration identifiers containing
+letters, digits, underscores, or hyphens; path-like context values are rejected
+before `Config::load()`.
+
 `tests/boot.php` covers only the deterministic DB-free prefix through Registry,
 Config, namespaces, and selected services. It intentionally does not claim full
 application boot coverage.

@@ -65,6 +65,12 @@ $suite->test('missing context preserves Config load failure', static function ()
     TestSuite::assertContains('Config file not found', $result->stdout . $result->stderr, 'Missing context failure changed.');
 });
 
+$suite->test('invalid context names fail before configuration loading', static function () use ($fixture): void {
+    $result = Subprocess::run($fixture, ['invalid-context']);
+    TestSuite::assertTrue($result->exitCode !== 0, 'Invalid context unexpectedly booted.');
+    TestSuite::assertContains('Kernel context must be a lowercase configuration name', $result->stdout . $result->stderr, 'Invalid context failure changed.');
+});
+
 $suite->test('invalid namespace path remains a lazy resolution failure', static function () use ($root, $run): void {
     $temporary = new TemporaryDirectory();
     $system = $temporary->path . '/upload/system';
@@ -86,6 +92,11 @@ $suite->test('second Kernel in the same context creates distinct base state', st
     TestSuite::assertTrue($data['second_instance']['booted'], 'Second Kernel instance did not boot.');
     TestSuite::assertTrue($data['second_instance']['different_registry'], 'Second Kernel silently reused the first Registry.');
     TestSuite::assertTrue($data['second_instance']['autoload_count'] >= 3, 'Second Kernel did not expose duplicate global autoload state.');
+});
+
+$suite->test('second Kernel cannot change the process context', static function () use ($run): void {
+    $data = $run('second-context');
+    TestSuite::assertContains('LogicException: Kernel context "admin" conflicts with process context "frontend".', $data['second_context'], 'One-context-per-process guard changed.');
 });
 
 $suite->test('Kernel performs no application composition', static function () use ($run): void {
