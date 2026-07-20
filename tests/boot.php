@@ -16,6 +16,12 @@ declare(strict_types=1);
  *   - any HTTP request/response cycle or a running web server
  *   - production data of any kind (nothing here writes to storage/)
  *
+ * This deliberately covers only the DB-free prefix shared with web boot. It
+ * does not execute extension discovery/startups, configured pre-actions,
+ * database-backed events, Front dispatch, global error/shutdown handlers, or
+ * response emission. Those process-global and terminating stages are covered
+ * in isolated subprocesses by tests/lifecycle.php.
+ *
  * Exit code 0 and the final "Boot checkpoint reached." line mean success.
  * Any failure prints to STDERR and exits 1 — this script is a pass/fail
  * gate, not a coverage report, so failures are collected and the exit code
