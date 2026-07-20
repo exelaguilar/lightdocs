@@ -2,21 +2,24 @@
 namespace Frontend\Controller\Startup;
 
 use System\Engine\Controller;
+use System\Helper\RoutePattern;
 
 /**
  * ControllerStartupRouter
  *
  * Resolves the pretty request URL to an MVC route for the public reader.
- * Static paths come from the config route map; dynamic content paths
- * (uploads, raw markdown, per-section llms exports, and documentation pages)
- * are resolved by pattern.
+ * Static and `{param}` paths come from the config route map (matched via
+ * System\Helper\RoutePattern); dynamic content paths (uploads, raw markdown,
+ * per-section llms exports, and documentation pages) are resolved by
+ * fallback rules the route map can't express.
  *
  * @package Frontend\Controller\Startup
  */
 class Router extends Controller
 {
     /**
-     * Sets $request->get['route'] from the request path.
+     * Sets $request->get['route'] (and any captured path params) from the
+     * request path.
      *
      * @return void
      */
@@ -29,9 +32,15 @@ class Router extends Controller
         $path = rtrim('/' . ltrim((string)(parse_url($this->request->server['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'), '/'), '/') ?: '/';
 
         $routes = (array)$this->config->get('routes', []);
+        $match = RoutePattern::match($path, $routes);
 
-        if (isset($routes[$path])) {
-            $this->request->get['route'] = $routes[$path];
+        if ($match !== null) {
+            $this->request->get['route'] = $match['route'];
+
+            foreach ($match['params'] as $name => $value) {
+                $this->request->get[$name] = $value;
+            }
+
             return;
         }
 

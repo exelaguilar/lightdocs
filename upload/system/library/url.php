@@ -1,5 +1,8 @@
 <?php
 namespace System\Library;
+
+use System\Helper\RoutePattern;
+
 /**
  * Handles the generation of application URLs.
  *
@@ -9,8 +12,9 @@ namespace System\Library;
  *
  * Lightdocs adaptation: the application serves pretty URLs, so link() first
  * consults the shared route map (the same `routes` config table the router
- * pre-action uses, inverted) and only falls back to `index.php?route=` for
- * unmapped routes.
+ * pre-action uses) via System\Helper\RoutePattern::build() — which also
+ * substitutes any `{param}` path segments from $args — and only falls back
+ * to `index.php?route=` for unmapped routes or unfilled params.
  *
  * @package System\Library
  * @author Exel
@@ -23,9 +27,9 @@ class Url
     private string $base;
 
     /**
-     * @var array<string, string> Route → pretty path map (inverse of the router map).
+     * @var array<string, string> Pretty path → route map, as configured.
      */
-    private array $paths = [];
+    private array $routes;
 
     /**
      * @var object[] An array of URL rewriter objects.
@@ -36,19 +40,12 @@ class Url
      * Url constructor.
      *
      * @param string $base   The base URL for the site, including a trailing slash.
-     * @param array  $routes Pretty path → route map; inverted here for link building.
+     * @param array  $routes Pretty path → route map used for link building.
      */
     public function __construct(string $base, array $routes = [])
     {
         $this->base = $base;
-
-        foreach ($routes as $path => $route) {
-            // First mapping wins so canonical paths stay stable when a route
-            // has multiple pretty aliases.
-            if (!isset($this->paths[$route])) {
-                $this->paths[$route] = $path;
-            }
-        }
+        $this->routes = $routes;
     }
 
     /**
@@ -73,15 +70,20 @@ class Url
      */
     public function link(string $route, $args = ''): string
     {
-        $query_string = is_array($args) ? http_build_query($args) : ltrim((string)$args, '&');
+        $built = RoutePattern::build($route, $this->routes, is_array($args) ? $args : []);
 
-        if (isset($this->paths[$route])) {
-            $url = rtrim($this->base, '/') . $this->paths[$route];
+        if ($built !== null) {
+            [$path, $remaining_args] = $built;
+            $query_string = is_array($args) ? http_build_query($remaining_args) : ltrim((string)$args, '&');
+
+            $url = rtrim($this->base, '/') . $path;
 
             if ($query_string) {
                 $url .= '?' . $query_string;
             }
         } else {
+            $query_string = is_array($args) ? http_build_query($args) : ltrim((string)$args, '&');
+
             $url = $this->base . 'index.php?route=' . $route;
 
             if ($query_string) {

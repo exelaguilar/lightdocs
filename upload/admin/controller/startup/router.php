@@ -2,20 +2,24 @@
 namespace Admin\Controller\Startup;
 
 use System\Engine\Controller;
+use System\Helper\RoutePattern;
 
 /**
  * ControllerStartupRouter
  *
  * Resolves the pretty request URL to an MVC route (the OpenCart seo_url
  * pattern). The path → route table lives in config/admin.php so the router
- * and the Url link builder share a single source of truth.
+ * and the Url link builder share a single source of truth. Entries may
+ * contain `{param}` segments (e.g. `/admin/roles/{role}/edit`), matched via
+ * System\Helper\RoutePattern.
  *
  * @package Admin\Controller\Startup
  */
 class Router extends Controller
 {
     /**
-     * Sets $request->get['route'] from the request path.
+     * Sets $request->get['route'] (and any captured path params) from the
+     * request path.
      *
      * An explicit ?route= parameter wins so the framework keeps supporting
      * query-string routing across platforms.
@@ -30,14 +34,18 @@ class Router extends Controller
 
         $path = rtrim('/' . ltrim((string)(parse_url($this->request->server['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/'), '/'), '/') ?: '/';
 
-        // Extension settings pages carry the extension name inside the path.
-        if (preg_match('#^/admin/extensions/[a-z0-9_]+/settings$#', $path)) {
-            $this->request->get['route'] = 'tools/extension_settings';
+        $routes = (array)$this->config->get('routes', []);
+        $match = RoutePattern::match($path, $routes);
+
+        if ($match === null) {
+            $this->request->get['route'] = (string)$this->config->get('action_error', 'error/not_found');
             return;
         }
 
-        $routes = (array)$this->config->get('routes', []);
+        $this->request->get['route'] = $match['route'];
 
-        $this->request->get['route'] = $routes[$path] ?? (string)$this->config->get('action_error', 'error/not_found');
+        foreach ($match['params'] as $name => $value) {
+            $this->request->get[$name] = $value;
+        }
     }
 }
