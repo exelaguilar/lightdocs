@@ -17,7 +17,6 @@ use System\Engine\ExtensionCapabilityRegistry;
 use System\Engine\ExtensionDiscovery;
 use System\Engine\ExtensionManager;
 use System\Engine\ExtensionManifest;
-use System\Engine\ExtensionPackageInstaller;
 use System\Engine\ExtensionPackageTrust;
 use System\Library\DB;
 use System\Library\ErrorHandler;
@@ -31,6 +30,7 @@ use System\Library\Url;
 use System\Library\Document;
 use System\Library\Feedback;
 use System\Library\ExtensionState;
+use System\Library\ExtensionPackageInstaller;
 use System\Library\Content\AssetRepository;
 use System\Library\Content\ContentEditor;
 use System\Library\Content\ContentHealth;
@@ -188,7 +188,7 @@ $extension_manager = new ExtensionManager(
     new ExtensionDiscovery($config->get('extension_dir')),
     $extension_state,
     capabilities: $extension_capabilities,
-    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.9.0'],
+	platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.10.0'],
     autoloader: $registry->get('autoloader'),
     packages: new ExtensionPackageInstaller($config->get('extension_dir')),
     authorizer: new ExtensionAuthorization($registry),

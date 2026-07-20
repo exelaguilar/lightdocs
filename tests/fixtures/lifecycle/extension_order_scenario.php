@@ -14,10 +14,8 @@ use System\Engine\ExtensionAdministration;
 use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionCapabilityRegistry;
 use System\Engine\ExtensionDiscovery;
-use System\Engine\ExtensionInstallationRepositoryInterface;
 use System\Engine\ExtensionManager;
 use System\Engine\ExtensionManifest;
-use System\Engine\InMemoryExtensionInstallationRepository;
 use System\Engine\Registry;
 use System\Engine\Startup;
 use System\Library\Content\ContentRepository;
@@ -54,7 +52,7 @@ file_put_contents($extensionDirectory . '/extension.json', json_encode([
     'type' => 'test',
     'default_enabled' => true,
     'contexts' => ['public'],
-    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.9'],
+    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.10'],
     'capabilities' => ['requires' => ['lightdocs.application']],
     'resources' => ['namespaces' => ['Extension\\Lifecycle' => 'src']],
 ], JSON_THROW_ON_ERROR));
@@ -83,7 +81,7 @@ $repository = new ContentRepository($temporary . '/content');
 $directives = new DirectiveRegistry([]);
 
 $trace->record('extension.discovery.begin');
-$state = new InMemoryExtensionInstallationRepository();
+$state = new \System\Library\ExtensionState($database);
 $startups = new Startup();
 $capabilities = new ExtensionCapabilityRegistry();
 $capabilities->register('lightdocs.application', static fn (ExtensionManifest $manifest): ExtensionApplication => new ExtensionApplication(
@@ -99,11 +97,11 @@ $manager = new ExtensionManager(
     new ExtensionDiscovery(dirname($extensionDirectory)),
     $state,
     capabilities: $capabilities,
-    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.9.0'],
+    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.10.0'],
     autoloader: $autoloader,
 );
 $runtime = $manager->boot('public');
-$extensions = new ExtensionAdministration($manager, $runtime, new \System\Library\ExtensionState($database), $startups);
+$extensions = new ExtensionAdministration($manager, $runtime, $state, $startups);
 $extensions->registerEvents($event);
 $trace->record('extension.listeners.registered');
 $extensions->runStartups($event);

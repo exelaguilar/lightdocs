@@ -16,7 +16,7 @@ final class Extension implements ExtensionInterface, MediaProcessor
 	public function register(ExtensionContext $context): void
 	{
 		$this->context = $this->application($context);
-		$context->services()->set('media.processor', $this);
+		$context->service('media.processor', $this);
 	}
 
 	private function application(ExtensionContext $context): ExtensionApplication

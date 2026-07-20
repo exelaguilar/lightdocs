@@ -4,7 +4,7 @@
   "class": "Extension\\Mail\\Extension",
   "version": "1.0.0",
   "description": "Sends transactional email (password resets, notifications) over SMTP.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.9"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.10"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "type": "integration",
   "default_enabled": false,

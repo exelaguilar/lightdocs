@@ -18,7 +18,7 @@ final class Extension implements ExtensionInterface
         $trace = new TraceRecorder((string) getenv('LIGHTDOCS_TEST_TRACE'));
         $trace->record('extension.discovery.complete');
         $trace->record('extension.listeners.declared');
-        $context->events()->listen('controller/*/before', static function () use ($trace): void {
+		$context->listen('controller/*/before', static function () use ($trace): void {
             $trace->record('extension.listener.observed');
         }, 'lifecycle.controller_before');
         $application->startup('trace', static function () use ($trace): void {

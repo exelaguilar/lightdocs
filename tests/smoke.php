@@ -21,10 +21,10 @@ use System\Engine\ExtensionCapabilityRegistry;
 use System\Engine\ExtensionDiscovery;
 use System\Engine\ExtensionManager;
 use System\Engine\ExtensionManifest;
-use System\Engine\ExtensionPackageInstaller;
 use System\Engine\Startup;
 use System\Engine\Model;
 use System\Library\Content\DirectiveRegistry;
+use System\Library\ExtensionPackageInstaller;
 use System\Library\Content\Glossary;
 use System\Library\Content\NavigationManager;
 use System\Library\User;
@@ -65,7 +65,7 @@ $buildExtensions = static function (array $config, DB $database, ContentReposito
         new ExtensionDiscovery($config['extension_dir']),
         $state,
         capabilities: $capabilities,
-        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.9.0'],
+        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.10.0'],
         autoloader: $autoloader,
         packages: new ExtensionPackageInstaller($config['extension_dir']),
     );

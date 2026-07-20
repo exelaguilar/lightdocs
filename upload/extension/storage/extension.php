@@ -17,7 +17,7 @@ final class Extension implements ExtensionInterface, AssetStorage
 	public function register(ExtensionContext $context): void
 	{
 		$this->context = $this->application($context);
-		$context->services()->set('storage.assets', $this);
+		$context->service('storage.assets', $this);
 	}
 
 	private function application(ExtensionContext $context): ExtensionApplication

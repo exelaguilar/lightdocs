@@ -19,7 +19,7 @@ final class Extension implements ExtensionInterface, BackupProvider
 	public function register(ExtensionContext $context): void
 	{
 		$this->context = $this->application($context);
-		$context->services()->set('backup.provider', $this);
+		$context->service('backup.provider', $this);
 	}
 
 	private function application(ExtensionContext $context): ExtensionApplication

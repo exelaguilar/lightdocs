@@ -4,7 +4,7 @@
   "class": "Extension\\Storage\\Extension",
   "version": "1.0.0",
   "description": "Optional S3-compatible publication for uploaded assets while keeping a local mirror.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.9"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.10"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "type": "storage",
   "default_enabled": false,

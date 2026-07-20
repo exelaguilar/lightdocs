@@ -6,9 +6,8 @@ namespace System\Library;
 
 use PDO;
 use System\Engine\ExtensionInstallation;
-use System\Engine\ExtensionInstallationRepositoryInterface;
 
-final class ExtensionState implements ExtensionInstallationRepositoryInterface
+final class ExtensionState
 {
 	private PDO $db;
 

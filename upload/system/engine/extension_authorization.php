@@ -8,7 +8,7 @@ use RuntimeException;
 use System\Library\User;
 
 /** Maps TinyMVC extension lifecycle operations onto Lightdocs' administrator ACL. */
-final class ExtensionAuthorization implements ExtensionOperationAuthorizerInterface
+final class ExtensionAuthorization
 {
     private Registry $registry;
     private string $permissionRoute;

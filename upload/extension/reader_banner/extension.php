@@ -16,7 +16,7 @@ final class Extension implements ExtensionInterface
 	public function register(ExtensionContext $context): void
 	{
 		$this->context = $this->application($context);
-		$context->events()->listen('frontend/page/content/after', function (mixed &$payload): void {
+		$context->listen('frontend/page/content/after', function (mixed &$payload): void {
 			if (!is_array($payload) || !($payload['page'] ?? null) instanceof Page || !isset($payload['content']) || !is_string($payload['content'])) return;
 			$message = trim((string) ($this->context->settings['message'] ?? ''));
 			if ($message === '') return;

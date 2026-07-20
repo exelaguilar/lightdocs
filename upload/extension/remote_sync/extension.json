@@ -4,7 +4,7 @@
   "class": "Extension\\RemoteSync\\Extension",
   "version": "1.0.0",
   "description": "Optional, manually-triggered synchronization with a remote Git repository.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.9"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.10"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "type": "integration",
   "default_enabled": false,

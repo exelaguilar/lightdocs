@@ -1295,3 +1295,18 @@ The existing `RegistryTest`, `ConfigTest`, `ActionTest`, and `FrontTest` provide
 dispatch-behavior coverage base, but none of these Phase 2 gates has begun. `Response` merging,
 Lightdocs-only helper extraction, extension/provider genericization, database and migration
 abstractions, and Nevernote adoption also remain deferred.
+
+## v0.10 contraction completion record (2026-07-20)
+
+TinyMVC commit `7c99283` and local tag `v0.10.0` contract the extension
+platform to the portable load-time contract plus the hardened archive/install
+pipeline. Lightdocs now owns the concrete manager, installation state,
+capability providers, compatibility/dependency policy, catalogs, trust policy,
+and authorization. The four speculative interfaces and two production
+scaffolds were removed; the three contribution registries were folded into
+`ExtensionContext`.
+
+The TinyMVC suite passes at 156 tests / 367 assertions. Lightdocs passes its
+extension platform, extension policy, authorization, 36 lifecycle
+characterizations, package-boundary, smoke, and doctor checks while consuming
+the local v0.10 tag. Neither repository nor tag has been pushed.

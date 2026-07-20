@@ -18,9 +18,9 @@ final class Extension implements ExtensionInterface
 	{
 		$this->context = $this->application($context);
 		$this->db = $this->context->database->connection();
-		$context->services()->set('audit.log', $this);
+		$context->service('audit.log', $this);
 		foreach ($this->eventNames() as $event) {
-			$context->events()->listen($event, function (mixed $payload, string $name): void {
+			$context->listen($event, function (mixed $payload, string $name): void {
 				$this->record($name, $payload);
 			}, 'audit.' . str_replace('.', '_', $event));
 		}

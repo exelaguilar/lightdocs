@@ -17,7 +17,7 @@ final class Extension implements ExtensionInterface, MailProvider
 	public function register(ExtensionContext $context): void
 	{
 		$this->context = $this->application($context);
-		$context->services()->set('mail.provider', $this);
+		$context->service('mail.provider', $this);
 	}
 
 	private function application(ExtensionContext $context): ExtensionApplication

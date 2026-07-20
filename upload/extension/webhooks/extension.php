@@ -21,9 +21,9 @@ final class Extension implements ExtensionInterface, WebhookProvider
 	{
 		$this->context = $this->application($context);
 		$this->db = $this->context->database->connection();
-		$context->services()->set('webhook.provider', $this);
+		$context->service('webhook.provider', $this);
 		foreach ($this->eventNames() as $event) {
-			$context->events()->listen($event, function (mixed $payload, string $name): void {
+			$context->listen($event, function (mixed $payload, string $name): void {
 				try {
 					$this->send($name, is_array($payload) ? $payload : ['value' => $payload]);
 				} catch (\Throwable) {
