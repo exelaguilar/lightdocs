@@ -12,6 +12,7 @@ use System\Engine\Front;
 use System\Engine\Startup;
 use System\Engine\ExtensionManager;
 use System\Library\DB;
+use System\Library\ErrorHandler;
 use System\Library\Log;
 use System\Library\FileCache;
 use System\Library\Template;
@@ -61,114 +62,9 @@ $registry->set('db', $db);
 $error_log = new Log(DIR_LOGS . $config->get('error_file'), $config);
 $registry->set('error_log', $error_log);
 
-set_error_handler(function (int $code, string $message, string $file, int $line) use ($error_log, $config) {
-    if (!(error_reporting() & $code)) {
-        return false;
-    }
-
-    $levels = [
-        E_NOTICE => 'Notice', E_USER_NOTICE => 'Notice',
-        E_WARNING => 'Warning', E_USER_WARNING => 'Warning',
-        E_DEPRECATED => 'Deprecated', E_USER_DEPRECATED => 'Deprecated',
-        E_RECOVERABLE_ERROR => 'Recoverable Error',
-        E_ERROR => 'Fatal Error', E_USER_ERROR => 'Fatal Error',
-        E_PARSE => 'Parse Error', E_CORE_ERROR => 'Core Error',
-        E_COMPILE_ERROR => 'Compile Error'
-    ];
-    $level = $levels[$code] ?? 'Unknown';
-    $msg = "PHP $level: $message in $file on line $line";
-
-    if ($config->get('error_log')) {
-        $error_log->error($msg);
-    }
-
-    // Only E_USER_ERROR and E_RECOVERABLE_ERROR ever reach a userland error handler;
-    // PHP routes true fatals (E_ERROR/E_PARSE/E_CORE_ERROR/E_COMPILE_ERROR) to its own
-    // handler and never here. Convert the catchable fatal-class levels into an exception
-    // so they flow through set_exception_handler instead of silently continuing.
-    $fatal_codes = [
-        E_USER_ERROR,
-        E_RECOVERABLE_ERROR,
-    ];
-
-    if (in_array($code, $fatal_codes, true)) {
-        throw new ErrorException($message, 0, $code, $file, $line);
-    }
-
-    if ($config->get('error_display')) {
-        echo "<b>$level</b>: $message in <b>$file</b> on line <b>$line</b>";
-    }
-
-    return true;
-});
-
-set_exception_handler(function (Throwable $e) use ($error_log, $config): void {
-    $out = "Uncaught Exception: {$e->getMessage()}\nFile: {$e->getFile()}\nLine: {$e->getLine()}\n\n";
-    foreach ($e->getTrace() as $k => $trace) {
-        $out .= "Backtrace #$k\n";
-        foreach (['file', 'line', 'class', 'function'] as $part) {
-            if (isset($trace[$part])) {
-                $out .= ucfirst($part) . ": {$trace[$part]}\n";
-            }
-        }
-        $out .= "\n";
-    }
-
-    if ($config->get('error_log')) {
-        $error_log->error(trim($out));
-    }
-
-    if (!headers_sent()) {
-        http_response_code(500);
-        header('Content-Type: text/html; charset=utf-8');
-    }
-
-    if ($config->get('error_display')) {
-        echo nl2br(htmlspecialchars($out, ENT_QUOTES, 'UTF-8'));
-    } elseif ($config->get('error_page')) {
-        header('Location: ' . $config->get('error_page'));
-        exit;
-    } else {
-        echo 'An error occurred.';
-    }
-});
-
-// Catch true fatals (E_ERROR, OOM, parse/compile) that PHP never routes through
-// set_error_handler — without this they produce a bare/blank 500.
-register_shutdown_function(function () use ($error_log, $config): void {
-    $error = error_get_last();
-
-    if ($error === null || !($error['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR))) {
-        return;
-    }
-
-    if ($config->get('error_log')) {
-        $error_log->error("PHP Fatal: {$error['message']} in {$error['file']} on line {$error['line']}");
-    }
-
-    // Once output/headers have started (e.g. a fatal mid-stream) we cannot safely
-    // change the status or body — let PHP finish the response as-is.
-    if (headers_sent()) {
-        return;
-    }
-
-    // Discard any partially-rendered output so only the clean error response shows.
-    while (ob_get_level() > 0) {
-        if (@ob_end_clean() === false) {
-            break;
-        }
-    }
-
-    http_response_code(500);
-    header('Content-Type: text/html; charset=utf-8');
-
-    if ($config->get('error_display')) {
-        echo '<b>Fatal Error</b>: ' . htmlspecialchars($error['message'], ENT_QUOTES, 'UTF-8')
-            . ' in <b>' . htmlspecialchars($error['file'], ENT_QUOTES, 'UTF-8') . '</b> on line ' . (int)$error['line'];
-    } else {
-        echo 'An unexpected error occurred.';
-    }
-});
+// Global error/exception/shutdown handlers — the shared package component,
+// componentized verbatim from the block that previously lived inline here.
+ErrorHandler::install($config, $error_log);
 
 // === Debug Log ===
 $debug_log = new Log(DIR_LOGS . $config->get('debug_file'), $config);

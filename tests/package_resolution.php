@@ -85,6 +85,7 @@ $classes = [
     'System\\Library\\Request' => ['basename' => 'request.php', 'formerLocalPath' => DIR_SYSTEM . 'library/request.php'],
     'System\\Library\\Response' => ['basename' => 'response.php', 'formerLocalPath' => DIR_SYSTEM . 'library/response.php'],
     'System\\Library\\Document' => ['basename' => 'document.php', 'formerLocalPath' => DIR_SYSTEM . 'library/document.php'],
+    'System\\Library\\ErrorHandler' => ['basename' => 'error_handler.php', 'formerLocalPath' => DIR_SYSTEM . 'library/error_handler.php'],
     'System\\Library\\Language' => ['basename' => 'language.php', 'formerLocalPath' => DIR_SYSTEM . 'library/language.php'],
     'System\\Library\\Log' => ['basename' => 'log.php', 'formerLocalPath' => DIR_SYSTEM . 'library/log.php'],
     'System\\Library\\Session' => ['basename' => 'session.php', 'formerLocalPath' => DIR_SYSTEM . 'library/session.php'],

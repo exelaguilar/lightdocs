@@ -310,6 +310,58 @@ Rollback boundary: revert the single Lightdocs integration commit, or pin
 continues unchanged, and the package version is drop-in call-compatible if
 adoption ever proceeds.
 
+## Phase C completion record (2026-07-20) — Config path-neutrality + ErrorHandler, TinyMVC v0.4.0
+
+Third growth batch, released as two package commits under one tag
+(`7f3cb60` Config, `eff2f65` ErrorHandler, annotated tag `v0.4.0`).
+
+**C1 — Config base directory.** `System\Engine\Config` now accepts an
+optional constructor argument naming the directory its files load from
+(normalized with a trailing slash). Omitting it preserves the legacy
+`DIR_SYSTEM . 'config/'` resolution byte-for-byte; with neither available,
+`load()` throws a catchable `RuntimeException` instead of the previous fatal
+undefined-constant `Error`. This is the package's first behavioral change to
+a released file, covered by four new explicit-directory tests against a
+dedicated `tests/Fixture/config_alt/` fixture. Lightdocs adopts it
+implicitly: every `new Config()` call site is unchanged and keeps the legacy
+resolution — no application edit was needed or made. It removes the
+structural blocker recorded in the Kernel review (vendor `Config::load()`
+hardcoding `DIR_SYSTEM`) and is the prerequisite for the Phase E Kernel
+promotion decision.
+
+**C2 — ErrorHandler component.** `System\Library\ErrorHandler::install(Config, Log)`
+componentizes the global error/exception/shutdown handler block from
+`framework.php` — the hardened Lightdocs version of the near-identical block
+both applications carried inline (Nevernote's copy had already drifted: no
+headers-sent/500 handling in its exception handler, unescaped `nl2br`
+display, and a PHP 8.4-deprecated `E_STRICT` map entry). Before replacement,
+a normalization comparison proved the component's 91 code lines identical to
+the inline block, making the Lightdocs edit a pure move:
+`framework.php` now calls `ErrorHandler::install($config, $error_log)` where
+the ~108-line block used to be. Package-side, six subprocess scenarios
+characterize handled warnings (display on/off), `error_reporting` masking,
+`E_USER_ERROR` conversion through the exception handler (which exits 0 with
+an installed handler — the same characterized behavior the lifecycle suite
+asserts), uncaught-exception display, and both shutdown branches (clean-500
+emission under `display_errors=0`, and the log-then-bail path when PHP
+already displayed the fatal). Package suite: 80 tests, CI green.
+
+Lightdocs consumption: constraint `^0.3` → `^0.4`, targeted update
+(`v0.3.0 => v0.4.0`), `tests/package_resolution.php` extended to 23 classes
+(ErrorHandler never existed locally; its former-local-path check passes
+trivially). Validation: package resolution 23/23, boot, kernel 18/18,
+lifecycle 36/36 — including all five global-handler scenarios now running
+against the package component through the real `framework.php`, with their
+log-content assertions — CSS build twice with unchanged tracked hashes
+(141004 bytes), strict Composer validation, all exit 0; `tests/smoke.php`
+retains its pre-existing environmental extension-state failure unchanged.
+
+Rollback boundary: revert the single Lightdocs integration commit (restores
+the inline handler block and the `^0.3` constraint + lock), or pin `v0.3.0`
+at release level. Nevernote untouched: its inline block continues unchanged;
+adopting the component (and gaining the hardened semantics) remains an
+optional, explicitly separate decision.
+
 ## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free

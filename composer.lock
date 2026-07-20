@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "93a0e3b613a15e470d4a1c42191905f2",
+    "content-hash": "fb2d2c8e5dd4667cc5184b16f3a47173",
     "packages": [
         {
             "name": "dflydev/dot-access-data",
@@ -83,16 +83,16 @@
         },
         {
             "name": "exelaguilar/tiny-mvc-framework-private",
-            "version": "v0.3.0",
+            "version": "v0.4.0",
             "source": {
                 "type": "git",
                 "url": "git@github.com:exelaguilar/tiny-mvc-framework.git",
-                "reference": "2890835b105850c6281c734080df2b380e708e73"
+                "reference": "eff2f6514ad0dce98f34c393f83ff53c2f8d2686"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/2890835b105850c6281c734080df2b380e708e73",
-                "reference": "2890835b105850c6281c734080df2b380e708e73",
+                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/eff2f6514ad0dce98f34c393f83ff53c2f8d2686",
+                "reference": "eff2f6514ad0dce98f34c393f83ff53c2f8d2686",
                 "shasum": ""
             },
             "require": {
@@ -128,10 +128,10 @@
             ],
             "description": "Private OpenCart-style registry-MVC framework extracted from Lightdocs and intended for Lightdocs, Nevernote, and future applications.",
             "support": {
-                "source": "https://github.com/exelaguilar/tiny-mvc-framework/tree/v0.3.0",
+                "source": "https://github.com/exelaguilar/tiny-mvc-framework/tree/v0.4.0",
                 "issues": "https://github.com/exelaguilar/tiny-mvc-framework/issues"
             },
-            "time": "2026-07-20T16:16:34+00:00"
+            "time": "2026-07-20T16:41:23+00:00"
         },
         {
             "name": "graham-campbell/result-type",
