@@ -55,8 +55,14 @@ $suite->test('missing context configuration is fatal', static function () use ($
     TestSuite::assertContains('Config file not found', $result->stdout . $result->stderr, 'Missing-context failure changed.');
 });
 
-$suite->test('invalid namespace path is lazy and nonfatal', static function () use ($runJson): void {
-    $data = $runJson('base_boot_scenario.php', ['invalid-namespace']);
+$suite->test('invalid namespace path is lazy and nonfatal', static function () use ($root, $fixtures, $decode): void {
+    $temporary = new TemporaryDirectory();
+    $system = $temporary->path . '/upload/system';
+    mkdir($system . '/config', 0700, true);
+    foreach (glob($root . '/upload/system/config/*.php') ?: [] as $file) copy($file, $system . '/config/' . basename($file));
+    file_put_contents($system . '/config/config.local.php', "<?php return ['namespaces' => ['Admin'=>'admin/','Frontend'=>'frontend/','Extension'=>'extension/','BrokenFixture'=>'missing/']];");
+    $result = Subprocess::run($fixtures . '/base_boot_scenario.php', ['frontend'], ['LIGHTDOCS_TEST_SYSTEM_DIR' => $system]);
+    $data = $decode($result);
     TestSuite::assertTrue(in_array('BrokenFixture', $data['namespaces'], true), 'Invalid namespace was not registered.');
     TestSuite::assertSame(false, $data['broken_namespace_class'], 'Missing class unexpectedly resolved.');
 });

@@ -22,20 +22,37 @@ require $projectRoot . '/upload/system/engine/kernel.php';
 
 $context = match ($mode) {
     'admin' => 'admin',
-    'missing' => 'does_not_exist',
+    'missing', 'failed-state' => 'does_not_exist',
     'invalid-context' => '../frontend',
     default => 'frontend',
 };
-if ($mode !== 'undefined') {
+if (!in_array($mode, ['undefined', 'config-context-conflict', 'failed-state'], true)) {
     define('APP_CONTEXT', $context);
 }
 
+$kernelSystemRoot = $mode === 'mismatch-system-root' ? $applicationRoot : $systemRoot;
+$kernelApplicationRoot = $mode === 'mismatch-application-root' ? $projectRoot . DIRECTORY_SEPARATOR : $applicationRoot;
 $kernel = new \System\Engine\Kernel(
     context: $context,
-    systemRoot: $systemRoot,
-    applicationRoot: $applicationRoot,
+    systemRoot: $kernelSystemRoot,
+    applicationRoot: $kernelApplicationRoot,
     loadLocalConfig: $mode !== 'no-local',
 );
+
+if ($mode === 'failed-state') {
+    try {
+        $kernel->boot();
+        $failure = 'succeeded';
+    } catch (Throwable $throwable) {
+        $failure = get_class($throwable) . ': ' . $throwable->getMessage();
+    }
+    echo json_encode([
+        'booted' => $kernel->isBooted(),
+        'failure' => $failure,
+    ], JSON_THROW_ON_ERROR) . PHP_EOL;
+    exit(0);
+}
+
 $registry = $kernel->boot();
 
 $autoloader = $registry->get('autoloader');

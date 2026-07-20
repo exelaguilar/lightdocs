@@ -112,6 +112,35 @@ $suite->test('invalid required paths fail before initialization', static functio
     TestSuite::assertContains('Kernel system root does not exist', $result->stdout . $result->stderr, 'Invalid path failure changed.');
 });
 
+$suite->test('explicit system root must match DIR_SYSTEM', static function () use ($fixture): void {
+    $result = Subprocess::run($fixture, ['mismatch-system-root']);
+    TestSuite::assertTrue($result->exitCode !== 0, 'Mismatched system root unexpectedly booted.');
+    TestSuite::assertContains('Kernel system root must match DIR_SYSTEM', $result->stdout . $result->stderr, 'System-root mismatch failure changed.');
+});
+
+$suite->test('explicit application root must match DIR_ROOT', static function () use ($fixture): void {
+    $result = Subprocess::run($fixture, ['mismatch-application-root']);
+    TestSuite::assertTrue($result->exitCode !== 0, 'Mismatched application root unexpectedly booted.');
+    TestSuite::assertContains('Kernel application root must match DIR_ROOT', $result->stdout . $result->stderr, 'Application-root mismatch failure changed.');
+});
+
+$suite->test('failed boot remains observable and is not marked booted', static function () use ($run): void {
+    $data = $run('failed-state');
+    TestSuite::assertSame(false, $data['booted'], 'Failed Kernel was marked booted.');
+    TestSuite::assertContains('RuntimeException: Config file not found', $data['failure'], 'Failed boot reason changed.');
+});
+
+$suite->test('config-declared context cannot change an undefined process context', static function () use ($root, $fixture): void {
+    $temporary = new TemporaryDirectory();
+    $system = $temporary->path . '/upload/system';
+    mkdir($system . '/config', 0700, true);
+    foreach (glob($root . '/upload/system/config/*.php') ?: [] as $file) copy($file, $system . '/config/' . basename($file));
+    file_put_contents($system . '/config/config.local.php', "<?php return ['app_context' => 'admin'];");
+    $result = Subprocess::run($fixture, ['config-context-conflict'], ['LIGHTDOCS_TEST_SYSTEM_DIR' => $system]);
+    TestSuite::assertTrue($result->exitCode !== 0, 'Config-declared context conflict unexpectedly booted.');
+    TestSuite::assertContains('Kernel context "frontend" conflicts with process context "admin"', $result->stdout . $result->stderr, 'Config context conflict changed.');
+});
+
 $suite->test('Kernel source has no prohibited application dependencies', static function () use ($root): void {
     $source = (string) file_get_contents($root . '/upload/system/engine/kernel.php');
     foreach (['System\\Library\\DB', 'Schema', 'ExtensionManager', 'Front', 'Response', 'Action('] as $forbidden) {

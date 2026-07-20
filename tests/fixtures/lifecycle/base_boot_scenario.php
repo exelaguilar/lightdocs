@@ -17,36 +17,24 @@ define('DIR_SYSTEM', $systemRoot);
 
 require $projectRoot . '/upload/vendor/autoload.php';
 require $projectRoot . '/upload/system/engine/autoloader.php';
+require $projectRoot . '/upload/system/engine/kernel.php';
 
 if ($mode !== 'undefined') {
     define('APP_CONTEXT', $mode === 'missing' ? 'does_not_exist' : ($mode === 'admin' ? 'admin' : 'frontend'));
 }
 $definedBefore = defined('APP_CONTEXT');
 
-$autoloader = new \System\Engine\Autoloader();
-$autoloader->register('System', $projectRoot . '/upload/system/');
-
-$registry = new \System\Engine\Registry();
-$registry->set('autoloader', $autoloader);
-
-$config = new \System\Engine\Config();
-$config->load('default.php');
-$config->load((defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend') . '.php');
-if (is_file(DIR_SYSTEM . 'config/config.local.php')) {
-    $config->load('config.local.php');
-}
-$registry->set('config', $config);
-
-defined('APP_CONTEXT') || define('APP_CONTEXT', $config->get('app_context', 'frontend'));
-$registry->set('app', APP_CONTEXT);
-
-$namespaces = (array) $config->get('namespaces', []);
-if ($mode === 'invalid-namespace') {
-    $namespaces['BrokenFixture'] = 'missing-namespace/';
-}
-foreach ($namespaces as $namespace => $directory) {
-    $autoloader->register((string) $namespace, DIR_ROOT . $directory);
-}
+$kernel = new \System\Engine\Kernel(
+    context: defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend',
+    systemRoot: DIR_SYSTEM,
+    applicationRoot: DIR_ROOT,
+);
+$registry = $kernel->boot();
+$config = $registry->get('config');
+$autoloader = $registry->get('autoloader');
+$pathProperty = new ReflectionProperty($autoloader, 'path');
+$registeredNamespaces = array_keys((array) $pathProperty->getValue($autoloader));
+$namespaces = array_keys((array) $config->get('namespaces', []));
 
 echo json_encode([
     'defined_before' => $definedBefore,
@@ -55,7 +43,8 @@ echo json_encode([
     'config_context' => $config->get('app_context'),
     'action_default' => $config->get('action_default'),
     'local_marker' => $config->get('lifecycle_local_marker'),
-    'namespaces' => array_keys($namespaces),
+    'namespaces' => $namespaces,
+    'registered_namespaces' => $registeredNamespaces,
     'system_registry' => class_exists(\System\Engine\Registry::class),
     'frontend_router' => class_exists(\Frontend\Controller\Startup\Router::class),
     'admin_router' => class_exists(\Admin\Controller\Startup\Router::class),
