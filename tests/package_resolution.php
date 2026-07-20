@@ -3,11 +3,12 @@
 declare(strict_types=1);
 
 /**
- * Package-source resolution test for the TinyMVC Phase 1 extraction.
+ * Package-source resolution test for the TinyMVC extraction (Phase 1 core,
+ * plus the Phase A Url/RoutePattern batch consumed from v0.2.0).
  *
  * Invocation: php tests/package_resolution.php
  *
- * Proves that the 18 classes physically moved into the `tiny-mvc-framework`
+ * Proves that every class physically moved into the `tiny-mvc-framework`
  * private package resolve from the package's owner-approved
  * system/engine|helper|library layout (via Composer's classmap autoloader,
  * e.g. System\Engine\Action -> <composer-install>/system/engine/action.php,
@@ -19,7 +20,7 @@ declare(strict_types=1);
  *
  * This script only requires system/startup.php (which registers Composer's
  * autoloader), not the full system/framework.php bootstrap — resolving these
- * 18 classes is a pure autoloading question and does not need Registry,
+ * classes is a pure autoloading question and does not need Registry,
  * Config, a database, or anything else the fuller bootstrap constructs.
  *
  * For every class this checks:
@@ -37,12 +38,12 @@ declare(strict_types=1);
  *      or system/library path inside the installed package
  *  11. the installed package is not the conventional sibling checkout
  *
- * Before the 18 local files are deleted, check 6 (and therefore 5) is
+ * Before the local files are deleted, check 6 (and therefore 5) is
  * expected to report "local file still present" for every class — that is
  * the known, correct pre-deletion state, not a bug in this script. Checks
  * 1-4/7/8/9 (does Composer's classmap actually resolve each class to the
  * package?) are what gate the deletion step. Run this script again after
- * deletion: every one of the 9 checks must pass for Phase 1 to be complete.
+ * deletion: every one of the 9 checks must pass for the batch to be complete.
  *
  * Exit 0 only if every check for every class passes. Any failure prints to
  * STDERR and exits 1.
@@ -79,12 +80,14 @@ $classes = [
     'System\\Engine\\Registry' => ['basename' => 'registry.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/registry.php'],
     'System\\Helper\\ClientIp' => ['basename' => 'client_ip.php', 'formerLocalPath' => DIR_SYSTEM . 'helper/client_ip.php'],
     'System\\Helper\\RouteMatcher' => ['basename' => 'route_matcher.php', 'formerLocalPath' => DIR_SYSTEM . 'helper/route_matcher.php'],
+    'System\\Helper\\RoutePattern' => ['basename' => 'route_pattern.php', 'formerLocalPath' => DIR_SYSTEM . 'helper/route_pattern.php'],
     'System\\Library\\Request' => ['basename' => 'request.php', 'formerLocalPath' => DIR_SYSTEM . 'library/request.php'],
     'System\\Library\\Document' => ['basename' => 'document.php', 'formerLocalPath' => DIR_SYSTEM . 'library/document.php'],
     'System\\Library\\Language' => ['basename' => 'language.php', 'formerLocalPath' => DIR_SYSTEM . 'library/language.php'],
     'System\\Library\\Log' => ['basename' => 'log.php', 'formerLocalPath' => DIR_SYSTEM . 'library/log.php'],
     'System\\Library\\Session' => ['basename' => 'session.php', 'formerLocalPath' => DIR_SYSTEM . 'library/session.php'],
     'System\\Library\\Template' => ['basename' => 'template.php', 'formerLocalPath' => DIR_SYSTEM . 'library/template.php'],
+    'System\\Library\\Url' => ['basename' => 'url.php', 'formerLocalPath' => DIR_SYSTEM . 'library/url.php'],
 ];
 
 $failures = [];
@@ -184,4 +187,4 @@ if ($failures !== []) {
     exit(1);
 }
 
-echo PHP_EOL . 'All 18 classes resolve from the installed tiny-mvc-framework/system/{engine,helper,library} paths with lowercase filenames preserved, no sibling or src/ resolution, and no local duplicates.' . PHP_EOL;
+echo PHP_EOL . 'All ' . count($classes) . ' classes resolve from the installed tiny-mvc-framework/system/{engine,helper,library} paths with lowercase filenames preserved, no sibling or src/ resolution, and no local duplicates.' . PHP_EOL;

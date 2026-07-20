@@ -235,6 +235,39 @@ redesign, Kernel/`Kernel::boot()`, namespace migration or aliases, Response reco
 optional-helper and CallbackAction extraction, extension/provider genericization, database,
 cache, and migration abstractions, and Nevernote adoption were not begun.
 
+## Phase A completion record (2026-07-20) — Url + RoutePattern, TinyMVC v0.2.0
+
+First growth batch after the shared-component audit. `System\Library\Url` and
+`System\Helper\RoutePattern` were copied byte-identically (SHA-256 verified:
+`6ED88A98EA3D…` / `807B631A1C07…`) into the package as `system/library/url.php`
+and `system/helper/route_pattern.php`, with 22 new package tests
+(`tests/Library/UrlTest.php`, `tests/Helper/RoutePatternTest.php`) — including
+the one-argument-constructor / empty-routes assertions that pin the exact
+legacy `index.php?route=` output as the Nevernote-compatibility contract.
+Package suite: 50 tests, `composer check` green. Released as annotated tag
+`v0.2.0` (package commit `63f4cda`), pushed to the private remote with `main`.
+A `CHANGELOG.md` now exists in the package.
+
+Lightdocs consumption followed the Phase 1 copy → gate → delete sequence:
+constraint bumped `^0.1` → `^0.2`, targeted
+`composer update exelaguilar/tiny-mvc-framework-private --with-dependencies`
+(Composer: `0 installs, 1 update, 0 removals`, `v0.1.0 => v0.2.0`),
+`tests/package_resolution.php` extended to 20 classes and run pre-deletion
+(both classes resolved from the package; only the expected local-presence
+checks failed), then the two local files deleted and autoload regenerated.
+Post-deletion validation: package resolution 20/20, boot, kernel 18/18,
+lifecycle 36/36, CSS build twice with unchanged tracked hashes (141004 bytes),
+strict Composer validation — all exit 0. `tests/smoke.php` still exits 1 with
+the same two pre-existing Local Git extension-state diagnostics (disabled
+extensions in the local dev DB — environmental, tracked separately, identical
+before and after).
+
+Rollback boundary: revert the single Lightdocs integration commit (restores
+the two local files and the `^0.1` constraint + lock), or at release level pin
+`v0.1.0` again with a targeted update. Nevernote untouched; its local subset
+`Url` continues unchanged, and future adoption remains optional and
+call-compatible.
+
 ## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free
@@ -620,8 +653,14 @@ system/engine/extension_manager.php   — genuine Lightdocs type coupling + hard
 system/engine/startup.php             — coupled to ExtensionManager
 system/engine/analytics_provider.php  — dead code (zero implementations/call sites)
 system/helper/request_scheme.php      — generic, Lightdocs-only adoption
-system/helper/route_pattern.php       — generic, Lightdocs-only adoption
 system/library/response.php           — not identical to Nevernote's copy
+```
+
+**[UPDATED 2026-07-20]** `system/helper/route_pattern.php` and
+`system/library/url.php` moved to the package in Phase A (v0.2.0) and are no
+longer local. Remaining list continues below unchanged:
+
+```
 ```
 
 Plus, unaffected by this extraction and staying in Lightdocs indefinitely: `system/model/*`
