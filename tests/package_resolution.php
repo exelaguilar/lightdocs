@@ -69,6 +69,7 @@ $localLibrary = realpath(DIR_SYSTEM . 'library') ?: (DIR_SYSTEM . 'library');
 /** @var array<string, array{basename: string, formerLocalPath: string}> $classes */
 $classes = [
     'System\\Engine\\Action' => ['basename' => 'action.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/action.php'],
+    'System\\Engine\\Autoloader' => ['basename' => 'autoloader.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/autoloader.php'],
     'System\\Engine\\CallbackAction' => ['basename' => 'callback_action.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/callback_action.php'],
     'System\\Engine\\Config' => ['basename' => 'config.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/config.php'],
     'System\\Engine\\Controller' => ['basename' => 'controller.php', 'formerLocalPath' => DIR_SYSTEM . 'engine/controller.php'],

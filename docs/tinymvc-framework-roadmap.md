@@ -362,6 +362,52 @@ at release level. Nevernote untouched: its inline block continues unchanged;
 adopting the component (and gaining the hardened semantics) remains an
 optional, explicitly separate decision.
 
+## Phase D completion record (2026-07-20) — Autoloader extraction, TinyMVC v0.5.0
+
+The long-deferred Phase 2 gate 1. `System\Engine\Autoloader` was copied
+byte-identically into the package (SHA-256 `B1159CB7FD6E…`, re-verified
+identical in Lightdocs AND Nevernote immediately before the move) and
+released as `v0.5.0` (package commit `0636325`), with 7 new package tests and
+committed fixture trees characterizing the underscore filename generation,
+nested namespaces, PSR-4 mode, false-not-throw fall-through for unknown
+classes (the property Composer-first ordering depends on), directory
+re-registration, and the process-lifetime SPL callback per construction.
+Package suite: 87 tests.
+
+The deliberately deferred bootstrap edit landed with the deletion as one
+coupled change: `upload/system/startup.php` no longer requires
+`engine/autoloader.php` (the class resolves through Composer's classmap like
+every other package class), the local file is deleted, and the two test
+fixtures that required it directly (`tests/fixtures/kernel/boot_scenario.php`,
+`tests/fixtures/lifecycle/base_boot_scenario.php`) dropped their require
+lines. This phase's pre-deletion gate necessarily differed from previous
+batches: while the direct require existed, the class bound to the local file
+(documented by a pre-edit resolution run showing exactly the four expected
+failures), so edit + deletion were validated together rather than
+sequentially.
+
+Consumption: constraint `^0.4` → `^0.5`, targeted update
+(`v0.4.0 => v0.5.0`), `tests/package_resolution.php` extended to 24 classes.
+Validation: package resolution 24/24, boot, kernel 18/18, lifecycle 36/36 —
+including the duplicate-framework-boot scenario whose SPL callback count
+(1 → 2 → 3) pins the autoloader's global-registration behavior unchanged,
+and the smoke prefix constructing the package-resolved Autoloader through
+the real `startup.php` — CSS build twice with unchanged tracked hashes
+(141004 bytes), strict Composer validation, all exit 0; `tests/smoke.php`
+retains its pre-existing environmental extension-state failure unchanged.
+
+With Phase D complete, the only generic framework code left in Lightdocs'
+local `system/` tree is `engine/kernel.php` (application-local by decision,
+pending the Phase E promotion evaluation) and `helper/request_scheme.php`
+(deliberately local). Nevernote untouched: its local Autoloader and
+`vendor.php` PSR-4 usage continue unchanged; adoption remains deferred and
+its config-before-Composer boot order remains a documented compatibility
+concern for any future Kernel/Autoloader adoption there.
+
+Rollback boundary: revert the single Lightdocs integration commit (restores
+the local file, the startup require line, the fixture requires, and the
+`^0.4` constraint + lock), or pin `v0.4.0` at release level.
+
 ## Phase 1.6 distribution record (2026-07-20; historical pre-integration state)
 
 TinyMVC is privately hosted at `github.com/exelaguilar/tiny-mvc-framework` over credential-free

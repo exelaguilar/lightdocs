@@ -40,11 +40,10 @@ $_SERVER['HTTPS'] = (
     (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_SSL']) === 'on')
 );
 
-// Composer vendor autoload + third-party dependencies.
+// Composer vendor autoload + third-party dependencies. The framework
+// Autoloader class now resolves through Composer's classmap like every other
+// package class, so no direct engine/autoloader.php require remains.
 require_once(DIR_SYSTEM . 'vendor.php');
-
-// Engine autoloader class (instantiated and configured in framework.php).
-require_once(DIR_SYSTEM . 'engine/autoloader.php');
 
 // Application-local coordinator for the shared DB-free boot prefix.
 require_once(DIR_SYSTEM . 'engine/kernel.php');

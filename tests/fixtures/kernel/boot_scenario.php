@@ -17,7 +17,6 @@ define('DIR_ROOT', $applicationRoot);
 define('DIR_SYSTEM', $systemRoot);
 
 require $projectRoot . '/upload/vendor/autoload.php';
-require $projectRoot . '/upload/system/engine/autoloader.php';
 require $projectRoot . '/upload/system/engine/kernel.php';
 
 $context = match ($mode) {
