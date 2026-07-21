@@ -47,13 +47,15 @@ mkdir -p "$stage/content" "$stage/storage/uploads" "$stage/storage/cache" "$stag
 cp -a "$root/resources/starter-site/content/." "$stage/content/"
 cp -a "$root/resources/starter-site/public/uploads/." "$stage/storage/uploads/"
 printf '%s\n' "$version" > "$stage/VERSION"
-chmod 0755 "$stage/bin/docs" "$stage/deploy/docker/entrypoint.sh" "$stage/deploy/docker/install.sh" "$stage/deploy/native/install.sh" "$stage/deploy/native/lightdocs" "$stage/deploy/proxmox/install-lxc.sh" "$stage/deploy/release/build.sh"
+chmod 0755 "$stage/bin/docs" "$stage/bin/cron" "$stage/deploy/docker/entrypoint.sh" "$stage/deploy/docker/install.sh" "$stage/deploy/native/install.sh" "$stage/deploy/native/lightdocs" "$stage/deploy/proxmox/install-lxc.sh" "$stage/deploy/release/build.sh"
 
 composer install --working-dir="$stage" --no-dev --no-interaction --no-progress --prefer-dist --classmap-authoritative
+php "$stage/bin/build-css.php"
 php "$stage/bin/docs" doctor
 php "$stage/bin/docs" validate
 rm -f "$stage/storage/lightdocs.sqlite" "$stage/storage/lightdocs.sqlite-shm" "$stage/storage/lightdocs.sqlite-wal"
 rm -rf "$stage/storage/cache/"*
+rm -rf "$stage/storage/assets"
 
 archive="$dist/lightdocs-release.tar.gz"
 versioned="$dist/lightdocs-v$version.tar.gz"

@@ -33,8 +33,15 @@ class Developer extends Controller
                     $message = 'Content index rebuilt: ' . (int)($stats['documents'] ?? 0) . ' documents.';
                     break;
                 case 'rebuild_css':
-                    $bytes = $this->css->build();
-                    $message = 'Shared stylesheet rebuilt: ' . number_format($bytes) . ' bytes.';
+                    if ((bool)$this->config->get('asset_read_only', false)) {
+                        $this->notifications->add('warning', 'Runtime stylesheet rebuilds are disabled for this installation.');
+                        $this->response->redirect($this->url->link('tools/developer'));
+                        return null;
+                    }
+                    $job_id = $this->job_queue->enqueue('assets.rebuild', [
+                        'requested_by' => $this->user->getId(),
+                    ], 50, 3);
+                    $message = 'Stylesheet rebuild queued as job #' . $job_id . '.';
                     break;
                 case 'reset_session':
                     $this->user->logout();

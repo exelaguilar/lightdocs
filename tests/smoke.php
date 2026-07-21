@@ -65,7 +65,7 @@ $buildExtensions = static function (array $config, DB $database, ContentReposito
         new ExtensionDiscovery($config['extension_dir']),
         $state,
         capabilities: $capabilities,
-        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.11.0'],
+        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.13.0'],
         autoloader: $autoloader,
         packages: new ExtensionPackageInstaller($config['extension_dir']),
     );

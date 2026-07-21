@@ -8,6 +8,7 @@ dist
 site
 var
 upload/vendor
+upload/assets/generated
 content
 storage
 tests

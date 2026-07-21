@@ -99,7 +99,8 @@ main() {
     rm -f /etc/nginx/sites-enabled/default
     /usr/local/sbin/lightdocs update "$requested_version"
 
-    systemctl enable php8.4-fpm nginx
+    systemctl enable php8.4-fpm nginx lightdocs-cron.timer
+    systemctl start lightdocs-cron.timer
     /usr/sbin/nginx -t
     systemctl restart php8.4-fpm nginx
     /usr/local/sbin/lightdocs doctor

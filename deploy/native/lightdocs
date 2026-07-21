@@ -90,6 +90,11 @@ install_managed_configs() {
         install -m 0644 "$release/deploy/native/nginx.conf" /etc/nginx/sites-available/lightdocs
         ln -sfn /etc/nginx/sites-available/lightdocs /etc/nginx/sites-enabled/lightdocs
     fi
+    if [[ -d /etc/systemd/system && -f "$release/deploy/native/lightdocs-cron.service" ]]; then
+        install -m 0644 "$release/deploy/native/lightdocs-cron.service" /etc/systemd/system/lightdocs-cron.service
+        install -m 0644 "$release/deploy/native/lightdocs-cron.timer" /etc/systemd/system/lightdocs-cron.timer
+        systemctl daemon-reload
+    fi
 }
 
 reload_services() {
@@ -168,6 +173,8 @@ update_release() {
         mkdir -p "$target"
         cp -a "$extract/." "$target/"
     fi
+    mkdir -p "$target/upload/assets/generated"
+    chown -R www-data:www-data "$target/upload/assets/generated"
     seed_site "$target"
     run_docs "$target" doctor
     run_docs "$target" validate
@@ -282,7 +289,9 @@ restore_backup() {
 uninstall_lightdocs() {
     need_root
     local purge="${1:-}"
-    rm -f /etc/nginx/sites-enabled/lightdocs /etc/nginx/sites-available/lightdocs /etc/php/8.4/fpm/pool.d/lightdocs.conf
+    systemctl disable --now lightdocs-cron.timer >/dev/null 2>&1 || true
+    rm -f /etc/nginx/sites-enabled/lightdocs /etc/nginx/sites-available/lightdocs /etc/php/8.4/fpm/pool.d/lightdocs.conf /etc/systemd/system/lightdocs-cron.service /etc/systemd/system/lightdocs-cron.timer
+    systemctl daemon-reload
     reload_services
     [[ "$APP_ROOT" == "/opt/lightdocs" ]] || die "Refusing to remove a nonstandard application root automatically."
     rm -rf "$APP_ROOT"

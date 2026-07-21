@@ -135,9 +135,12 @@ application boot coverage.
 `bin/build-css.php` fixes frontend context, runs `startup.php`, and uses the
 Kernel to load `default.php` then `frontend.php` and register the configured
 namespace map. It explicitly disables optional `config.local.php` and builds
-admin and frontend styles without constructing the database. Two consecutive
-builds preserve the tracked generated-file hashes when inputs are unchanged and
-both exit 0.
+admin and frontend styles without constructing the database. Both bundles are
+compiled into private staging and published together through TinyMVC's
+`AssetPublisher`; the content-addressed version directory is made live by one
+atomic manifest swap. Rebuilding identical inputs reuses the same version.
+The Studio enqueues `assets.rebuild` rather than compiling in the request;
+`bin/cron` claims and executes that job.
 
 ## Constraints for a future boot-only Kernel
 

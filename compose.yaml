@@ -9,7 +9,21 @@ services:
       LIGHTDOCS_BOOTSTRAP_ADMIN_PASSWORD: ${LIGHTDOCS_ADMIN_PASSWORD:-}
     volumes:
       - lightdocs-data:/var/lib/lightdocs
+      - lightdocs-assets:/var/www/html/upload/assets/generated
+    restart: unless-stopped
+
+  lightdocs-cron:
+    image: ${LIGHTDOCS_IMAGE:-ghcr.io/exelaguilar/lightdocs:latest}
+    environment:
+      LIGHTDOCS_BOOTSTRAP_NAME: ${LIGHTDOCS_NAME:-Lightdocs}
+      LIGHTDOCS_BOOTSTRAP_BASE_URL: ${LIGHTDOCS_BASE_URL:-}
+      LIGHTDOCS_BOOTSTRAP_ADMIN_PASSWORD: ${LIGHTDOCS_ADMIN_PASSWORD:-}
+    volumes:
+      - lightdocs-data:/var/lib/lightdocs
+      - lightdocs-assets:/var/www/html/upload/assets/generated
+    command: ["sh", "-c", "while :; do su -s /bin/sh www-data -c 'php /var/www/html/bin/cron'; sleep 60; done"]
     restart: unless-stopped
 
 volumes:
   lightdocs-data:
+  lightdocs-assets:

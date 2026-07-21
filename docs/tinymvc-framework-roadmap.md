@@ -1341,3 +1341,20 @@ requires TinyMVC `^0.12`, registers both the durable queue and notification
 service, owns the SQLite queue tables, and exposes `bin/cron` / `jobs:run` as a
 bounded cron-friendly entrypoint. Nevernote remains unchanged; its existing
 workflow-engine work is a separate application subsystem.
+
+## v0.13 atomic asset publication completion record (2026-07-20)
+
+TinyMVC commit `b0b8577` and tag `v0.13.0` add the compiler-agnostic
+`AssetPublisher`: exclusive locking, private staging, content-addressed files,
+pre-commit validation, a single manifest commit point, retained last-known-good
+versions, protected build logs, and explicit read-only enforcement.
+
+Lightdocs keeps TailwindPHP, template/source discovery, bundle validation, and
+the `assets.rebuild` handler application-owned. CLI and release builds publish
+synchronously through the same path; the Studio now enqueues the rebuild and
+the cron worker performs it. Web, preview, and static-export consumers resolve
+the manifest with the existing committed CSS files retained as a migration
+fallback. Native installs use a systemd timer, Docker Compose runs a companion
+cron service with a shared generated-assets volume, and shared hosting can run
+`php bin/cron` once per minute. TailwindPHP is pinned to the verified fork
+commit instead of floating on `dev-main`.

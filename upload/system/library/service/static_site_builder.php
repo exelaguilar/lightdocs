@@ -89,6 +89,7 @@ final class StaticSiteBuilder
 		$build_config = $this->config;
 		$build_config['editor_enabled'] = false;
 		$build_config['private_access'] = $include_private;
+		$build_config['published_assets']['frontend.css'] = '/assets/front.min.css';
 		$search_documents = [];
 		foreach ($this->repository->all(false, $include_private) as $source_page) {
 			$page = $this->profilePage($source_page, $profile);
@@ -191,8 +192,9 @@ final class StaticSiteBuilder
 			mkdir($asset_destination, 0775, true);
 		}
 		foreach (['front.min.css', 'app.js'] as $asset) {
+			$published_stylesheet = (string)($this->config['published_assets']['frontend.css'] ?? '/frontend/view/stylesheet/front.min.css');
 			$asset_source = $asset === 'front.min.css'
-				? $project_root . '/frontend/view/stylesheet/' . $asset
+				? $project_root . '/' . ltrim($published_stylesheet, '/')
 				: $project_root . '/frontend/view/javascript/' . $asset;
 			copy($asset_source, $asset_destination . '/' . $asset);
 		}

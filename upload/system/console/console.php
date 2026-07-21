@@ -24,10 +24,12 @@ use System\Engine\Registry;
 use System\Library\DB;
 use System\Library\FileCache;
 use System\Library\Template;
+use System\Library\AssetPublisher;
 use System\Library\Job\JobHandlerInterface;
 use System\Library\JobQueue;
 use System\Library\JobWorker;
 use System\Library\Schedule;
+use System\Library\Service\CssBuilder;
 
 final class Console
 {
@@ -59,6 +61,18 @@ final class Console
 		(new Schema($registry))->migrate();
 		$this->jobQueue = new JobQueue($database);
 		$registry->set('job_queue', $this->jobQueue);
+
+		$assetPublisher = new AssetPublisher(
+			(string)$config->get('asset_public_root'),
+			(string)$config->get('asset_public_base'),
+			(bool)$config->get('asset_read_only', false),
+			2,
+			(string)$config->get('asset_state_root'),
+		);
+		$registry->set('asset_publisher', $assetPublisher);
+		$assetManifest = $assetPublisher->manifest();
+		$config->set('published_assets', $assetManifest['assets'] ?? []);
+		$registry->set('css', new CssBuilder($config->all(), $assetPublisher));
 
 		$this->repository = new ContentRepository($config->get('content_dir'));
 		$registry->set('repository', $this->repository);

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7ceeecd19077398d52151a28149ef7f2",
+    "content-hash": "cdc3a03d2e4e259c150af9b87c6c1aaf",
     "packages": [
         {
             "name": "composer/semver",
@@ -160,16 +160,16 @@
         },
         {
             "name": "exelaguilar/tiny-mvc-framework-private",
-            "version": "v0.12.0",
+            "version": "v0.13.0",
             "source": {
                 "type": "git",
                 "url": "git@github.com:exelaguilar/tiny-mvc-framework.git",
-                "reference": "2cff063400b3e3f0b6d41d04f6e0f41cebaf4ff2"
+                "reference": "b0b85778338e24a7c169f62c7592c49ee75bffdf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/2cff063400b3e3f0b6d41d04f6e0f41cebaf4ff2",
-                "reference": "2cff063400b3e3f0b6d41d04f6e0f41cebaf4ff2",
+                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/b0b85778338e24a7c169f62c7592c49ee75bffdf",
+                "reference": "b0b85778338e24a7c169f62c7592c49ee75bffdf",
                 "shasum": ""
             },
             "require": {
@@ -207,7 +207,7 @@
                 "proprietary"
             ],
             "description": "Private OpenCart-style registry-MVC framework extracted from Lightdocs and intended for Lightdocs, Nevernote, and future applications.",
-            "time": "2026-07-21T00:19:08+00:00"
+            "time": "2026-07-21T00:32:59+00:00"
         },
         {
             "name": "graham-campbell/result-type",

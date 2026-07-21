@@ -1,0 +1,17 @@
+[Unit]
+Description=Run a bounded Lightdocs background-job batch
+After=network.target
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+Environment=LIGHTDOCS_SITE_DIR=/var/lib/lightdocs
+Environment=LIGHTDOCS_STATE_DIR=/var/lib/lightdocs/storage
+Environment=LIGHTDOCS_ENV_FILE=/etc/lightdocs/lightdocs.env
+EnvironmentFile=-/etc/lightdocs/lightdocs.env
+WorkingDirectory=/opt/lightdocs/current
+ExecStart=/usr/bin/php8.4 /opt/lightdocs/current/bin/cron 20
+
+[Install]
+WantedBy=multi-user.target

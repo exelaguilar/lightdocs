@@ -32,6 +32,7 @@ COPY deploy/docker/apache-site.conf /etc/apache2/sites-available/000-default.con
 COPY deploy/docker/entrypoint.sh /usr/local/bin/lightdocs-entrypoint
 
 RUN version="${LIGHTDOCS_VERSION#v}" && printf '%s\n' "$version" > VERSION \
+    && php bin/build-css.php \
     && rm -rf content storage \
     && mkdir -p /var/lib/lightdocs/storage/uploads \
     && chown -R www-data:www-data /var/lib/lightdocs \

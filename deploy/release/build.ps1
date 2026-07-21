@@ -64,6 +64,8 @@ try {
 
     & composer "--working-dir=$stage" install --no-dev --no-interaction --no-progress --prefer-dist --classmap-authoritative
     if ($LASTEXITCODE -ne 0) { throw 'Composer release installation failed.' }
+    & php (Join-Path $stage 'bin\build-css.php')
+    if ($LASTEXITCODE -ne 0) { throw 'Release stylesheet build failed.' }
     & php (Join-Path $stage 'bin\docs') doctor
     if ($LASTEXITCODE -ne 0) { throw 'Release doctor failed.' }
     & php (Join-Path $stage 'bin\docs') validate
@@ -71,6 +73,7 @@ try {
 
     Get-ChildItem -LiteralPath (Join-Path $stage 'storage') -Filter 'lightdocs.sqlite*' -File -ErrorAction SilentlyContinue | Remove-Item -Force
     Get-ChildItem -LiteralPath (Join-Path $stage 'storage\cache') -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+    Remove-Item -LiteralPath (Join-Path $stage 'storage\assets') -Recurse -Force -ErrorAction SilentlyContinue
 
     $archive = Join-Path $dist 'lightdocs-release.tar.gz'
     & tar -C $stage -czf $archive .

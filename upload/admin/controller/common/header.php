@@ -44,9 +44,10 @@ class Header extends Controller
 
         // Shared assets flow through the Document service so the footer can
         // render versioned script tags in one place.
-        $stylesheet = '/admin/view/stylesheet/app.min.css';
+        $stylesheet = (string)($this->config->get('published_assets')['admin.css'] ?? '/admin/view/stylesheet/app.min.css');
         $stylesheet_path = DIR_ROOT . ltrim($stylesheet, '/');
-        $this->document->addStyle(is_file($stylesheet_path) ? $stylesheet . '?v=' . filemtime($stylesheet_path) : $stylesheet);
+        $content_addressed = str_starts_with($stylesheet, '/assets/generated/versions/');
+        $this->document->addStyle(!$content_addressed && is_file($stylesheet_path) ? $stylesheet . '?v=' . filemtime($stylesheet_path) : $stylesheet);
         foreach ((array)($this->config->get('extension_assets')['admin']['styles'] ?? []) as $asset) {
             $this->document->addStyle((string)$asset);
         }

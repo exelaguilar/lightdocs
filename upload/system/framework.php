@@ -28,6 +28,7 @@ use System\Library\Request;
 use System\Library\Response;
 use System\Library\Url;
 use System\Library\Document;
+use System\Library\AssetPublisher;
 use System\Library\JobQueue;
 use System\Library\Feedback;
 use System\Library\ExtensionState;
@@ -134,6 +135,17 @@ $base_url = (string)$config->get('base_url');
 $registry->set('url', new Url($base_url !== '' ? $base_url . '/' : '/', (array)$config->get('routes', [])));
 $registry->set('document', new Document($config));
 
+$asset_publisher = new AssetPublisher(
+    (string)$config->get('asset_public_root'),
+    (string)$config->get('asset_public_base'),
+    (bool)$config->get('asset_read_only', false),
+    2,
+    (string)$config->get('asset_state_root'),
+);
+$registry->set('asset_publisher', $asset_publisher);
+$asset_manifest = $asset_publisher->manifest();
+$config->set('published_assets', $asset_manifest['assets'] ?? []);
+
 $factory = new Factory($registry);
 $registry->set('factory', $factory);
 
@@ -190,7 +202,7 @@ $extension_manager = new ExtensionManager(
     new ExtensionDiscovery($config->get('extension_dir')),
     $extension_state,
     capabilities: $extension_capabilities,
-	platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.12.0'],
+	platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.13.0'],
     autoloader: $registry->get('autoloader'),
     packages: new ExtensionPackageInstaller($config->get('extension_dir')),
     authorizer: new ExtensionAuthorization($registry),
@@ -220,7 +232,7 @@ $registry->set('asset_repository', new AssetRepository($config->get('upload_dir'
 $registry->set('snippets', new SnippetRepository($config->get('content_dir'), $repository));
 $registry->set('navigation', new NavigationManager($config->get('content_dir')));
 $registry->set('importer', new ContentImporter($config->get('content_dir')));
-$registry->set('css', new CssBuilder($config->all()));
+$registry->set('css', new CssBuilder($config->all(), $asset_publisher));
 
 // The static site builder and exports always render the public reader
 // templates, regardless of the current context.

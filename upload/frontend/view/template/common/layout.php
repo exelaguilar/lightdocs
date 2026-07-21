@@ -34,6 +34,8 @@ $page_title = $title === $config['name'] ? $title : $title . ' · ' . $config['n
 $initial = mb_strtoupper(mb_substr($config['name'], 0, 1));
 $asset_version = static fn (string $asset): string => $asset . '?v=' . (@filemtime((defined('DIR_ROOT') ? DIR_ROOT : '') . ltrim($asset, '/')) ?: 1);
 $extension_assets = $config['extension_assets']['public'] ?? ['styles' => [], 'scripts' => []];
+$stylesheet = (string)($config['published_assets']['frontend.css'] ?? '/frontend/view/stylesheet/front.min.css');
+$stylesheet_url = str_starts_with($stylesheet, '/assets/generated/versions/') ? $stylesheet : $asset_version($stylesheet);
 ?>
 <!doctype html>
 <html class="scroll-smooth scroll-pt-9 bg-[var(--canvas)] max-[840px]:scroll-pt-[calc(var(--header)+24px)] max-[840px]:[--header:54px]" lang="<?= $e($config['language'] ?? 'en') ?>" dir="<?= $e($config['direction'] ?? 'ltr') ?>" data-density="<?= $e($config['theme']['density'] ?? 'comfortable') ?>">
@@ -47,7 +49,7 @@ $extension_assets = $config['extension_assets']['public'] ?? ['styles' => [], 's
   <meta name="theme-color" content="#0b0b0f" media="(prefers-color-scheme: dark)">
   <?php if ($canonical_path !== '' && $config['base_url'] !== ''): ?><link rel="canonical" href="<?= $e($config['base_url'] . $canonical_path) ?>"><?php endif; ?>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="<?= $e($asset_version('/frontend/view/stylesheet/front.min.css')) ?>">
+  <link rel="stylesheet" href="<?= $e($stylesheet_url) ?>">
   <?php foreach ($extension_assets['styles'] as $asset): ?><link rel="stylesheet" href="<?= $e($asset_version($asset)) ?>"><?php endforeach; ?>
   <style>:root{--brand:<?= $e($config['accent']) ?>;--radius:<?= ['small' => '6px', 'large' => '14px'][$config['theme']['radius'] ?? 'medium'] ?? '10px' ?>;--content:<?= ['narrow' => '680px', 'wide' => '880px'][$config['theme']['content_width'] ?? 'normal'] ?? '768px' ?>}</style>
   <script nonce="<?= $e($csp_nonce ?? '') ?>">try{const t=localStorage.getItem('lightdocs-theme')||<?= json_encode($config['theme']['default_theme'] ?? 'system') ?>;if(t&&t!=='system')document.documentElement.dataset.theme=t;if(localStorage.getItem('lightdocs-sidebar')==='collapsed')document.documentElement.dataset.sidebarCollapsed='true';const r=JSON.parse(localStorage.getItem('lightdocs-reading-preferences')||'{}');if(r.text_size)document.documentElement.dataset.readingTextSize=r.text_size;if(r.content_width)document.documentElement.dataset.readingWidth=r.content_width;const l=r.layout||(r.focus?'focus':'standard');document.documentElement.dataset.readerLayout=l;if(l==='focus')document.documentElement.dataset.readerFocus='true'}catch{}</script>

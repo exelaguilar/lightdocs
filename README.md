@@ -322,7 +322,7 @@ The administrator account is seeded on the first request when `DOCS_ADMIN_PASSWO
 Allow the PHP service account to write canonical content and runtime data because the administrator console is always available:
 
 ```bash
-chown -R www-data:www-data content storage/uploads storage
+chown -R www-data:www-data content storage/uploads storage upload/assets/generated
 chown root:www-data .env
 chmod 0660 .env
 ```
@@ -339,6 +339,7 @@ Run the deployment checks as the PHP service account:
 sudo -u www-data php bin/docs doctor
 sudo -u www-data php bin/docs validate
 sudo -u www-data php bin/docs index
+sudo -u www-data php bin/cron
 ```
 
 ## Shared hosting
@@ -351,6 +352,11 @@ Shared hosting works when the provider offers PHP 8.4, PDO SQLite, and control o
 4. Copy `.env.example` to `.env` and set the site name, base URL, and administrator password.
 5. Make `content/`, `storage/uploads/`, and `storage/` writable by PHP.
 6. Open `/healthz`, then open the site root.
+
+Configure the hosting control panel to run `php bin/cron` once per minute so
+queued stylesheet rebuilds and future background work are processed. Set
+`LIGHTDOCS_ASSET_READ_ONLY=true` when deployments must serve the packaged
+last-known-good stylesheets but never rebuild assets at runtime.
 
 Do **not** place the complete repository inside `public_html`. Only copy the contents of `upload/`; keep configuration, Markdown source, revisions, and runtime files outside the web root. If the provider cannot separate those locations, use a static export instead.
 
@@ -521,6 +527,8 @@ composer docs:validate
 composer docs:test
 php bin/docs index
 php bin/docs cache:clear
+php bin/build-css.php
+php bin/cron
 php bin/docs build build --profile=public
 ```
 

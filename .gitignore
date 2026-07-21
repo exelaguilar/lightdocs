@@ -13,6 +13,8 @@
 /storage/*.sqlite-shm
 /storage/*.sqlite-wal
 /storage/uploads/*
+/storage/assets/
+/upload/assets/generated/
 !storage/cache/.gitkeep
 !storage/revisions/.gitkeep
 !storage/exports/.gitkeep

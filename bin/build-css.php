@@ -16,6 +16,13 @@ $kernel = new \System\Engine\Kernel(
 $registry = $kernel->boot();
 $config = $registry->get('config');
 
-$bytes = (new System\Library\Service\CssBuilder($config->all()))->build();
+$publisher = new System\Library\AssetPublisher(
+    (string)$config->get('asset_public_root'),
+    (string)$config->get('asset_public_base'),
+    false,
+    2,
+    (string)$config->get('asset_state_root'),
+);
+$bytes = (new System\Library\Service\CssBuilder($config->all(), $publisher))->build();
 
 fwrite(STDOUT, sprintf("Wrote admin and frontend stylesheets (%d bytes total)\n", $bytes));

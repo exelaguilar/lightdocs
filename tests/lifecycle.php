@@ -330,16 +330,19 @@ $suite->test('CLI constructor failure occurs before command catch and proves DB 
 });
 
 $suite->test('real CSS build is successful and idempotent', static function () use ($root): void {
-    $paths = [$root . '/upload/frontend/view/stylesheet/front.min.css', $root . '/upload/admin/view/stylesheet/app.min.css'];
-    $before = array_map('hash_file', array_fill(0, count($paths), 'sha256'), $paths);
+    $manifestPath = $root . '/upload/assets/generated/manifest.json';
     $first = Subprocess::run($root . '/bin/build-css.php', timeoutSeconds: 30, workingDirectory: $root);
-    $middle = array_map('hash_file', array_fill(0, count($paths), 'sha256'), $paths);
+    $middle = json_decode((string)file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
     $second = Subprocess::run($root . '/bin/build-css.php', timeoutSeconds: 30, workingDirectory: $root);
-    $after = array_map('hash_file', array_fill(0, count($paths), 'sha256'), $paths);
+    $after = json_decode((string)file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
     TestSuite::assertSame(0, $first->exitCode, 'First CSS build failed.');
     TestSuite::assertSame(0, $second->exitCode, 'Second CSS build failed.');
-    TestSuite::assertSame($before, $middle, 'First CSS build changed tracked output without input changes.');
-    TestSuite::assertSame($middle, $after, 'CSS build is not idempotent.');
+    TestSuite::assertSame($middle['version'], $after['version'], 'CSS build is not content-idempotent.');
+    TestSuite::assertSame($middle['assets'], $after['assets'], 'Identical CSS inputs changed published asset URLs.');
+    foreach (['admin.css', 'frontend.css'] as $logical) {
+        $published = $root . '/upload/' . ltrim((string)($after['assets'][$logical] ?? ''), '/');
+        TestSuite::assertTrue(is_file($published) && filesize($published) > 1000, 'Published CSS asset is missing or empty: ' . $logical);
+    }
     $source = (string) file_get_contents($root . '/bin/build-css.php');
     TestSuite::assertContains('new \\System\\Engine\\Kernel', $source, 'CSS Kernel boot changed.');
     TestSuite::assertContains('localConfigFile: null', $source, 'CSS local-config exclusion changed.');

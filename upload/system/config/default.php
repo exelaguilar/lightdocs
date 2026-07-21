@@ -56,6 +56,7 @@ if (!is_array($custom_directives)) $custom_directives = [];
 $environment = $env('APP_ENV', 'production');
 $extension_trusted_signers = json_decode($env('LIGHTDOCS_EXTENSION_TRUSTED_SIGNERS', '{}'), true);
 if (!is_array($extension_trusted_signers)) throw new RuntimeException('LIGHTDOCS_EXTENSION_TRUSTED_SIGNERS must be a JSON object of signer IDs to PEM public keys.');
+$asset_read_only = in_array(strtolower($env('LIGHTDOCS_ASSET_READ_ONLY', 'false')), ['1', 'true', 'yes', 'on'], true);
 
 return [
     // Autoloading — app-tree namespace → directory (relative to DIR_ROOT).
@@ -100,10 +101,16 @@ return [
     'revision_dir' => $state_root . '/revisions',
     'export_dir' => $state_root . '/exports',
     'upload_dir' => $upload_root,
+    'asset_public_root' => dirname(__DIR__, 2) . '/assets/generated',
+    'asset_public_base' => '/assets/generated',
+    'asset_state_root' => $state_root . '/assets',
+    'asset_read_only' => $asset_read_only,
     'environment_file' => $environment_file,
     'settings_paths' => ['site' => $site_path, 'theme' => $theme_path],
     'directives' => $custom_directives,
-    'job_handlers' => [],
+    'job_handlers' => [
+        'assets.rebuild' => 'System\\Library\\Job\\RebuildAssets',
+    ],
     'job_schedules' => [],
 
     // Environment

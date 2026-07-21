@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace System\Library\Service;
 
+use RuntimeException;
+use System\Library\AssetPublisher;
+
 final class CssBuilder
 {
-	public function __construct(private readonly array $config)
+	public function __construct(private readonly array $config, private readonly AssetPublisher $publisher)
 	{
 	}
 
@@ -21,7 +24,7 @@ final class CssBuilder
 		$bundles = [
 			'admin' => [
 				$application_root . '/admin/view/stylesheet/admin.css',
-				$application_root . '/admin/view/stylesheet/app.min.css',
+				'admin.css',
 				[
 					$application_root . '/admin/view/template',
 					$application_root . '/admin/view/javascript',
@@ -30,7 +33,7 @@ final class CssBuilder
 			],
 			'frontend' => [
 				$application_root . '/frontend/view/stylesheet/front.css',
-				$application_root . '/frontend/view/stylesheet/front.min.css',
+				'frontend.css',
 				[
 					$application_root . '/frontend/view/template',
 					$application_root . '/frontend/view/javascript',
@@ -39,11 +42,23 @@ final class CssBuilder
 			],
 		];
 		$total_bytes = 0;
-
-		foreach ($bundles as $bundle) {
-			$sources = [...$shared_sources, ...$this->collectSources($bundle[2])];
-			$total_bytes += $this->buildBundle($shared_source, $bundle[0], $bundle[1], $sources);
-		}
+		$this->publisher->publish(
+			function (string $staging) use ($bundles, $shared_sources, $shared_source, &$total_bytes): void {
+				foreach ($bundles as $bundle) {
+					$sources = [...$shared_sources, ...$this->collectSources($bundle[2])];
+					$total_bytes += $this->buildBundle($shared_source, $bundle[0], $staging . '/' . $bundle[1], $sources);
+				}
+			},
+			static function (string $staging, array $manifest): void {
+				foreach (['admin.css', 'frontend.css'] as $logical) {
+					$url = (string)($manifest['assets'][$logical] ?? '');
+					$path = $staging . '/' . basename($url);
+					if ($url === '' || !is_file($path) || filesize($path) < 1000) {
+						throw new RuntimeException('The generated ' . $logical . ' bundle failed validation.');
+					}
+				}
+			}
+		);
 
 		return $total_bytes;
 	}
@@ -108,7 +123,9 @@ final class CssBuilder
 				'importPaths' => $temp_path,
 				'minify' => true,
 			]);
-			file_put_contents($output_path, $output . "\n" . $bundle . "\n");
+			if (file_put_contents($output_path, $output . "\n" . $bundle . "\n", LOCK_EX) === false) {
+				throw new RuntimeException('Unable to write the compiled CSS bundle.');
+			}
 
 			return strlen($output) + strlen($bundle);
 		} finally {
