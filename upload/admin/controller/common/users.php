@@ -95,7 +95,7 @@ class Users extends Controller
 
                 $this->fireUserEvent('user.created', (int)$new_id, $username, $group_id);
 
-                $this->session->addNotification('success', 'User created.');
+                $this->notifications->add('success', 'User created.');
                 $this->response->redirect($this->url->link('common/users'));
             } catch (\Throwable $exception) {
                 $error = $exception->getCode() === 23000 || str_contains($exception->getMessage(), 'UNIQUE constraint')
@@ -162,7 +162,7 @@ class Users extends Controller
 
                 $this->fireUserEvent('user.updated', $id, $username, $group_id, $enabled);
 
-                $this->session->addNotification('success', 'User updated.');
+                $this->notifications->add('success', 'User updated.');
                 $this->response->redirect($this->url->link('common/users'));
             } catch (\Throwable $exception) {
                 $error = $exception->getMessage();

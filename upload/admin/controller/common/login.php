@@ -135,7 +135,7 @@ class Login extends Controller
                 $event_args = [&$payload];
                 $this->event->trigger('security/password_reset', $event_args);
 
-                $this->session->addNotification('success', 'Password updated. Sign in with your new password.');
+                $this->notifications->add('success', 'Password updated. Sign in with your new password.');
                 $this->response->redirect($this->url->link('common/login.login'));
             } catch (\Throwable $exception) {
                 $error = $exception->getMessage();

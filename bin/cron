@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+define('APP_CONTEXT', 'frontend');
+
+require dirname(__DIR__) . '/upload/system/startup.php';
+
+$kernel = new \System\Engine\Kernel(
+    context: APP_CONTEXT,
+    systemRoot: DIR_SYSTEM,
+    applicationRoot: DIR_ROOT,
+    localConfigFile: null,
+    enforceApplicationConstants: true,
+);
+$registry = $kernel->boot();
+$arguments = [$argv[0], 'jobs:run'];
+
+if (isset($argv[1])) {
+    $arguments[] = $argv[1];
+}
+
+exit((new \System\Console\Console($registry))->run($arguments));

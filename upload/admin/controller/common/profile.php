@@ -48,8 +48,8 @@ class Profile extends Controller
                 $error = $exception->getMessage();
             }
 
-            if ($message !== '') $this->session->addNotification('success', $message);
-            if ($error !== '') $this->session->addNotification('danger', $error);
+            if ($message !== '') $this->notifications->add('success', $message);
+            if ($error !== '') $this->notifications->add('danger', $error);
             $this->response->redirect($this->url->link('common/profile', ['tab' => $redirect_tab]));
         }
 
@@ -93,7 +93,7 @@ class Profile extends Controller
         $this->load->model('common/user');
         $this->model_common_user->revokeOtherSessions($this->session->getId(), (int)($this->session->get('user_id') ?? 0));
 
-        $this->session->addNotification('success', 'Other active sessions were signed out.');
+        $this->notifications->add('success', 'Other active sessions were signed out.');
         $this->response->redirect($this->url->link('common/profile'));
     }
 }

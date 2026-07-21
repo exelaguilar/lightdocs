@@ -32,9 +32,9 @@ class ExtensionSettings extends Controller
             try {
                 $input = $this->request->post['settings'] ?? [];
                 $this->extensions->setSettings($name, is_array($input) ? $input : []);
-                $this->session->addNotification('success', ucwords(str_replace('_', ' ', $name)) . ' settings saved.');
+                $this->notifications->add('success', ucwords(str_replace('_', ' ', $name)) . ' settings saved.');
             } catch (Throwable $exception) {
-                $this->session->addNotification('danger', $exception->getMessage());
+                $this->notifications->add('danger', $exception->getMessage());
             }
 
             $this->response->redirect($this->url->link('tools/extension_settings', ['name' => $name]));

@@ -51,7 +51,7 @@ class Csrf extends Controller
             $this->rejectAjaxRequest();
         }
 
-        $this->session->addNotification('danger', 'Security token expired. Please try again.');
+        $this->notifications->add('danger', 'Security token expired. Please try again.');
 
         $this->response->redirect($this->url->link($this->currentRouteBase()));
 

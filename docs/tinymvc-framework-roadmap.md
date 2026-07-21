@@ -1324,3 +1324,20 @@ Lightdocs removes its duplicate class and moves the two database-backed
 protected-user/group decisions into `Admin\Model\Common\User`, which already
 owns those tables. The application now requires TinyMVC `^0.11`; Nevernote
 remains unchanged until its deferred adoption phase.
+
+## v0.12 queue, scheduler, and flash completion record (2026-07-20)
+
+TinyMVC commit `2cff063` and tag `v0.12.0` promote the durable queue mechanics
+proven in Nevernote without moving its workflow-engine subsystem. The package
+now provides SQLite and MySQL-compatible atomic claiming, configurable leases
+and backoff, heartbeats, stale-lease recovery, bounded workers, run logs, and
+central recurring-schedule materialization. Job definitions, handlers, schema
+ownership, CLI composition, and operational alerts remain application-owned.
+
+The session flash behavior was also corrected at its abstraction boundary:
+`Session::pull()` owns generic consume-once storage, while
+`FlashNotifications` owns the UI-specific type/message shape. Lightdocs now
+requires TinyMVC `^0.12`, registers both the durable queue and notification
+service, owns the SQLite queue tables, and exposes `bin/cron` / `jobs:run` as a
+bounded cron-friendly entrypoint. Nevernote remains unchanged; its existing
+workflow-engine work is a separate application subsystem.

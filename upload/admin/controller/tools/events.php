@@ -48,9 +48,9 @@ class Events extends Controller
 
                     $event_args = [&$payload];
                     $this->event->trigger($target, $event_args);
-                    $this->session->addNotification('success', 'Dispatched ' . $target . ' synchronously.');
+                    $this->notifications->add('success', 'Dispatched ' . $target . ' synchronously.');
                 } catch (Throwable $exception) {
-                    $this->session->addNotification('danger', $exception->getMessage());
+                    $this->notifications->add('danger', $exception->getMessage());
                 }
 
                 $this->response->redirect($this->url->link('tools/events'));

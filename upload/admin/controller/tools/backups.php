@@ -30,9 +30,9 @@ class Backups extends Controller
 
             try {
                 $archive = $backup->create((string)$this->request->post('label', 'string') ?: 'manual');
-                $this->session->addNotification('success', 'Backup created: ' . basename($archive['file']) . '.');
+                $this->notifications->add('success', 'Backup created: ' . basename($archive['file']) . '.');
             } catch (Throwable $exception) {
-                $this->session->addNotification('danger', $exception->getMessage());
+                $this->notifications->add('danger', $exception->getMessage());
             }
 
             $this->response->redirect($this->url->link('tools/backups'));
@@ -82,9 +82,9 @@ class Backups extends Controller
 
         try {
             $result = $backup->restore((string)$this->request->post('file', 'string'));
-            $this->session->addNotification('success', sprintf('Restore completed: %d content files, %d uploads, %d revisions, database %s.', $result['content'], $result['uploads'], $result['revisions'], $result['database'] ? 'restored' : 'unchanged'));
+            $this->notifications->add('success', sprintf('Restore completed: %d content files, %d uploads, %d revisions, database %s.', $result['content'], $result['uploads'], $result['revisions'], $result['database'] ? 'restored' : 'unchanged'));
         } catch (Throwable $exception) {
-            $this->session->addNotification('danger', $exception->getMessage());
+            $this->notifications->add('danger', $exception->getMessage());
         }
 
         $this->response->redirect($this->url->link('tools/backups'));

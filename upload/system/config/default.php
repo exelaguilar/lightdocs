@@ -103,6 +103,8 @@ return [
     'environment_file' => $environment_file,
     'settings_paths' => ['site' => $site_path, 'theme' => $theme_path],
     'directives' => $custom_directives,
+    'job_handlers' => [],
+    'job_schedules' => [],
 
     // Environment
     'version' => is_file($root . '/VERSION') ? trim((string)file_get_contents($root . '/VERSION')) : 'development',

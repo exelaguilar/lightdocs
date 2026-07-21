@@ -55,7 +55,7 @@ class Logs extends Controller
     public function clear(): void
     {
         if (!$this->user->hasPermission('modify', 'tools/logs')) {
-            $this->session->addNotification('danger', 'You do not have permission to modify this area.');
+            $this->notifications->add('danger', 'You do not have permission to modify this area.');
             $this->response->redirect($this->url->link('tools/logs'));
             return;
         }
@@ -64,9 +64,9 @@ class Logs extends Controller
         $path = $this->logPath($log_file);
 
         if (!is_file($path) || @file_put_contents($path, '') !== false) {
-            $this->session->addNotification('success', ucfirst($log_file) . ' cleared.');
+            $this->notifications->add('success', ucfirst($log_file) . ' cleared.');
         } else {
-            $this->session->addNotification('danger', 'Could not clear ' . $log_file . '.');
+            $this->notifications->add('danger', 'Could not clear ' . $log_file . '.');
         }
 
         $this->response->redirect($this->url->link('tools/logs', ['log' => $log_file]));
@@ -78,7 +78,7 @@ class Logs extends Controller
         $path = $this->logPath($log_file);
 
         if (!is_file($path)) {
-            $this->session->addNotification('danger', 'That log file was not found.');
+            $this->notifications->add('danger', 'That log file was not found.');
             $this->response->redirect($this->url->link('tools/logs'));
             return;
         }

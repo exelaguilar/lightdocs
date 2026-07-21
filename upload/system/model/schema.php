@@ -24,6 +24,25 @@ final class Schema extends Model
 		$this->pdo->exec(<<<'SQL'
 CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS index_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS job_queue (
+	job_id INTEGER PRIMARY KEY AUTOINCREMENT, job_type TEXT NOT NULL, payload_json TEXT NOT NULL DEFAULT '{}',
+	reference_id INTEGER, status TEXT NOT NULL DEFAULT 'pending', priority INTEGER NOT NULL DEFAULT 100,
+	attempts INTEGER NOT NULL DEFAULT 0, max_attempts INTEGER NOT NULL DEFAULT 5,
+	scheduled_at TEXT NOT NULL, started_at TEXT, completed_at TEXT, locked_by TEXT, locked_until TEXT,
+	last_error TEXT, date_added TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS job_queue_claim_idx ON job_queue(status, scheduled_at, priority, job_id);
+CREATE INDEX IF NOT EXISTS job_queue_lease_idx ON job_queue(status, locked_until);
+CREATE TABLE IF NOT EXISTS job_run_log (
+	run_id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER NOT NULL, job_type TEXT NOT NULL,
+	attempt INTEGER NOT NULL, worker_id TEXT NOT NULL, status TEXT NOT NULL, error TEXT,
+	started_at TEXT NOT NULL, completed_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS job_run_log_job_idx ON job_run_log(job_id, run_id);
+CREATE TABLE IF NOT EXISTS job_schedule (
+	schedule_name TEXT PRIMARY KEY, job_type TEXT NOT NULL, interval_seconds INTEGER NOT NULL,
+	next_run_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS documents (
 	id INTEGER PRIMARY KEY, path TEXT NOT NULL UNIQUE, url TEXT NOT NULL UNIQUE,
 	title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', keywords TEXT NOT NULL DEFAULT '',

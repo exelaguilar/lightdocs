@@ -32,16 +32,16 @@ class RemoteSync extends Controller
                 $action = (string)$this->request->post('action', 'string');
                 if ($action === 'initialize') {
                     $remote->initialize();
-                    $this->session->addNotification('success', 'The local repository was imported from the remote.');
+                    $this->notifications->add('success', 'The local repository was imported from the remote.');
                 } elseif ($action === 'pull') {
                     $remote->pull();
-                    $this->session->addNotification('success', 'Remote changes pulled successfully.');
+                    $this->notifications->add('success', 'Remote changes pulled successfully.');
                 } elseif ($action === 'push') {
                     $remote->push();
-                    $this->session->addNotification('success', 'Local changes pushed successfully.');
+                    $this->notifications->add('success', 'Local changes pushed successfully.');
                 }
             } catch (Throwable $exception) {
-                $this->session->addNotification('danger', $exception->getMessage());
+                $this->notifications->add('danger', $exception->getMessage());
             }
 
             $this->response->redirect($this->url->link('tools/remote_sync'));

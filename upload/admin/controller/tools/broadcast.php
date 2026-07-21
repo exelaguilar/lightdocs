@@ -56,7 +56,7 @@ class Broadcast extends Controller
             return;
         }
         if (!$this->user->hasPermission('modify', 'tools/broadcast')) {
-            $this->session->addNotification('danger', 'You do not have permission to modify this area.');
+            $this->notifications->add('danger', 'You do not have permission to modify this area.');
             $this->response->redirect($this->url->link('tools/broadcast'));
             return;
         }
@@ -79,9 +79,9 @@ class Broadcast extends Controller
             $event_args = [&$payload];
             $this->event->trigger('broadcast.created', $event_args);
 
-            $this->session->addNotification('success', 'Notice posted.');
+            $this->notifications->add('success', 'Notice posted.');
         } catch (Throwable $exception) {
-            $this->session->addNotification('danger', $exception->getMessage());
+            $this->notifications->add('danger', $exception->getMessage());
         }
 
         $this->response->redirect($this->url->link('tools/broadcast'));
@@ -104,7 +104,7 @@ class Broadcast extends Controller
             return;
         }
         if (!$this->user->hasPermission('modify', 'tools/broadcast')) {
-            $this->session->addNotification('danger', 'You do not have permission to modify this area.');
+            $this->notifications->add('danger', 'You do not have permission to modify this area.');
             $this->response->redirect($this->url->link('tools/broadcast'));
             return;
         }
@@ -117,9 +117,9 @@ class Broadcast extends Controller
                 throw new \RuntimeException('Notice not found.');
             }
             $action($id);
-            $this->session->addNotification('success', $success_message);
+            $this->notifications->add('success', $success_message);
         } catch (Throwable $exception) {
-            $this->session->addNotification('danger', $exception->getMessage());
+            $this->notifications->add('danger', $exception->getMessage());
         }
 
         $this->response->redirect($this->url->link('tools/broadcast'));

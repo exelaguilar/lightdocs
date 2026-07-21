@@ -41,7 +41,7 @@ class Developer extends Controller
                     $this->response->redirect($this->url->link('common/login.login'));
             }
 
-            if ($message !== '') $this->session->addNotification('success', $message);
+            if ($message !== '') $this->notifications->add('success', $message);
             $this->response->redirect($this->url->link('tools/developer'));
         }
 

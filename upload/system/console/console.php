@@ -24,6 +24,10 @@ use System\Engine\Registry;
 use System\Library\DB;
 use System\Library\FileCache;
 use System\Library\Template;
+use System\Library\Job\JobHandlerInterface;
+use System\Library\JobQueue;
+use System\Library\JobWorker;
+use System\Library\Schedule;
 
 final class Console
 {
@@ -32,9 +36,13 @@ final class Console
 	private ContentRepository $repository;
 	private SearchService $search;
 	private StaticSiteBuilder $builder;
+	private Registry $registry;
+	private DB $database;
+	private JobQueue $jobQueue;
 
 	public function __construct(Registry $registry)
 	{
+		$this->registry = $registry;
 		$config = $registry->get('config');
 		if (!$config instanceof Config) {
 			throw new LogicException('Console requires a booted Registry with Config.');
@@ -43,11 +51,14 @@ final class Console
 
 		$database = new DB($config->get('database_path'));
 		$registry->set('db', $database);
+		$this->database = $database;
 
 		$events = new Event($registry);
 		$registry->set('event', $events);
 
 		(new Schema($registry))->migrate();
+		$this->jobQueue = new JobQueue($database);
+		$registry->set('job_queue', $this->jobQueue);
 
 		$this->repository = new ContentRepository($config->get('content_dir'));
 		$registry->set('repository', $this->repository);
@@ -80,12 +91,40 @@ final class Console
 				'doctor' => $this->doctor(),
 				'version' => $this->version(),
 				'build' => $this->build($arguments),
+				'jobs:run' => $this->runJobs($arguments),
 				default => $this->help(),
 			};
 		} catch (Throwable $exception) {
 			fwrite(STDERR, 'Error: ' . $exception->getMessage() . PHP_EOL);
 			return 1;
 		}
+	}
+
+	private function runJobs(array $arguments): int
+	{
+		$schedules = (array)($this->config['job_schedules'] ?? []);
+		$materialized = (new Schedule($this->jobQueue, $this->database))->materialize($schedules);
+		$handlers = [];
+
+		foreach ((array)($this->config['job_handlers'] ?? []) as $type => $class) {
+			if (!is_string($class) || !class_exists($class)) {
+				throw new RuntimeException('Invalid job handler class for ' . $type . '.');
+			}
+
+			$handler = new $class($this->registry);
+			if (!$handler instanceof JobHandlerInterface) {
+				throw new RuntimeException($class . ' must implement JobHandlerInterface.');
+			}
+			$handlers[(string)$type] = $handler;
+		}
+
+		$limit = isset($arguments[2]) ? max(0, (int)$arguments[2]) : 20;
+		$summary = $handlers === []
+			? ['processed' => 0, 'succeeded' => 0, 'failed' => 0, 'retried' => 0, 'recovered' => $this->jobQueue->recoverStaleLeases()]
+			: (new JobWorker($this->jobQueue, $handlers))->run($limit, array_keys($handlers));
+
+		echo json_encode(['materialized' => $materialized] + $summary, JSON_THROW_ON_ERROR) . PHP_EOL;
+		return $summary['failed'] > 0 ? 1 : 0;
 	}
 
 	private function validate(): int
@@ -179,7 +218,7 @@ final class Console
 
 	private function help(): int
 	{
-		echo "Lightdocs\n\n  doctor         Verify this PHP/LXC deployment\n  version        Print the installed version\n  validate       Validate content and links\n  index          Rebuild the SQLite search index\n  cache:clear    Clear rendered caches\n  build [dir] [--profile=public|private|sanitized] [--acknowledge-secrets]\n                 Export a static site\n";
+		echo "Lightdocs\n\n  doctor         Verify this PHP/LXC deployment\n  version        Print the installed version\n  validate       Validate content and links\n  index          Rebuild the SQLite search index\n  cache:clear    Clear rendered caches\n  jobs:run [n]   Materialize schedules and run a bounded job batch\n  build [dir] [--profile=public|private|sanitized] [--acknowledge-secrets]\n                 Export a static site\n";
 		return 0;
 	}
 }

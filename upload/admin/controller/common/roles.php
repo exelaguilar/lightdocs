@@ -117,7 +117,7 @@ class Roles extends Controller
                 $event_args = [&$payload];
                 $this->event->trigger($create ? 'role.created' : 'role.updated', $event_args);
 
-                $this->session->addNotification('success', 'Role permissions saved.');
+                $this->notifications->add('success', 'Role permissions saved.');
                 $this->response->redirect($this->url->link('common/roles.edit', ['role' => $id]));
             } catch (\Throwable $exception) {
                 $error = $exception->getMessage();

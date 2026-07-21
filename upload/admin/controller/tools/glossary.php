@@ -25,9 +25,9 @@ class Glossary extends Controller
             try {
                 $this->glossary->delete((string)$this->request->post('slug', 'string'));
                 $this->announceChange(['action' => 'glossary.delete', 'slug' => (string)$this->request->post('slug', 'string')]);
-                $this->session->addNotification('success', 'Glossary term removed.');
+                $this->notifications->add('success', 'Glossary term removed.');
             } catch (Throwable $exception) {
-                $this->session->addNotification('danger', $exception->getMessage());
+                $this->notifications->add('danger', $exception->getMessage());
             }
 
             $this->response->redirect($this->url->link('tools/glossary'));
@@ -82,7 +82,7 @@ class Glossary extends Controller
                 $aliases = preg_split('/\r?\n|,/', (string)$this->request->post('aliases', 'string')) ?: [];
                 $slug = $this->glossary->save((string)$this->request->post('slug', 'string'), (string)$this->request->post('term', 'string'), (string)$this->request->post('definition', 'string'), $aliases, $source_slug === '' ? null : $source_slug);
                 $this->announceChange(['action' => 'glossary.save', 'slug' => $slug]);
-                $this->session->addNotification('success', 'Glossary term saved.');
+                $this->notifications->add('success', 'Glossary term saved.');
                 $this->response->redirect($this->url->link('tools/glossary'));
             } catch (Throwable $exception) {
                 $error = $exception->getMessage();

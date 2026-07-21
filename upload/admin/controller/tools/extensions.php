@@ -33,9 +33,9 @@ class Extensions extends Controller
             if ($action === 'install') {
                 try {
                     $this->extensions->install($this->request->files['extension'] ?? []);
-                    $this->session->addNotification('success', 'Extension installed. Reload the request to load it.');
+                    $this->notifications->add('success', 'Extension installed. Reload the request to load it.');
                 } catch (Throwable $exception) {
-                    $this->session->addNotification('danger', $exception->getMessage());
+                    $this->notifications->add('danger', $exception->getMessage());
                 }
                 $this->response->redirect($this->url->link('tools/extensions'));
             }
@@ -43,9 +43,9 @@ class Extensions extends Controller
             if ($action === 'remove') {
                 try {
                     $this->extensions->remove((string)$this->request->post('extension', 'string'));
-                    $this->session->addNotification('success', 'Extension removed.');
+                    $this->notifications->add('success', 'Extension removed.');
                 } catch (Throwable $exception) {
-                    $this->session->addNotification('danger', $exception->getMessage());
+                    $this->notifications->add('danger', $exception->getMessage());
                 }
                 $this->response->redirect($this->url->link('tools/extensions'));
             }

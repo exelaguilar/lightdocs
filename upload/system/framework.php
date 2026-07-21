@@ -28,6 +28,7 @@ use System\Library\Request;
 use System\Library\Response;
 use System\Library\Url;
 use System\Library\Document;
+use System\Library\JobQueue;
 use System\Library\Feedback;
 use System\Library\ExtensionState;
 use System\Library\ExtensionPackageInstaller;
@@ -141,6 +142,7 @@ $registry->set('load', $loader);
 
 // === Schema ===
 (new Schema($registry))->migrate();
+$registry->set('job_queue', new JobQueue($db));
 
 // === Lightdocs Domain Services ===
 $repository = new ContentRepository($config->get('content_dir'));
@@ -188,7 +190,7 @@ $extension_manager = new ExtensionManager(
     new ExtensionDiscovery($config->get('extension_dir')),
     $extension_state,
     capabilities: $extension_capabilities,
-	platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.11.0'],
+	platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.12.0'],
     autoloader: $registry->get('autoloader'),
     packages: new ExtensionPackageInstaller($config->get('extension_dir')),
     authorizer: new ExtensionAuthorization($registry),

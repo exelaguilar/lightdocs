@@ -18,15 +18,15 @@ class System extends Controller
             return;
         }
         if (!$this->user->hasPermission('modify', 'tools/system')) {
-            $this->session->addNotification('danger', 'You do not have permission to modify this area.');
+            $this->notifications->add('danger', 'You do not have permission to modify this area.');
             $this->response->redirect($this->url->link('tools/system'));
             return;
         }
 
         if (function_exists('opcache_reset') && opcache_reset()) {
-            $this->session->addNotification('success', 'OPcache cleared.');
+            $this->notifications->add('success', 'OPcache cleared.');
         } else {
-            $this->session->addNotification('danger', 'OPcache is unavailable or could not be cleared.');
+            $this->notifications->add('danger', 'OPcache is unavailable or could not be cleared.');
         }
 
         $this->response->redirect($this->url->link('tools/system'));

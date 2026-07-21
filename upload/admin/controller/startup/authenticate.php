@@ -403,7 +403,7 @@ class Authenticate extends Controller
         $this->event->trigger('security/session_invalidated', $event_args);
 
         $this->user->logout();
-        $this->session->addNotification('danger', $reason);
+        $this->notifications->add('danger', $reason);
         $this->debug_log->info("User logged out: {$reason}", [
             'user_id' => $user_id,
             'ip' => $ip,

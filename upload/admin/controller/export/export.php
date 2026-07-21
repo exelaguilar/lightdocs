@@ -50,8 +50,8 @@ class Export extends Controller
                 $this->session->set('lightdocs_export_download', $download_file);
             }
 
-            if ($message !== '') $this->session->addNotification('success', $message);
-            if ($error !== '') $this->session->addNotification('danger', $error);
+            if ($message !== '') $this->notifications->add('success', $message);
+            if ($error !== '') $this->notifications->add('danger', $error);
             $this->response->redirect($this->url->link('export/export'));
         }
 

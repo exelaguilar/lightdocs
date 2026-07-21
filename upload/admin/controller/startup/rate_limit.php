@@ -65,7 +65,7 @@ class RateLimit extends Controller
             exit;
         }
 
-        $this->session->addNotification('warning', $message);
+        $this->notifications->add('warning', $message);
         $this->response->redirect($this->url->link('common/dashboard'));
 
         return '';

@@ -3,6 +3,7 @@ namespace Frontend\Controller\Startup;
 
 use System\Engine\Controller;
 use System\Library\Session as SessionLibrary;
+use System\Library\FlashNotifications;
 use System\Helper\RequestScheme;
 
 /**
@@ -27,6 +28,7 @@ class Session extends Controller
     {
         $session = new SessionLibrary();
         $this->registry->set('session', $session);
+        $this->registry->set('notifications', new FlashNotifications($session));
 
         $session_name = (string)$this->config->get('session_name', 'SESSID_LIGHTDOCS');
         $session_timeout = max(0, (int)$this->config->get('config_session_timeout', 86400));

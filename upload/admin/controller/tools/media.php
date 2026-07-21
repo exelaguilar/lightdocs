@@ -49,8 +49,8 @@ class Media extends Controller
                 $error = $exception->getMessage();
             }
 
-            if ($message !== '') $this->session->addNotification('success', $message);
-            if ($error !== '') $this->session->addNotification('danger', $error);
+            if ($message !== '') $this->notifications->add('success', $message);
+            if ($error !== '') $this->notifications->add('danger', $error);
             $this->response->redirect($this->url->link('tools/media'));
         }
 

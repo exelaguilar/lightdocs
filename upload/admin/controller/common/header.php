@@ -62,7 +62,7 @@ class Header extends Controller
             'title' => $this->document->getTitle() !== '' ? $this->document->getTitle() : (string)$text['heading_default'],
             'body_class' => (string)($context['body_class'] ?? ''),
             'styles' => $this->document->getStyles(),
-            'notifications' => $this->session?->getNotifications() ?? [],
+            'notifications' => $this->notifications?->all() ?? [],
             'broadcasts' => $shell ? $this->activeBroadcasts() : [],
         ];
 

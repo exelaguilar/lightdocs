@@ -51,7 +51,7 @@ class Permission extends Controller
                 exit;
             }
 
-            $this->session->addNotification('danger', 'You do not have permission to access this page.');
+            $this->notifications->add('danger', 'You do not have permission to access this page.');
             return new Action('error/permission');
         }
 
