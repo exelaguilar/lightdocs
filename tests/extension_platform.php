@@ -5,6 +5,7 @@ declare(strict_types=1);
 use System\Engine\ExtensionDiscovery;
 use System\Engine\ExtensionManifest;
 use System\Engine\ExtensionContext;
+use System\Library\User;
 
 require dirname(__DIR__) . '/upload/system/startup.php';
 require_once DIR_SYSTEM . 'library/extension_state.php';
@@ -38,9 +39,16 @@ $check(
 	'extension interface resolves from TinyMVC rather than a local duplicate'
 );
 
+$userFile = (new ReflectionClass(User::class))->getFileName();
+$check(
+	is_string($userFile) && str_contains(str_replace('\\', '/', $userFile), '/vendor/exelaguilar/tiny-mvc-framework-private/system/library/user.php'),
+	'current-user principal resolves from TinyMVC rather than a local duplicate'
+);
+$check(!method_exists(User::class, 'isProtectedAdminUser') && !is_file(DIR_SYSTEM . 'library/user.php'), 'database-backed user protection policy remains application-owned');
+
 if ($failures !== []) {
-	fwrite(STDERR, sprintf('Extension platform: %d/6 passed, %d failed.%s', $passes, count($failures), PHP_EOL));
+	fwrite(STDERR, sprintf('Extension platform: %d/8 passed, %d failed.%s', $passes, count($failures), PHP_EOL));
 	exit(1);
 }
 
-fwrite(STDOUT, 'Extension platform: 6/6 passed, 0 failed.' . PHP_EOL);
+fwrite(STDOUT, 'Extension platform: 8/8 passed, 0 failed.' . PHP_EOL);

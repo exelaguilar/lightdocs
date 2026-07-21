@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d8e1173faf749a4a519545523403510c",
+    "content-hash": "05ed212fa6ee6f040d436a3f53e28ba4",
     "packages": [
         {
             "name": "composer/semver",
@@ -160,16 +160,16 @@
         },
         {
             "name": "exelaguilar/tiny-mvc-framework-private",
-            "version": "v0.10.0",
+            "version": "v0.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/exelaguilar/tiny-mvc-framework.git",
-                "reference": "7c99283246a4657ae68f69a64a7f5563bd600d9b"
+                "reference": "4b8ba80da283a313b3dcf676df6b7367c1282e28"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/7c99283246a4657ae68f69a64a7f5563bd600d9b",
-                "reference": "7c99283246a4657ae68f69a64a7f5563bd600d9b",
+                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/4b8ba80da283a313b3dcf676df6b7367c1282e28",
+                "reference": "4b8ba80da283a313b3dcf676df6b7367c1282e28",
                 "shasum": ""
             },
             "require": {
@@ -208,10 +208,10 @@
             ],
             "description": "Private OpenCart-style registry-MVC framework extracted from Lightdocs and intended for Lightdocs, Nevernote, and future applications.",
             "support": {
-                "source": "https://github.com/exelaguilar/tiny-mvc-framework/tree/v0.10.0",
+                "source": "https://github.com/exelaguilar/tiny-mvc-framework/tree/v0.11.0",
                 "issues": "https://github.com/exelaguilar/tiny-mvc-framework/issues"
             },
-            "time": "2026-07-20T22:05:09+00:00"
+            "time": "2026-07-21T00:07:45+00:00"
         },
         {
             "name": "graham-campbell/result-type",

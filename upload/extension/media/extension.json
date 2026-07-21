@@ -4,7 +4,7 @@
   "class": "Extension\\Media\\Extension",
   "version": "1.0.0",
   "description": "Optional image resizing and optimization for uploaded media.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.10"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.11"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "type": "content",
   "default_enabled": false,

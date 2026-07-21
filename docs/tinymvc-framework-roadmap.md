@@ -1309,4 +1309,18 @@ scaffolds were removed; the three contribution registries were folded into
 The TinyMVC suite passes at 156 tests / 367 assertions. Lightdocs passes its
 extension platform, extension policy, authorization, 36 lifecycle
 characterizations, package-boundary, smoke, and doctor checks while consuming
-the local v0.10 tag. Neither repository nor tag has been pushed.
+the local v0.10 tag. The framework tag and both consumer commits were
+subsequently pushed.
+
+## v0.11 User-principal completion record (2026-07-20)
+
+TinyMVC commit `4b8ba80` and local tag `v0.11.0` promote the shared
+session-backed `System\Library\User` principal with a configurable bootstrap
+administrator-group ID. It owns current identity, session-cached route
+permissions, display values, and logout, but no SQL, credentials, login flow,
+or user/group storage.
+
+Lightdocs removes its duplicate class and moves the two database-backed
+protected-user/group decisions into `Admin\Model\Common\User`, which already
+owns those tables. The application now requires TinyMVC `^0.11`; Nevernote
+remains unchanged until its deferred adoption phase.

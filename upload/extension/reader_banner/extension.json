@@ -4,7 +4,7 @@
   "class": "Extension\\ReaderBanner\\Extension",
   "version": "1.0.0",
   "description": "Example public-reader extension that adds a dismissible notice with a hook, CSS, and JavaScript.",
-  "requires": {"php": ">=8.4", "tinymvc": "^0.10"},
+  "requires": {"php": ">=8.4", "tinymvc": "^0.11"},
   "capabilities": {"requires": ["lightdocs.application"]},
   "resources": {"assets": {"public": {"scripts": ["view/javascript/reader_banner.js"]}}},
   "type": "example",

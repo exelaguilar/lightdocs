@@ -52,7 +52,7 @@ file_put_contents($extensionDirectory . '/extension.json', json_encode([
     'type' => 'test',
     'default_enabled' => true,
     'contexts' => ['public'],
-    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.10'],
+    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.11'],
     'capabilities' => ['requires' => ['lightdocs.application']],
     'resources' => ['namespaces' => ['Extension\\Lifecycle' => 'src']],
 ], JSON_THROW_ON_ERROR));
@@ -97,7 +97,7 @@ $manager = new ExtensionManager(
     new ExtensionDiscovery(dirname($extensionDirectory)),
     $state,
     capabilities: $capabilities,
-    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.10.0'],
+    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.11.0'],
     autoloader: $autoloader,
 );
 $runtime = $manager->boot('public');

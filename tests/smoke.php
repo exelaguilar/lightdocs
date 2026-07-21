@@ -65,7 +65,7 @@ $buildExtensions = static function (array $config, DB $database, ContentReposito
         new ExtensionDiscovery($config['extension_dir']),
         $state,
         capabilities: $capabilities,
-        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.10.0'],
+        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.11.0'],
         autoloader: $autoloader,
         packages: new ExtensionPackageInstaller($config['extension_dir']),
     );
@@ -236,6 +236,9 @@ $accounts = new \Admin\Model\Common\User($accountsRegistry);
 $account = $accounts->login('admin', 'SmokePassword-123', '127.0.0.1');
 $check($account !== null, 'Seeded administrator could not authenticate.');
 $check($account !== null && (int) ($account['user_group_id'] ?? 0) === 1, 'Seeded administrator does not belong to the super admin group.');
+$check($account !== null && $accounts->isProtectedAdminUser($account), 'Bootstrap administrator protection did not remain application-owned.');
+$check($accounts->isProtectedUserGroupId(1), 'Bootstrap administrator group is not protected.');
+$check(!$accounts->isProtectedAdminUser(['user_id' => 99, 'user_group_id' => 2, 'is_protected' => 0]), 'Ordinary editor account was incorrectly protected.');
 $smokeGroup = $accounts->getGroup(2);
 $check(in_array('editor/editor', $smokeGroup['permission']['access'] ?? [], true), 'Seeded editor group did not receive route-based access permissions.');
 if ($account !== null) {

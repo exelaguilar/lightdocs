@@ -188,7 +188,7 @@ $extension_manager = new ExtensionManager(
     new ExtensionDiscovery($config->get('extension_dir')),
     $extension_state,
     capabilities: $extension_capabilities,
-	platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.10.0'],
+	platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.11.0'],
     autoloader: $registry->get('autoloader'),
     packages: new ExtensionPackageInstaller($config->get('extension_dir')),
     authorizer: new ExtensionAuthorization($registry),

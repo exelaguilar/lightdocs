@@ -20,7 +20,7 @@
     "ext-mbstring": "*",
     "ext-pdo": "*",
     "ext-pdo_sqlite": "*",
-    "exelaguilar/tiny-mvc-framework-private": "^0.10",
+    "exelaguilar/tiny-mvc-framework-private": "^0.11",
     "league/commonmark": "^2.8",
     "symfony/yaml": "^7.3 || ^8.0",
     "tailwindphp/tailwindphp": "dev-main",

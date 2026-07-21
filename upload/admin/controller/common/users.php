@@ -148,7 +148,7 @@ class Users extends Controller
                     throw new \RuntimeException('You cannot disable the account currently signed in.');
                 }
 
-                if ($this->user->isProtectedAdminUser($user) && !$this->user->isSuperAdmin()) {
+                if ($this->model_common_user->isProtectedAdminUser($user) && !$this->user->isSuperAdmin()) {
                     throw new \RuntimeException('This account is protected and can only be changed by a super administrator.');
                 }
 
@@ -173,7 +173,7 @@ class Users extends Controller
         $user['enabled'] = (int)$user['status'] === 1;
         $user['role_label'] = (string)($user['group_name'] ?? 'Unassigned');
         $user['is_current_user'] = $id === (int)($this->session->get('user_id') ?? 0);
-        $user['is_protected'] = $this->user->isProtectedAdminUser($user);
+        $user['is_protected'] = $this->model_common_user->isProtectedAdminUser($user);
         $user['can_edit_protected'] = !$user['is_protected'] || $this->user->isSuperAdmin();
         $user['date_added_label'] = !empty($user['date_added']) ? date('M j, Y', (int)$user['date_added']) : 'Unknown';
         $user['last_login_label'] = !empty($user['last_login']) ? date('M j, Y a\t g:i A', (int)$user['last_login']) : 'Never';

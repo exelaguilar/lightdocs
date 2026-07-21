@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/upload/system/startup.php';
-require_once DIR_SYSTEM . 'library/user.php';
 require_once DIR_SYSTEM . 'engine/extension_authorization.php';
 
 use System\Engine\ExtensionAuthorization;

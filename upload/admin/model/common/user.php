@@ -211,6 +211,29 @@ class User extends Model
         return array_map(fn(array $user): array => $this->withDisplayName($user), $rows);
     }
 
+    /** Application policy: bootstrap/protected groups cannot be edited normally. */
+    public function isProtectedUserGroupId(int $user_group_id): bool
+    {
+        if ($user_group_id === 1) {
+            return true;
+        }
+
+        $row = $this->db->query(
+            'SELECT is_protected FROM admin_user_group WHERE user_group_id = :id LIMIT 1',
+            [':id' => $user_group_id]
+        )->row;
+
+        return !empty($row) && (bool)(int)$row['is_protected'];
+    }
+
+    /** @param array<string,mixed> $user */
+    public function isProtectedAdminUser(array $user): bool
+    {
+        return (int)($user['user_id'] ?? 0) === 1
+            || !empty($user['is_protected'])
+            || $this->isProtectedUserGroupId((int)($user['user_group_id'] ?? 0));
+    }
+
     public function addUser(string $username, string $firstname, string $lastname, string $password, int $user_group_id, string $email = ''): int
     {
         if ($this->getGroup($user_group_id) === null) {
