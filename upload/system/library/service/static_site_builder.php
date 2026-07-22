@@ -94,12 +94,13 @@ final class StaticSiteBuilder
 		foreach ($this->repository->all(false, $include_private) as $source_page) {
 			$page = $this->profilePage($source_page, $profile);
 			$rendered = $renderer->render($page);
+			$task_count = preg_match_all('/type="checkbox"/', $rendered->html, $matches) ?: 0;
 			[$previous, $next] = $this->repository->neighbours($source_page, $include_private);
 			$backlinks = $this->repository->backlinks($source_page, $include_private);
 			$related = $this->repository->relatedPages($source_page, $include_private);
 			$feedback = ['total' => 0, 'helpful_percent' => 0];
 			$config = $build_config;
-			$content = $this->view->render('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'feedback', 'config'));
+			$content = $this->view->render('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'feedback', 'config', 'task_count'));
 			$payload = ['page' => $page, 'content' => $content, 'private_access' => $include_private, 'static' => true];
 			$event_args = [&$payload];
 			$this->events?->trigger('frontend/page/content/after', $event_args);

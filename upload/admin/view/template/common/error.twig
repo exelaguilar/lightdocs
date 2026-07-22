@@ -1,0 +1,40 @@
+{{ header | raw }}
+<main
+  class="mx-auto grid w-[min(calc(100%-3rem),90rem)] gap-6 py-6 pb-10 text-sm max-[900px]:w-[min(calc(100%-2rem),90rem)]"
+>
+  <section
+    class="grid min-h-[min(32rem,calc(100vh-9rem))] place-content-center gap-6 rounded-lg border border-border bg-card p-[clamp(2rem,8vw,5rem)] text-center text-card-foreground shadow-sm"
+  >
+    <header class="justify-items-center">
+      <div class="grid justify-items-center gap-2.5">
+        <span
+          class="text-[clamp(3.5rem,12vw,7rem)] font-[750] leading-[0.9] tracking-[-0.08em] text-destructive"
+          aria-hidden="true"
+          >{{ (status ?? 403) }}</span
+        >
+        <span
+          class="m-0 text-xs font-bold uppercase tracking-[0.08em] text-destructive"
+          >{{ error_label ?? 'Error' }}</span
+        >
+        <h1
+          class="m-0 text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-[-0.04em]"
+        >
+          {{ title ?? 'Access denied' }}
+        </h1>
+        <p
+          class="mt-1 max-w-[32rem] text-[0.9375rem] leading-[1.6] text-muted-foreground"
+        >
+          {{ message ?? 'You do not have permission to access this area.' }}
+        </p>
+      </div>
+    </header>
+    <footer class="justify-center border-t-0 p-0">
+      <a
+        class="inline-flex items-center justify-center gap-2 rounded-md border px-3 py-1.5 text-sm font-semibold leading-5 transition-colors border-border bg-card text-foreground hover:bg-accent hover:text-accent-foreground"
+        href="{{ back_href ?? '/admin' }}"
+        >{{ back_label ?? 'Return to overview' }}</a
+      >
+    </footer>
+  </section>
+</main>
+{{ footer | raw }}

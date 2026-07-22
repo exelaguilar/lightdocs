@@ -63,8 +63,9 @@ class Reader extends Controller
 
         $config = $this->config->all();
         $config['private_access'] = $private_access;
+		$task_count = preg_match_all('/type="checkbox"/', $rendered->html, $matches) ?: 0;
 
-        $content = $this->load->view('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'feedback', 'config'));
+        $content = $this->load->view('page/page', compact('page', 'rendered', 'previous', 'next', 'backlinks', 'related', 'feedback', 'config', 'task_count'));
 
         $payload = ['page' => $page, 'content' => $content, 'private_access' => $private_access];
         $event_args = [&$payload];

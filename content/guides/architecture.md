@@ -20,7 +20,7 @@ The Content Studio uses native MVC actions rather than a route-definition page. 
 
 ## Extensions and events
 
-Extensions live below `upload/extension/{name}/` and are discovered from an `extension.json` manifest. The manifest names the extension class, version, default state, navigation entries, and declared event codes. The conventional class file is `extension.php` beside the manifest, so a trusted ZIP installed through Studio is discoverable on the next request without rebuilding Composer's optimized classmap. The class receives an `ExtensionContext`, then registers only the services, navigation, and listeners it owns:
+Extensions live below `upload/extension/{name}/` and are discovered from an `extension.json` manifest. The manifest names the extension class, version, default state, navigation entries, settings, resources, and declared event codes. Each manifest mounts its own namespace and the conventional entry class lives at `src/extension.php`, so trusted packages remain discoverable without changing the application or Composer classmap. The class receives an `Extension\Context`, then registers only the services, navigation, and listeners it owns:
 
 ```php
 $extensions->service('example.search', $search);
@@ -78,32 +78,26 @@ The front controller also provides OpenCart-style lifecycle hooks such as `contr
 Web server
   -> index.php
   -> system/startup.php
-  -> system/framework.php (wiring) + system/engine/action.php + system/engine/front.php
-  -> system/engine/application.php
-  -> system/engine/request.php
-  -> system/engine/action.php + system/engine/front.php
+  -> system/framework.php (provider list + dispatch)
+  -> system/bootstrap/{core,template,extension,content}_setup.php
+  -> vendor/.../system/engine/action.php + front.php
   -> admin/controller/*/*.php or frontend/controller/*/*.php
   -> system/model, library, and service classes
-  -> system/library/view.php
-  -> admin/view/template/*/*.php or frontend/view/template/*/*.php
-  -> system/engine/response.php
+  -> admin/view/template/*/*.twig or frontend/view/template/*/*.twig
+  -> vendor/.../system/library/response.php
 ```
 
-`system/framework.php` is the composition root. It creates the repository, renderer, cache, database, event system, index, services, and controllers, then registers those controllers with the native action factory. Dependencies are passed through constructors instead of being fetched from globals or an opaque container.
+`system/framework.php` is the composition root, but it contains only TinyMVC base boot, the ordered provider list, and request dispatch. TinyMVC runs `register()` for every provider before any `boot()` method. Core and content services are therefore available before extension boot, while extension-aware editor/build services are composed afterward. The provider classes live under `system/bootstrap/`; no Composer-managed framework file is edited.
 
-Extensions are intentionally small. `system/engine/extension_manager.php` provides registration, named services, startup callbacks, and event hooks without introducing a general-purpose plugin container. The first extension is `extension/local_git`, which owns the Local Git history and preflight services while the existing admin screens continue to use the stable service contracts. New extensions should register focused services, startups, or events and should not modify core files at runtime.
+Extensions are intentionally small. Lightdocs owns lifecycle state, authorization, trust, settings persistence, and admin policy under `system/engine/lightdocs/extension/`; TinyMVC owns discovery, manifests, contexts, dependency ordering, runtime assembly, and resource mounts. New extensions should register focused services, startups, assets, or events and should not modify application or framework core files at runtime.
 
 The shipped optional integrations are separated by responsibility: Local Git owns the private repository and history screen; Remote sync owns manual communication with a configured remote; Media owns image normalization; Storage owns external asset publication; Webhooks owns signed event delivery; OIDC owns external sign-in; Audit owns local event records; and Backup owns private ZIP archives. Each extension has its own settings page at `/admin/extensions/{name}/settings`, and disabling an extension removes its service, navigation, and listeners on the next request.
 
-`system/engine/application.php` owns the generic runtime boundary: secure session startup, request capture, router dispatch, and delegation to the configured exception handler. It has no knowledge of Markdown routes or Studio screens.
-
-`system/engine/action.php` parses native OpenCart-style routes such as `common/reader.page` and `editor/editor.save`. `system/engine/front.php` resolves the controller and invokes the action. Clean browser URLs are translated to those routes by `system/engine/request.php`; direct `?route=...` requests work as well.
-
-`system/engine/response.php` owns content types, redirects, status codes, and baseline security headers. Controllers terminate through a response rather than mixing response setup throughout templates.
+TinyMVC's `Action` parses OpenCart-style routes such as `common/reader.page` and `editor/editor.save`, while `Front` resolves and invokes the controller action. TinyMVC's request and response libraries own captured input, redirects, status codes, compression, and output. Lightdocs' `CoreSetup` adds application security headers and session policy without modifying those package classes.
 
 ### Synchronous events
 
-`system/engine/event.php` provides small, in-process extension points without a queue or daemon. Events are synchronous: the originating request completes only after its listeners complete.
+TinyMVC's `System\Engine\Event` provides small, in-process extension points without a queue or daemon. Events are synchronous: the originating request completes only after its listeners complete.
 
 The core content listener currently handles `content.changed`. Editor saves, uploads, reordering, and settings changes dispatch that event; one listener clears rendered cache, refreshes the repository, and atomically rebuilds SQLite. `ContentIndex` dispatches `index.rebuilt` after a successful commit, and `SiteSettings` dispatches `settings.saved` after portable settings are written; both are covered by the smoke tests.
 
@@ -126,7 +120,7 @@ Controllers translate HTTP into application operations. They read request data, 
 - `History` owns local repository initialization and commits.
 - `Tools` owns content health and the relationship graph.
 - `Export` owns browser-created archives and one-time downloads.
-- `system/engine/controller.php` provides shared rendering and CSRF verification; `Admin` adds Studio authorization and content-change dispatch on top of it.
+- TinyMVC's base controller provides registry access and rendering; Lightdocs startup actions add Studio authentication, authorization, and CSRF policy.
 
 Controllers should not parse Markdown, execute SQL directly, or contain presentation markup. The controller split follows visible Studio responsibilities, making route ownership discoverable without introducing one class per trivial action.
 
@@ -134,23 +128,23 @@ Controllers should not parse Markdown, execute SQL directly, or contain presenta
 
 Models own durable or queryable application state.
 
-- `system/engine/model.php` is the common model base. It exposes the shared PDO connection, event dispatcher, and a safe transaction wrapper.
-- `upload/system/library/db.php` opens SQLite, enables foreign keys and WAL mode, and configures a bounded busy timeout without knowing the application schema.
+- TinyMVC's model base exposes registry services to application models.
+- TinyMVC's `SqliteDb` opens SQLite, enables foreign keys and WAL mode, and configures a bounded busy timeout without knowing the application schema.
 - `system/model/schema.php` owns Lightdocs' idempotent tables, indexes, migration records, and optional FTS5 setup.
 - `system/model/content_index.php` synchronizes canonical files into relational tables and exposes relationships, keyword counts, usage data, statistics, and Studio session state.
 - `system/model/sqlite_search_service.php` presents SQLite search through the reader-facing search contract and maintains the portable JSON search index needed by static output.
 `SiteSettings` intentionally lives in `system/library/service/`, not `system/model/`: it validates and atomically writes the canonical YAML settings files plus safe `.env` mirrors, and never touches SQLite. The settings mirror inside the database is written by `ContentIndex` during synchronization, like every other derived row.
 
-All application models extend `system/engine/model.php`. There is no ORM: SQL is short, local, and explicit. This keeps startup, deployment, debugging, and recovery understandable on a small LXC.
+Application models use TinyMVC's model/database primitives. There is no ORM: SQL is short, local, and explicit. This keeps startup, deployment, debugging, and recovery understandable on a small LXC.
 
 ### Views
 
-`system/library/view.php` resolves a template below the active context's view root, extracts only the supplied data, captures its output, and returns HTML. It also provides every template with the same `$e` HTML escaper, so templates no longer define their own escaping closures. Templates remain ordinary semantic PHP.
+TinyMVC's `Template` facade and Twig adaptor resolve templates below registered application paths. Lightdocs adds only application-specific functions through `TemplateSetup`; escaping, includes, control flow, and rendering remain native Twig behavior.
 
-- `frontend/view/template/layout.php` is the reader shell.
-- `frontend/view/template/page.php` renders an individual document.
-- `admin/view/template/_header.php` is shared Studio navigation.
-- `admin/view/template/*.php` are the dashboard, editor, settings, health, graph, Local Git, and export screens.
+- `frontend/view/template/common/layout.twig` is the reader shell.
+- `frontend/view/template/page/page.twig` renders an individual document.
+- `admin/view/template/common/header.twig` is shared Studio navigation.
+- Admin Twig templates are grouped by their route domain.
 
 Views may format already-prepared data, but they should not write files, query SQLite, or decide access policy.
 
@@ -265,21 +259,11 @@ Static export uses the same repository, renderer, templates, and privacy rules t
 ## Directory map
 
 ```text
-system/                   Reusable, Lightdocs-agnostic framework code
-  engine/                 Framework execution mechanics
-    application.php       Runtime, session, dispatch, and error boundary
-    controller.php        Base controller with rendering and CSRF checks
-    model.php             Base PDO/event model with transactions
-    action.php             Native MVC action parsing
-    front.php              Controller action dispatch
-    request.php           Captured HTTP input
-    response.php          Typed responses and security headers
-    event.php              Synchronous application events
-    extension_manager.php Extension discovery and lifecycle
-  library/                Reusable infrastructure
-    db.php                 Generic SQLite connection and pragmas
-    view.php               PHP view loader and shared HTML escaper
-    file_cache.php         Fingerprinted disposable file cache
+vendor/exelaguilar/tiny-mvc-framework-private/
+  system/                 Composer-managed framework mechanics and libraries
+system/                   Lightdocs application composition and domain code
+  bootstrap/              register()/boot() application providers
+  engine/lightdocs/       Application-owned extension policy and orchestration
   config/                  PHP configuration and trusted custom directives
   helper/                  Stateless shared helpers
   library/content/         Markdown and content-domain components
@@ -289,13 +273,13 @@ admin/
   controller/             Admin controllers grouped by route domain
   model/                  Admin-specific models
   language/en-gb/          Admin language files
-  view/template/           Admin templates grouped by route domain
+  view/template/           Admin Twig templates grouped by route domain
   view/javascript/         Admin JavaScript
 frontend/
   controller/              Public controllers grouped by route domain
   model/                   Public-specific models
   language/en-gb/          Public language files
-  view/template/            Public templates grouped by route domain
+  view/template/            Public Twig templates grouped by route domain
   view/javascript/          Public JavaScript
   view/stylesheet/          Public CSS
 storage/                   Runtime database, cache, revisions, exports, and uploads
@@ -309,21 +293,16 @@ system/startup.php        Composer/config bootstrap
 router.php                PHP development-server router only
 ```
 
-Composer maps the shared engine, library, and model directories to `System\Engine`, `System\Library`, and `System\Model`. Admin and frontend controllers are classmapped from their context directories, while extension classes are discovered from their manifests. The layout uses lowercase underscore filenames and deploys identically on case-sensitive Linux filesystems.
+Composer loads TinyMVC's framework classes. Lightdocs' Kernel configuration maps its application-owned `System` tree plus the admin/frontend contexts, while each extension manifest mounts only its own namespace. The layout uses lowercase underscore filenames and deploys identically on case-sensitive Linux filesystems.
 
 ## Important files
 
 | File | Why it matters |
 |---|---|
-| `system/framework.php` | Explicit dependency wiring and the error boundary |
-| `system/engine/request.php` | Converts clean URLs and route queries into native MVC actions |
-| `system/engine/application.php` | Generic runtime, session, dispatch, and exception boundary |
-| `system/engine/front.php` | Native controller action dispatch |
-| `system/engine/controller.php` | Shared controller rendering and CSRF helpers |
-| `system/engine/model.php` | Shared PDO, events, and transaction behavior for models |
-| `system/engine/event.php` | Synchronous listener registration and dispatch |
-| `system/library/db.php` | Generic SQLite connection and runtime pragmas |
-| `system/library/view.php` | Template resolution and the shared `$e` HTML escaper |
+| `system/framework.php` | Provider order and native action dispatch |
+| `system/bootstrap/core_setup.php` | Database, HTTP, session, template, schema, and runtime services |
+| `system/bootstrap/content_setup.php` | Documentation-domain and extension-aware services |
+| `system/bootstrap/extension_setup.php` | Lightdocs extension policy over TinyMVC runtime assembly |
 | `frontend/controller/common/reader.php` | Public documentation endpoints |
 | `admin/controller/editor/editor.php` | Markdown authoring, preview, uploads, revisions, and note history |
 | `admin/controller/settings/settings.php` | Portable application settings |
@@ -337,7 +316,7 @@ Composer maps the shared engine, library, and model directories to `System\Engin
 | `system/library/service/static_site_builder.php` | Validation and complete static export shared by CLI and Studio |
 | `system/library/service/export_service.php` | Authenticated archive creation and one-time delivery |
 | `system/library/service/git_history.php` | Optional local repository status, commits, and note snapshots |
-| `admin/view/template/editor.php` | Studio authoring workspace markup |
+| `admin/view/template/editor/editor.twig` | Studio authoring workspace markup |
 | `admin/view/javascript/admin.js` | Progressive Studio interactions |
 | `frontend/view/javascript/app.js` | Reader navigation, search, themes, runbooks, tabs, and copy actions |
 | `frontend/view/stylesheet/app.css` | Reader and Studio design system without a build step |
@@ -347,7 +326,7 @@ Composer maps the shared engine, library, and model directories to `System\Engin
 
 For a new reader or Studio screen:
 
-1. Add or adjust the native action mapping in `system/engine/request.php`, then wire a new controller in `system/framework.php`.
+1. Add the controller under the owning context and update the application route configuration only when a clean URL needs an explicit mapping.
 2. Add a small controller action that validates the request and coordinates work.
 3. Put shared relational persistence or queries in `system/model/`.
 4. Put cross-cutting workflows in `system/library/service/`.
@@ -360,6 +339,6 @@ Avoid adding database-only document fields, hidden background requirements, or a
 
 ## Current architectural assessment
 
-The strongest parts of the design are its source-of-truth boundary and recognizable filesystem. Content remains inspectable and recoverable even if every cache and the entire SQLite database disappear. The `system/engine` versus `system/library` versus `system/` split makes framework mechanics, reusable infrastructure, and Lightdocs behavior individually distinct, while explicit constructor wiring in `Framework.php` keeps every dependency visible.
+The strongest parts of the design are its source-of-truth boundary and recognizable filesystem. Content remains inspectable and recoverable even if every cache and the entire SQLite database disappear. Composer-managed TinyMVC mechanics, Lightdocs providers, domain services, and extensions now have distinct ownership boundaries while the ordered provider list keeps composition visible.
 
 `Editor` remains the largest controller because editing, preview, revision, and upload operations share one authoring workspace, and its collaborators all arrive through the constructor. Saves post asynchronously to `/admin/save` and update the workspace in place; the same form still degrades to a full POST without JavaScript. Local Git remains the local-first version-control integration. The optional Remote sync extension adds manual import, pull, and explicitly enabled push workflows without making hosted Git a core dependency. Dependency construction (`system/framework.php`) and native action dispatch (`action.php` and `front.php`) are separate files with single jobs. The correct evolution remains focused first-party classes—not an ORM, opaque plugin container, or enterprise framework.

@@ -1,0 +1,41 @@
+{% macro render(nodes, selected, nested) %}
+<ul class="grid gap-0.5 m-0 list-none {{ nested ? 'ps-3.5' : 'ps-0' }}">
+  {% for node in nodes %} {% if node.type == 'folder' %}
+  <li data-tree-folder>
+    <details open>
+      <summary
+        class="flex cursor-pointer list-none items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-sidebar-foreground hover:bg-sidebar-accent"
+      >
+        <span class="font-semibold"
+          >{% if node.landing %}<a
+            class="text-primary"
+            href="/admin/editor?file={{ node.relativePath|url_encode|replace({'%2F': '/'}) }}"
+            >{{ node.title }}</a
+          >{% else %}{{ node.title }}{% endif %}</span
+        >
+      </summary>
+      {{ _self.render(node.children|default([]), selected, true) }}
+    </details>
+  </li>
+  {% else %}
+  <li
+    data-tree-page
+    data-search-text="{{ (node.title ~ ' ' ~ node.relativePath)|lower }}"
+  >
+    <a
+      class="flex cursor-pointer items-center justify-between gap-1.5 rounded-lg border-s-2 px-2.5 py-2 text-xs text-sidebar-foreground transition-colors hover:bg-sidebar-accent {{ node.relativePath == selected ? 'border-primary bg-accent font-semibold text-accent-foreground' : 'border-transparent' }}"
+      data-page-file="{{ node.relativePath }}"
+      href="/admin/editor?file={{ node.relativePath|url_encode|replace({'%2F': '/'}) }}"
+      ><span>{{ node.title }}</span>{% if node.private %}<span
+        class="inline-flex min-h-6 w-fit items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold bg-muted text-muted-foreground"
+        >Private</span
+      >{% elseif node.draft %}<span
+        class="inline-flex min-h-6 w-fit items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold border border-border bg-transparent text-foreground"
+        >Draft</span
+      >{% endif %}</a
+    >
+  </li>
+  {% endif %} {% endfor %}
+</ul>
+{% endmacro %} {% import _self as macros %} {{ macros.render(tree, selected,
+false) }}

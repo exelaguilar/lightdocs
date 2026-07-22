@@ -31,15 +31,6 @@ if (!defined('DIR_PROJECT')) {
     define('DIR_PROJECT', $project_root . DIRECTORY_SEPARATOR);
 }
 
-// Normalise HTTPS flag once for the whole request lifecycle.
-// Covers direct TLS, reverse-proxy forwarding headers, and port 443.
-$_SERVER['HTTPS'] = (
-    (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') ||
-    (!empty($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) ||
-    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https') ||
-    (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && strtolower((string)$_SERVER['HTTP_X_FORWARDED_SSL']) === 'on')
-);
-
 // Composer vendor autoload + third-party dependencies. The framework
 // Autoloader class now resolves through Composer's classmap like every other
 // package class, so no direct engine/autoloader.php require remains.

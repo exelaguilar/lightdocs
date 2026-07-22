@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Composer\InstalledVersions;
 use System\Library\Content\ContentRepository;
 use System\Library\Content\MarkdownRenderer;
 use System\Library\Content\Page;
@@ -12,19 +13,19 @@ use System\Library\Service\SiteSettings;
 use System\Library\Service\GitHistory;
 use System\Library\Service\GitSyncPreflight;
 use System\Library\Service\SecretRedactor;
-use System\Library\DB;
+use System\Library\Db\SqliteDb;
 use System\Library\ExtensionState;
 use System\Engine\Event;
-use System\Engine\ExtensionAdministration;
-use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionCapabilityRegistry;
-use System\Engine\ExtensionDiscovery;
-use System\Engine\ExtensionManager;
-use System\Engine\ExtensionManifest;
+use System\Engine\Lightdocs\Extension\Administration;
+use System\Engine\Lightdocs\Extension\Application;
+use System\Engine\Lightdocs\Extension\CapabilityRegistry;
+use System\Engine\Extension\Discovery;
+use System\Engine\Lightdocs\Extension\Manager;
+use System\Engine\Extension\Manifest;
 use System\Engine\Startup;
 use System\Engine\Model;
 use System\Library\Content\DirectiveRegistry;
-use System\Library\ExtensionPackageInstaller;
+use System\Library\Extension\PackageInstaller;
 use System\Library\Content\Glossary;
 use System\Library\Content\NavigationManager;
 use System\Library\User;
@@ -54,23 +55,26 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
     if (!$condition) $failures[] = $message;
 };
 
-$buildExtensions = static function (array $config, DB $database, ContentRepository $repository, DirectiveRegistry $directives, \System\Engine\Autoloader $autoloader): ExtensionAdministration {
+$buildExtensions = static function (array $config, SqliteDb $database, ContentRepository $repository, DirectiveRegistry $directives, \System\Engine\Autoloader $autoloader): Administration {
     $state = new ExtensionState($database);
     $startups = new Startup();
-    $capabilities = new ExtensionCapabilityRegistry();
-    $capabilities->register('lightdocs.application', static fn (ExtensionManifest $manifest): ExtensionApplication => new ExtensionApplication(
+    $capabilities = new CapabilityRegistry();
+    $capabilities->register('lightdocs.application', static fn (Manifest $manifest): Application => new Application(
         $manifest->name(), $config, $repository, $directives, $database, $state->settings($manifest->name()), $startups
     ));
-    $manager = new ExtensionManager(
-        new ExtensionDiscovery($config['extension_dir']),
+    $manager = new Manager(
+        new Discovery($config['extension_dir']),
         $state,
         capabilities: $capabilities,
-        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.13.0'],
+        platformVersions: [
+            'php' => PHP_VERSION,
+            'tinymvc' => InstalledVersions::getPrettyVersion('exelaguilar/tiny-mvc-framework-private') ?: '0.32.0',
+        ],
         autoloader: $autoloader,
-        packages: new ExtensionPackageInstaller($config['extension_dir']),
+        packages: new PackageInstaller($config['extension_dir']),
     );
     $runtime = $manager->boot('public');
-    return new ExtensionAdministration($manager, $runtime, $state, $startups);
+    return new Administration($manager, $runtime, $state, $startups);
 };
 
 $repository = new ContentRepository($config['content_dir']);
@@ -84,7 +88,7 @@ $events->trigger('smoke.event', $smokeArgs);
 $check(($eventPayload['ok'] ?? false) === true, 'Synchronous system events did not dispatch payloads.');
 $check(is_subclass_of(ContentIndex::class, Model::class), 'ContentIndex does not extend the system Model base.');
 $check(!is_subclass_of(SiteSettings::class, Model::class), 'SiteSettings should write canonical files without extending the SQLite Model base.');
-$mainDB = new DB($config['database_path']);
+$mainDB = new SqliteDb($config['database_path']);
 $registry->set('db', $mainDB);
 $registry->set('event', $events);
 $registry->set('repository', $repository);
@@ -98,7 +102,7 @@ $extensionRows = $extensions->all();
 $check(($extensionRows['reader_banner']['type'] ?? '') === 'example', 'The Reader Banner extension type was not discovered.');
 $check(($extensions->settingsFor('reader_banner')['contexts'] ?? []) === ['public'], 'The Reader Banner public-reader context was not discovered.');
 $extensionRoot = $config['cache_dir'] . '/extension-smoke-' . bin2hex(random_bytes(3));
-$extensionDb = new DB($extensionRoot . '/lightdocs.sqlite');
+$extensionDb = new SqliteDb($extensionRoot . '/lightdocs.sqlite');
 $extensionRegistry = new Registry();
 $extensionRegistry->set('config', $configuration);
 $extensionRegistry->set('db', $extensionDb);
@@ -185,7 +189,7 @@ $check($publicPreflight['excluded'] > 0, 'Public-only Git preflight did not excl
 @rmdir($preflightRoot);
 
 $escapeRenderer = new MarkdownRenderer(false, ['services' => ['demo' => ['id' => '103']]], $config['content_dir'], $config['directives']);
-$escapePage = new Page('', 'escape.md', '/escape', 'Escape', '', "Escaped: \\{{ services.demo.id }}\n\nResolved: {{ services.demo.id }}", [], time());
+$escapePage = new Page('', 'escape.md', '/escape', 'Escape', '', "Escaped: \{{ services.demo.id }}\n\nResolved: {{ services.demo.id }}", [], time());
 $html = $escapeRenderer->render($escapePage)->html;
 $check(str_contains($html, 'Escaped: {{ services.demo.id }}'), 'Escaped template variable was not preserved literally.');
 $check(str_contains($html, 'Resolved: 103'), 'Unescaped template variable was not resolved.');
@@ -224,7 +228,7 @@ $check(($navigation->folders()[0]['collapsed'] ?? false) === true, 'Navigation f
 @rmdir($navigationRoot);
 
 $accountsRoot = $config['cache_dir'] . '/accounts-smoke-' . bin2hex(random_bytes(3));
-$accountsDb = new DB($accountsRoot . '/lightdocs.sqlite');
+$accountsDb = new SqliteDb($accountsRoot . '/lightdocs.sqlite');
 $accountsConfig = new Config();
 $accountsConfig->load('default.php');
 $accountsConfig->set('admin_password', 'SmokePassword-123');

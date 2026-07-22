@@ -1,0 +1,185 @@
+{{ header | raw }}
+<main
+  class="mx-auto grid w-[min(calc(100%-3rem),82rem)] gap-6 py-7 pb-10 text-sm max-[900px]:w-[min(calc(100%-2rem),82rem)] max-[640px]:gap-5 max-[640px]:py-5"
+>
+  <header
+    class="flex items-end justify-between gap-6 max-[640px]:items-stretch max-[640px]:flex-col"
+  >
+    <div class="grid gap-1">
+      <nav
+        class="flex items-center gap-2 text-xs text-muted-foreground"
+        aria-label="Breadcrumb"
+      >
+        <a class="transition-colors hover:text-foreground" href="/admin"
+          >Workspace</a
+        ><svg
+          class="h-3.5 w-3.5"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="m9 18 6-6-6-6" /></svg
+        ><span class="text-foreground">Logs</span>
+      </nav>
+      <h1 class="m-0 text-2xl font-semibold tracking-[-0.03em] text-foreground">
+        Logs
+      </h1>
+      <p class="m-0 text-sm leading-6 text-muted-foreground">
+        Tail the framework's error and debug logs without shell access.
+      </p>
+    </div>
+  </header>
+
+  <section
+    class="grid grid-cols-2 divide-x divide-border overflow-hidden rounded-xl border border-border bg-card shadow-sm max-[480px]:grid-cols-1"
+    aria-label="Log file summary"
+  >
+    {% for file in files %}
+    <a
+      class="grid gap-1 px-5 py-4 transition-colors hover:bg-muted/40 max-[480px]:border-t max-[480px]:first:border-t-0"
+      href="/admin/logs?log={{ file['file']|url_encode }}"
+    >
+      <span
+        class="flex items-center gap-1.5 text-xs font-medium text-muted-foreground"
+        >{{ file['file'] }}{{ active_log == file['file'] ? '<span
+          class="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary"
+          >Viewing</span
+        >' : '' }}</span
+      >
+      <strong class="text-lg font-semibold tracking-[-0.02em] text-foreground"
+        >{{ file['size_label'] }}</strong
+      >
+      <span class="text-xs text-muted-foreground"
+        >{{ file['exists'] ? 'Updated ' ~ e(file['modified_label']) : 'Never
+        written' }}</span
+      >
+    </a>
+    {% endfor %}
+  </section>
+
+  <section
+    class="overflow-hidden rounded-xl border border-border bg-card text-card-foreground shadow-sm max-[640px]:rounded-lg"
+  >
+    <header
+      class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4 max-[640px]:px-4"
+    >
+      <div class="grid gap-0.5">
+        <h2 class="m-0 text-base font-semibold tracking-[-0.01em]">
+          {{ active_log }}
+        </h2>
+        <p class="m-0 text-xs text-muted-foreground">
+          Showing up to the last 200 KB. Refresh to fetch the latest lines.
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          type="button"
+          data-logs-refresh
+        >
+          <svg
+            class="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 4v6h6" /></svg
+          ><span>Refresh</span>
+        </button>
+        <a
+          class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          href="{{ download_url }}?log={{ active_log|url_encode }}"
+          ><svg
+            class="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 3v12M7 10l5 5 5-5M5 21h14" /></svg
+          ><span>Download</span></a
+        >
+        <form
+          method="post"
+          action="{{ clear_url }}"
+          data-confirm="Clear {{ active_log }}? This cannot be undone."
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf }}" /><input
+            type="hidden"
+            name="log"
+            value="{{ active_log }}"
+          /><button
+            class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-destructive bg-destructive px-2.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-destructive/90"
+            type="submit"
+          >
+            <svg
+              class="h-3.5 w-3.5"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path
+                d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"
+              /></svg
+            ><span>Clear</span>
+          </button>
+        </form>
+      </div>
+    </header>
+    {% if content|default('')|trim == '' %}
+    <div
+      class="flex flex-col items-center justify-center gap-2 p-10 text-center text-sm text-muted-foreground"
+      data-logs-empty
+    >
+      <p class="m-0">This log is empty.</p>
+    </div>
+    {% endif %}
+    <pre
+      class="max-h-[60vh] overflow-auto whitespace-pre-wrap break-words p-5 font-mono text-xs leading-5 text-foreground {{ content|default('')|trim == '' ? 'hidden' : '' }}"
+      data-logs-content
+    >
+{{ content | raw }}</pre>
+  </section>
+</main>
+<script nonce="{{ csp_nonce ?? '' }}">
+  (() => {
+    const pre = document.querySelector('[data-logs-content]');
+    const empty = document.querySelector('[data-logs-empty]');
+    const button = document.querySelector('[data-logs-refresh]');
+    const activeLog = {{ active_log|json_encode }};
+    const contentUrl = {{ content_url|json_encode | raw }};
+    button?.addEventListener('click', async () => {
+      button.disabled = true;
+      try {
+        const response = await fetch(contentUrl + '?log=' + encodeURIComponent(activeLog), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await response.json();
+        if (pre) {
+          pre.textContent = data.content || '';
+          pre.classList.toggle('hidden', !data.content);
+        }
+        empty?.classList.toggle('hidden', !!data.content);
+      } catch {
+        // Leave the existing content in place on a failed refresh.
+      } finally {
+        button.disabled = false;
+      }
+    });
+  })();
+</script>
+{{ footer | raw }}

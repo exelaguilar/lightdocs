@@ -6,6 +6,7 @@
   "description": "Optional local audit trail for framework and content events.",
   "requires": {"php": ">=8.4", "tinymvc": ">=0.11 <1.0"},
   "capabilities": {"requires": ["lightdocs.application"]},
+  "resources": {"namespaces": {"Extension\\Audit": "src/"}},
   "type": "developer",
   "default_enabled": false,
   "contexts": ["admin", "public"],

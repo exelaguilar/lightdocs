@@ -10,17 +10,17 @@ use Lightdocs\Tests\Support\TraceRecorder;
 use System\Engine\Action;
 use System\Engine\CallbackAction;
 use System\Engine\Event;
-use System\Engine\ExtensionAdministration;
-use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionCapabilityRegistry;
-use System\Engine\ExtensionDiscovery;
-use System\Engine\ExtensionManager;
-use System\Engine\ExtensionManifest;
+use System\Engine\Lightdocs\Extension\Administration;
+use System\Engine\Lightdocs\Extension\Application;
+use System\Engine\Lightdocs\Extension\CapabilityRegistry;
+use System\Engine\Extension\Discovery;
+use System\Engine\Lightdocs\Extension\Manager;
+use System\Engine\Extension\Manifest;
 use System\Engine\Registry;
 use System\Engine\Startup;
 use System\Library\Content\ContentRepository;
 use System\Library\Content\DirectiveRegistry;
-use System\Library\DB;
+use System\Library\Db\SqliteDb;
 use System\Model\Schema;
 
 final class OrderedMainAction extends Action
@@ -71,7 +71,7 @@ $config->load('default.php');
 $config->load('frontend.php');
 $config->set('database_path', $temporary . '/storage/lifecycle.sqlite');
 $registry->set('config', $config);
-$database = new DB($config->get('database_path'));
+$database = new SqliteDb($config->get('database_path'));
 $registry->set('db', $database);
 (new Schema($registry))->migrate();
 
@@ -83,8 +83,8 @@ $directives = new DirectiveRegistry([]);
 $trace->record('extension.discovery.begin');
 $state = new \System\Library\ExtensionState($database);
 $startups = new Startup();
-$capabilities = new ExtensionCapabilityRegistry();
-$capabilities->register('lightdocs.application', static fn (ExtensionManifest $manifest): ExtensionApplication => new ExtensionApplication(
+$capabilities = new CapabilityRegistry();
+$capabilities->register('lightdocs.application', static fn (Manifest $manifest): Application => new Application(
     $manifest->name(),
     $config->all(),
     $repository,
@@ -93,15 +93,15 @@ $capabilities->register('lightdocs.application', static fn (ExtensionManifest $m
     [],
     $startups,
 ));
-$manager = new ExtensionManager(
-    new ExtensionDiscovery(dirname($extensionDirectory)),
+$manager = new Manager(
+    new Discovery(dirname($extensionDirectory)),
     $state,
     capabilities: $capabilities,
     platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.11.0'],
     autoloader: $autoloader,
 );
 $runtime = $manager->boot('public');
-$extensions = new ExtensionAdministration($manager, $runtime, $state, $startups);
+$extensions = new Administration($manager, $runtime, $state, $startups);
 $extensions->registerEvents($event);
 $trace->record('extension.listeners.registered');
 $extensions->runStartups($event);

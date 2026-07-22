@@ -6,6 +6,7 @@
   "description": "Optional image resizing and optimization for uploaded media.",
   "requires": {"php": ">=8.4", "tinymvc": ">=0.11 <1.0"},
   "capabilities": {"requires": ["lightdocs.application"]},
+  "resources": {"namespaces": {"Extension\\Media": "src/"}},
   "type": "content",
   "default_enabled": false,
   "contexts": ["admin"],

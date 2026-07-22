@@ -47,7 +47,7 @@ echo json_encode([
     'system_registry' => class_exists(\System\Engine\Registry::class),
     'frontend_router' => class_exists(\Frontend\Controller\Startup\Router::class),
     'admin_router' => class_exists(\Admin\Controller\Startup\Router::class),
-    'extension_interface' => class_exists(\System\Engine\ExtensionManager::class),
+    'extension_interface' => class_exists(\System\Engine\Lightdocs\Extension\Manager::class),
     'broken_namespace_class' => class_exists('BrokenFixture\\Missing'),
     'dir_template' => defined('DIR_TEMPLATE') ? DIR_TEMPLATE : null,
     'dir_language' => defined('DIR_LANGUAGE') ? DIR_LANGUAGE : null,

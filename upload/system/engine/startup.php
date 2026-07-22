@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace System\Engine;
 
+use System\Engine\Lightdocs\Extension\Administration;
+
 final class Startup
 {
 	/** @var list<array{name:string,callback:callable,sort_order:int}> */
@@ -15,7 +17,7 @@ final class Startup
 		return $this;
 	}
 
-	public function run(Event $events, ExtensionAdministration $extensions): void
+	public function run(Event $events, Administration $extensions): void
 	{
 		usort($this->callbacks, static fn (array $a, array $b): int => $a['sort_order'] <=> $b['sort_order'] ?: strcmp($a['name'], $b['name']));
 

@@ -1,0 +1,304 @@
+{{ header | raw }}
+<main
+  class="mx-auto grid w-[min(calc(100%-3rem),82rem)] gap-6 py-7 pb-10 text-sm max-[900px]:w-[min(calc(100%-2rem),82rem)] max-[640px]:gap-5 max-[640px]:py-5"
+>
+  <nav
+    class="flex items-center gap-2 text-xs text-muted-foreground"
+    aria-label="Breadcrumb"
+  >
+    <span class="font-medium text-foreground">Workspace</span
+    ><svg
+      class="h-3.5 w-3.5"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="m9 18 6-6-6-6" /></svg
+    ><span>Overview</span>
+  </nav>
+  <header
+    class="flex items-end justify-between gap-4 max-[640px]:items-stretch max-[640px]:flex-col"
+  >
+    <div>
+      <p
+        class="m-0 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+      >
+        Content Studio
+      </p>
+      <h1
+        class="m-[0.2rem_0_0.3rem] text-2xl font-semibold tracking-[-0.025em] text-foreground"
+      >
+        Documentation overview
+      </h1>
+      <p class="max-w-2xl text-sm leading-6 text-muted-foreground">
+        Write, review, and publish from one focused workspace.
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a
+        class="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-border bg-card px-3.5 py-2 text-sm font-semibold text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
+        href="/admin/health"
+        >Review content</a
+      ><a
+        class="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-primary bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+        href="/admin/editor"
+        ><svg
+          class="size-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
+            d="M12 5v14M5 12h14"
+          /></svg
+        >New or edit page</a
+      >
+    </div>
+  </header>
+  {% if stats['issues'] %}<a
+    class="flex items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-100 px-4 py-3 text-xs text-amber-950 shadow-sm hover:bg-amber-200 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100 dark:hover:bg-amber-950/70"
+    href="/admin/health"
+    ><span class="flex items-center gap-2"
+      ><span class="size-2 rounded-full bg-amber-600 dark:bg-amber-300"></span
+      ><strong class="font-semibold"
+        >{{ stats['issues'] }} content health finding{{ stats['issues'] == 1 ?
+        '' : 's' }}</strong
+      ><span class="hidden text-amber-800/80 sm:inline dark:text-amber-200/80"
+        >Review broken links, missing assets, or metadata warnings.</span
+      ></span
+    ><span class="font-semibold">Review now →</span></a
+  >{% else %}
+  <div
+    class="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-xs text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100"
+  >
+    <span class="size-2 rounded-full bg-emerald-600 dark:bg-emerald-300"></span
+    ><strong class="font-semibold">Content health is clear</strong
+    ><span class="text-emerald-800/80 dark:text-emerald-200/80"
+      >No current findings need review.</span
+    >
+  </div>
+  {% endif %}
+  <section
+    class="grid grid-cols-4 overflow-hidden rounded-xl border border-border bg-card shadow-sm max-[760px]:grid-cols-2 max-[480px]:grid-cols-1"
+    aria-label="Publishing summary"
+  >
+    <a
+      class="px-5 py-4 transition-colors hover:bg-muted/40"
+      href="/admin/editor"
+      ><p class="text-xs text-muted-foreground">All content</p>
+      <strong class="mt-1 block text-xl font-semibold tracking-tight"
+        >{{ stats['pages'] }}</strong
+      ><span class="text-xs text-muted-foreground"
+        >{{ stats['published'] }} published</span
+      ></a
+    ><a
+      class="border-l border-border px-5 py-4 transition-colors hover:bg-muted/40 max-[760px]:border-t max-[480px]:border-l-0"
+      href="/admin/editor"
+      ><p class="text-xs text-muted-foreground">Drafts</p>
+      <strong class="mt-1 block text-xl font-semibold tracking-tight"
+        >{{ stats['drafts'] }}</strong
+      ><span class="text-xs text-muted-foreground"
+        >Not publicly visible</span
+      ></a
+    ><a
+      class="border-l border-border px-5 py-4 transition-colors hover:bg-muted/40 max-[760px]:border-t max-[480px]:border-l-0"
+      href="/admin/editor"
+      ><p class="text-xs text-muted-foreground">In review</p>
+      <strong class="mt-1 block text-xl font-semibold tracking-tight"
+        >{{ stats['review'] }}</strong
+      ><span class="text-xs text-muted-foreground"
+        >Awaiting publication</span
+      ></a
+    ><a
+      class="border-l border-border px-5 py-4 transition-colors hover:bg-muted/40 max-[760px]:border-t max-[480px]:border-l-0"
+      href="/admin/editor"
+      ><p class="text-xs text-muted-foreground">Scheduled</p>
+      <strong class="mt-1 block text-xl font-semibold tracking-tight"
+        >{{ stats['scheduled'] }}</strong
+      ><span class="text-xs text-muted-foreground">Future publication</span></a
+    >
+  </section>
+  <div
+    class="grid grid-cols-[minmax(0,1.35fr)_minmax(18rem,0.65fr)] gap-5 max-[900px]:grid-cols-1"
+  >
+    <section
+      class="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+    >
+      <header
+        class="flex items-center justify-between gap-4 border-b border-border px-5 py-4 max-[640px]:px-4"
+      >
+        <div>
+          <p
+            class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            Content
+          </p>
+          <h2 class="mt-1 text-base font-semibold">Recently updated</h2>
+        </div>
+        <a
+          class="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+          href="/admin/editor"
+          >Browse all</a
+        >
+      </header>
+      <div class="p-4 max-[640px]:p-3" role="list">
+        {% for page in recent_pages %}<a
+          class="flex items-center gap-3 rounded-lg border border-border px-3.5 py-3 transition-colors hover:bg-muted/40"
+          role="listitem"
+          href="{{ page['url'] }}"
+          ><span
+            class="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground"
+            ><svg
+              class="size-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M14 3v5h5M9 13h6M9 17h4"
+              /></svg></span
+          ><span class="min-w-0 flex-1"
+            ><strong class="block truncate text-sm font-medium text-foreground"
+              >{{ page['title'] }}</strong
+            ><small class="block truncate text-xs text-muted-foreground"
+              >{{ page['relative_path'] }} · {{ page['modified_label']
+              }}</small
+            ></span
+          >{% if page['badge'] %}<span
+            class="shrink-0 rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground"
+            >{{ page['badge'] }}</span
+          >{% endif %}<svg
+            class="size-4 shrink-0 text-muted-foreground"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+              d="m9 18 6-6-6-6"
+            /></svg></a
+        >{% endfor %}{% if not recent_pages %}
+        <div
+          class="rounded-lg border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground"
+        >
+          No pages have been created yet.
+        </div>
+        {% endif %}
+      </div>
+    </section>
+    <aside class="grid content-start gap-5">
+      <section
+        class="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+      >
+        <header
+          class="flex items-center justify-between border-b border-border px-5 py-4"
+        >
+          <div>
+            <p
+              class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Search index
+            </p>
+            <h2 class="mt-1 text-base font-semibold">Index status</h2>
+          </div>
+          <span
+            class="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200"
+            >Synced</span
+          >
+        </header>
+        <div class="grid grid-cols-2 gap-px bg-border">{% for metric in [["Documents", index_stats["documents"]|default(0)], ["Headings", index_stats["headings"]|default(0)], ["Keywords", index_stats["keywords"]|default(0)], ["Links", index_stats["links"]|default(0)]] %}
+          <div class="bg-card px-4 py-3">
+            <p class="text-xs text-muted-foreground">{{ metric[0] }}</p>
+            <strong class="mt-1 block text-base font-semibold"
+              >{{ metric[1] }}</strong
+            >
+          </div>
+          {% endfor %}
+        </div>
+        <p
+          class="m-0 border-t border-border px-5 py-3 text-xs text-muted-foreground"
+        >
+          Synced automatically from canonical Markdown.
+        </p>
+      </section>
+      <section
+        class="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+      >
+        <header
+          class="flex items-center justify-between border-b border-border px-5 py-4"
+        >
+          <div>
+            <p
+              class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Quick actions
+            </p>
+            <h2 class="mt-1 text-base font-semibold">Keep moving</h2>
+          </div>
+        </header>
+        <nav class="grid p-2" aria-label="Dashboard quick actions">
+          <a
+            class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-foreground hover:bg-muted/50"
+            href="/admin/health"
+            ><span
+              class="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground"
+              >!</span
+            ><span
+              ><strong class="block text-xs font-medium"
+                >Review content health</strong
+              ><small class="text-xs text-muted-foreground"
+                >{{ stats['issues'] }} finding{{ stats['issues'] == 1 ? '' : 's'
+                }}</small
+              ></span
+            ></a
+          ><a
+            class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-foreground hover:bg-muted/50"
+            href="/admin/graph"
+            ><span
+              class="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground"
+              >↗</span
+            ><span
+              ><strong class="block text-xs font-medium"
+                >Explore content map</strong
+              ><small class="text-xs text-muted-foreground"
+                >See page relationships</small
+              ></span
+            ></a
+          ><a
+            class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-foreground hover:bg-muted/50"
+            href="/admin/export"
+            ><span
+              class="flex size-7 items-center justify-center rounded-md bg-muted text-muted-foreground"
+              >↓</span
+            ><span
+              ><strong class="block text-xs font-medium"
+                >Export documentation</strong
+              ><small class="text-xs text-muted-foreground"
+                >Build a portable bundle</small
+              ></span
+            ></a
+          >
+        </nav>
+      </section>
+    </aside>
+  </div>
+</main>
+{{ footer | raw }}

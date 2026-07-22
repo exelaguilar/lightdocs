@@ -6,6 +6,7 @@
   "description": "Local-only Git history and sanitized content preflight.",
   "requires": {"php": ">=8.4", "tinymvc": ">=0.11 <1.0"},
   "capabilities": {"requires": ["lightdocs.application"]},
+  "resources": {"namespaces": {"Extension\\LocalGit": "src/"}},
   "type": "developer",
   "default_enabled": true,
   "contexts": ["admin", "public"],

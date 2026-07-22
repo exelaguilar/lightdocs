@@ -90,7 +90,7 @@ final class MarkdownRenderer
 		do {
 			$placeholder = 'LIGHTDOCS_ESCAPED_OPEN_' . bin2hex(random_bytes(12)) . '_';
 		} while (str_contains($markdown, $placeholder));
-		$markdown = str_replace('\\{{', $placeholder, $markdown);
+		$markdown = str_replace('\{{', $placeholder, $markdown);
 		$markdown = preg_replace_callback('/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/', function (array $match): string {
 			if ($match[1] === 'redacted') {
 				return 'REDACTED';

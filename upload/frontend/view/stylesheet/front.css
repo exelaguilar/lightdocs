@@ -27,7 +27,7 @@
   --info-soft: color-mix(in srgb,#3b82f6 8%,var(--surface));
   --header: 58px;
   --sidebar: 268px;
-  --toc: 268px;
+  --toc: 288px;
   --content: 752px;
   --radius: 10px;
   --radius-sm: max(5px,calc(var(--radius) - 2px));

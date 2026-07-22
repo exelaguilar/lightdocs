@@ -21,7 +21,7 @@ use System\Library\Service\StaticSiteBuilder;
 use System\Engine\Config;
 use System\Engine\Event;
 use System\Engine\Registry;
-use System\Library\DB;
+use System\Library\Db\SqliteDb;
 use System\Library\FileCache;
 use System\Library\Template;
 use System\Library\AssetPublisher;
@@ -30,6 +30,7 @@ use System\Library\JobQueue;
 use System\Library\JobWorker;
 use System\Library\Schedule;
 use System\Library\Service\CssBuilder;
+use System\Bootstrap\TemplateSetup;
 
 final class Console
 {
@@ -39,7 +40,7 @@ final class Console
 	private SearchService $search;
 	private StaticSiteBuilder $builder;
 	private Registry $registry;
-	private DB $database;
+	private SqliteDb $database;
 	private JobQueue $jobQueue;
 
 	public function __construct(Registry $registry)
@@ -51,7 +52,7 @@ final class Console
 		}
 		$this->config = $config->all();
 
-		$database = new DB($config->get('database_path'));
+		$database = new SqliteDb($config->get('database_path'));
 		$registry->set('db', $database);
 		$this->database = $database;
 
@@ -90,6 +91,7 @@ final class Console
 
 		$template = new Template($config->get('template_engine', 'template'), $config);
 		$template->addPath(dirname(__DIR__, 2) . '/frontend/view/template/');
+		TemplateSetup::configure($template);
 
 		$this->builder = new StaticSiteBuilder($this->config, $this->repository, $renderer, $this->search, $template, $events);
 	}
@@ -185,7 +187,7 @@ final class Console
 			$checks['Environment configuration'] = !is_file($this->config['environment_file']) || is_readable($this->config['environment_file']);
 		}
 		try {
-			(new DB($this->config['database_path']))->connection()->query('SELECT 1')->fetchColumn();
+			(new SqliteDb($this->config['database_path']))->connection()->query('SELECT 1')->fetchColumn();
 			$checks['SQLite database'] = true;
 		} catch (Throwable) {
 			$checks['SQLite database'] = false;

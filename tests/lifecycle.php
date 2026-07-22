@@ -36,7 +36,7 @@ foreach (['frontend' => 'common/reader.page', 'admin' => 'common/dashboard'] as 
         TestSuite::assertSame($context, $data['context'], 'APP_CONTEXT changed.');
         TestSuite::assertSame($context, $data['config_context'], 'Context config did not load.');
         TestSuite::assertSame($defaultAction, $data['action_default'], 'Context action_default changed.');
-        TestSuite::assertSame(['Admin', 'Frontend', 'Extension'], $data['namespaces'], 'Configured namespaces changed.');
+        TestSuite::assertSame(['Admin', 'Frontend'], $data['namespaces'], 'Configured namespaces changed.');
         TestSuite::assertTrue($data['system_registry'] && $data['frontend_router'] && $data['admin_router'], 'Configured classes did not resolve.');
         TestSuite::assertContains("/{$context}/", str_replace('\\', '/', $data['dir_template']), 'Context template constant changed.');
         TestSuite::assertTrue($data['registry_has_config'], 'Registry/Config boot checkpoint was not reached.');
@@ -79,8 +79,8 @@ $suite->test('web config.local loads last and is optional', static function () u
     TestSuite::assertSame('local/override', $data['action_default'], 'Web config.local did not override context config.');
 });
 
-$frontendOrder = ['router', 'setting', 'session', 'event'];
-$adminOrder = ['router', 'setting', 'session', 'user', 'authenticate', 'csrf', 'rate_limit', 'permission', 'event'];
+$frontendOrder = ['router', 'setting', 'event'];
+$adminOrder = ['router', 'setting', 'authenticate', 'csrf', 'rate_limit', 'permission', 'event'];
 foreach (['frontend' => $frontendOrder, 'admin' => $adminOrder] as $context => $order) {
     $suite->test("{$context} startup actions retain exact order and event envelope", static function () use ($fixtures, $decode, $context, $order): void {
         $temporary = new TemporaryDirectory();
@@ -102,7 +102,7 @@ $suite->test('startup Action return replaces main route and stops pre-actions', 
     $temporary = new TemporaryDirectory();
     $data = $decode(Subprocess::run($fixtures . '/startup_scenario.php', ['frontend'], [
         'LIGHTDOCS_TEST_TRACE' => $temporary->path . '/trace.log',
-        'LIGHTDOCS_TEST_STARTUP_ACTION' => 'session',
+        'LIGHTDOCS_TEST_STARTUP_ACTION' => 'router',
     ]));
     TestSuite::assertSame('replacement-body', $data['result'], 'Replacement action result changed.');
     TestSuite::assertTrue(!in_array('preaction.event', $data['trace'], true), 'Startup continued after Action return.');
@@ -270,7 +270,7 @@ $suite->test('duplicate framework boot duplicates autoload callback and output',
 $suite->test('real CLI entrypoint registers the configured namespace map', static function () use ($fixtures, $decode): void {
     $data = $decode(Subprocess::run($fixtures . '/cli_namespace_scenario.php'));
     TestSuite::assertSame('frontend', $data['context'], 'CLI context changed.');
-    TestSuite::assertSame(['System', 'Admin', 'Frontend', 'Extension'], $data['namespaces'], 'CLI namespaces changed.');
+    TestSuite::assertSame(['System', 'Admin', 'Frontend'], $data['namespaces'], 'CLI namespaces changed.');
 });
 
 $suite->test('real CLI success, unknown command, caught command error and config.local exclusion', static function () use ($root): void {

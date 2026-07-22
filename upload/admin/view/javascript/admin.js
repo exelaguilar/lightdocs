@@ -403,6 +403,158 @@ function schedulePreview() {
 	timer = setTimeout(preview, 320);
 }
 
+let navigatingAway = false;
+function flashStatus(text, isError) {
+	showAdminToast(text, isError ? 'error' : 'success');
+}
+function updateRevisions(revisions) {
+	const badge = $('[data-toggle-revisions] span');
+	if (badge) badge.textContent = String(revisions.length);
+	const list = $('[data-revisions-list]');
+	if (!list) return;
+	list.replaceChildren(
+		...revisions.map((revision) => {
+			const row = document.createElement('article');
+			row.className = 'flex w-full flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card p-3 text-sm';
+			row.setAttribute('role', 'listitem');
+			const info = document.createElement('section');
+			info.className = 'min-w-0 flex-1';
+			const when = document.createElement('h3');
+			when.textContent = revision.label;
+			const size = document.createElement('p');
+			size.textContent = revision.size;
+			info.append(when, size);
+			const actions = document.createElement('aside');
+			actions.className = 'isolate flex w-fit items-stretch';
+			const compare = document.createElement('button');
+			compare.className = 'inline-flex items-center justify-center rounded-md border border-border px-3 py-1.5 text-sm font-semibold';
+			compare.type = 'button';
+			compare.dataset.compareRevision = revision.id;
+			compare.textContent = 'Compare';
+			const restore = document.createElement('button');
+			restore.className = compare.className;
+			restore.type = 'submit';
+			restore.name = 'action';
+			restore.value = 'restore:' + revision.id;
+			restore.dataset.restoreRevision = 'true';
+			restore.textContent = 'Restore';
+			actions.append(compare, restore);
+			row.append(info, actions);
+			return row;
+		}),
+	);
+}
+async function saveDocument() {
+	if (!form || !textarea) return;
+	syncFrontmatter();
+	if (saveState) saveState.textContent = 'Saving…';
+	const data = new FormData(form);
+	data.set('action', 'save');
+	try {
+		const response = await fetch('/admin/save', { method: 'POST', body: data });
+		const result = await response.json();
+		if (!response.ok) throw new Error(result.error || 'Save failed.');
+		form.elements.hash.value = result.hash;
+		cleanValue = textarea.value;
+		markDirty();
+		if (saveState) saveState.textContent = 'Saved';
+		if (result.created) {
+			navigatingAway = true;
+			location.href = '/admin/editor?file=' + encodeURIComponent(result.file);
+			return;
+		}
+		flashStatus(result.message || 'Saved', false);
+		updateRevisions(result.revisions || []);
+	} catch (error) {
+		if (saveState) saveState.textContent = 'Unsaved';
+		flashStatus(error.message, true);
+	}
+}
+function syncFrontmatter() {
+	if (!textarea || isSnippet) return;
+	const fields = Object.fromEntries(
+		$$('[data-meta-field]').map((field) => [
+			field.dataset.metaField,
+			field.type === 'checkbox' ? field.checked : field.value,
+		]),
+	);
+	let body = textarea.value;
+	let lines = [];
+	const match = textarea.value.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+	if (match) {
+		lines = match[1].split(/\r?\n/);
+		body = textarea.value.slice(match[0].length);
+	}
+	const keys = ['title', 'description', 'keywords', 'aliases', 'order', 'visibility', 'type', 'reviewed', 'review_after', 'status', 'publish_at', 'draft', 'nav', 'contains_secrets', 'ai_exclude'];
+	const retained = lines.filter((line) => !keys.some((key) => new RegExp(`^${key}:`).test(line)));
+	const quote = (value) => `"${String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+	const list = (value) => JSON.stringify(String(value || '').split(',').map((item) => item.trim()).filter(Boolean));
+	const generated = [
+		`title: ${quote(fields.title || 'New Page')}`,
+		`description: ${quote(fields.description || '')}`,
+		list(fields.keywords) !== '[]' ? `keywords: ${list(fields.keywords)}` : '',
+		list(fields.aliases) !== '[]' ? `aliases: ${list(fields.aliases)}` : '',
+		`order: ${Number(fields.order) || 100}`,
+		fields.visibility && fields.visibility !== 'public' ? `visibility: ${fields.visibility}` : '',
+		fields.type && fields.type !== 'article' ? `type: ${fields.type}` : '',
+		fields.reviewed ? `reviewed: ${quote(fields.reviewed)}` : '',
+		Number(fields.review_after) && Number(fields.review_after) !== 180 ? `review_after: ${Number(fields.review_after)}` : '',
+		fields.status && fields.status !== 'published' ? `status: ${fields.status}` : '',
+		fields.publish_at ? `publish_at: ${quote(fields.publish_at)}` : '',
+		fields.status === 'draft' || (!fields.status && fields.draft) ? 'draft: true' : '',
+		fields.nav ? '' : 'nav: false',
+		fields.contains_secrets ? 'contains_secrets: true' : '',
+		fields.ai_exclude ? 'ai_exclude: true' : '',
+	];
+	textarea.value = `---\n${[...generated, ...retained].filter(Boolean).join('\n')}\n---\n\n${body.replace(/^\s+/, '')}`;
+	markDirty();
+	updateCount();
+	schedulePreview();
+}
+
+previewButton?.addEventListener('click', () => {
+	const previewOnly = workspace?.classList.toggle('preview-only') || false;
+	previewButton.classList.toggle('active', previewOnly);
+	previewButton.setAttribute('aria-pressed', String(previewOnly));
+	previewButton.textContent = previewOnly ? 'Split view' : 'Preview only';
+	if (frame && !frame.srcdoc) preview();
+});
+metadataButton?.addEventListener('click', () => metadataPanel?.toggleAttribute('hidden'));
+revisionsButton?.addEventListener('click', () => revisionsPanel?.toggleAttribute('hidden'));
+$('[data-close-revisions]')?.addEventListener('click', () => revisionsPanel?.setAttribute('hidden', ''));
+gitHistoryButton?.addEventListener('click', () => gitHistoryPanel?.toggleAttribute('hidden'));
+$('[data-close-git-history]')?.addEventListener('click', () => gitHistoryPanel?.setAttribute('hidden', ''));
+document.addEventListener('click', (event) => {
+	const button = event.target.closest('[data-restore-revision]');
+	if (button && !confirm('Restore this revision? The current page will be saved in history first.')) event.preventDefault();
+});
+$$('[data-meta-field]').forEach((field) => field.addEventListener('change', syncFrontmatter));
+$$('[data-meta-field][type="text"], [data-meta-field][type="number"]').forEach((field) =>
+	field.addEventListener('input', () => {
+		clearTimeout(timer);
+		timer = setTimeout(syncFrontmatter, 250);
+	}),
+);
+textarea?.addEventListener('input', () => {
+	markDirty();
+	updateCount();
+	schedulePreview();
+	updateGlossarySuggestion();
+	updateSlashMenu();
+	if (/(^|\s)@image\s*$/.test(textarea.value.slice(0, textarea.selectionStart))) openAssetPicker();
+});
+form?.addEventListener('submit', (event) => {
+	const submitter = event.submitter;
+	const action = submitter && submitter.name === 'action' && submitter.value ? submitter.value : 'save';
+	if (action !== 'save') {
+		syncFrontmatter();
+		navigatingAway = true;
+		return;
+	}
+	event.preventDefault();
+	saveDocument();
+});
+
 const glossaryTerms = (() => {
 	try {
 		const terms = JSON.parse($('[data-glossary-terms]')?.textContent || '[]');
@@ -463,20 +615,61 @@ function hideSlashMenu() {
 }
 function positionSlashMenu() {
 	if (!textarea || !slashMenuRoot || slashMenuRoot.hidden) return;
-	const styles = getComputedStyle(textarea);
-	const mirror = document.createElement('div');
-	const marker = document.createElement('span');
-	mirror.className = 'fixed invisible pointer-events-none h-auto';
-	Object.assign(mirror.style, {
-		boxSizing: 'border-box',
-		font: styles.font,
-		letterSpacing: styles.letterSpacing,
-		lineHeight: styles.lineHeight,
-		padding: styles.padding,
-		textIndent: styles.textIndent,
-		textTransform: styles.textTransform,
-		});
+	slashMenuRoot.style.left = '1rem';
+	slashMenuRoot.style.top = '3.25rem';
+}
+function updateSlashMenu() {
+	if (!textarea || !slashMenuRoot || !slashMenu) return;
+	const before = textarea.value.slice(0, textarea.selectionStart);
+	const match = before.match(/(?:^|\n)\/([a-z-]*)$/i);
+	if (!match) {
+		hideSlashMenu();
+		return;
 	}
+	const commands = [
+		['Heading', '## Heading'],
+		['Callout', ':::callout type="info" title="Note"\nWrite the note here.\n:::'],
+		['Details', ':::details title="More information"\nAdditional details.\n:::'],
+		['Inline table of contents', ':::inline-toc title="In this article"\n:::'],
+	].filter(([label]) => label.toLowerCase().includes(match[1].toLowerCase()));
+	if (commands.length === 0) {
+		hideSlashMenu();
+		return;
+	}
+	slashMatch = { start: textarea.selectionStart - match[1].length - 1, commands };
+	slashIndex = Math.min(slashIndex, commands.length - 1);
+	slashMenu.replaceChildren(...commands.map(([label, markdown], index) => {
+		const button = document.createElement('button');
+		button.type = 'button';
+		button.className = 'flex w-full items-center rounded-md px-3 py-2 text-left text-sm hover:bg-accent';
+		button.dataset.active = String(index === slashIndex);
+		button.textContent = label;
+		button.addEventListener('click', () => {
+			textarea.setRangeText(markdown, slashMatch.start, textarea.selectionStart, 'end');
+			hideSlashMenu();
+			textarea.dispatchEvent(new Event('input', { bubbles: true }));
+			textarea.focus();
+		});
+		return button;
+	}));
+	slashMenuRoot.hidden = false;
+	positionSlashMenu();
+	}
+textarea?.addEventListener('keydown', (event) => {
+	if (!slashMatch || slashMenuRoot?.hidden) return;
+	if (event.key === 'Escape') {
+		event.preventDefault();
+		hideSlashMenu();
+	} else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+		event.preventDefault();
+		slashIndex = (slashIndex + (event.key === 'ArrowDown' ? 1 : -1) + slashMatch.commands.length) % slashMatch.commands.length;
+		updateSlashMenu();
+	} else if (event.key === 'Enter') {
+		event.preventDefault();
+		const buttons = $$('button', slashMenu);
+		buttons[slashIndex]?.click();
+	}
+});
 document.addEventListener('keydown', (event) => {
 	if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
 		event.preventDefault();

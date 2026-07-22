@@ -17,7 +17,6 @@ return [
     'pre_actions' => [
         'startup/router',
         'startup/setting',
-        'startup/session',
         'startup/event',
     ],
 

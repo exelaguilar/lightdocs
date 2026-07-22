@@ -33,11 +33,11 @@ foreach ($classes as $class => $expectedFile) {
 }
 
 $localClasses = [
-	System\Engine\ExtensionManager::class,
-	System\Engine\ExtensionCompatibility::class,
-	System\Engine\ExtensionDependencyResolver::class,
-	System\Engine\ExtensionPackageTrust::class,
-	System\Engine\ExtensionAuthorization::class,
+	System\Engine\Lightdocs\Extension\Manager::class,
+	System\Engine\Lightdocs\Extension\Compatibility::class,
+	System\Engine\Lightdocs\Extension\DependencyResolver::class,
+	System\Engine\Lightdocs\Extension\PackageTrust::class,
+	System\Engine\Lightdocs\Extension\Authorization::class,
 	System\Library\ExtensionState::class,
 ];
 foreach ($localClasses as $class) {
@@ -50,11 +50,11 @@ foreach ($localClasses as $class) {
 }
 
 $removed = [
-	'System\\Engine\\ExtensionManager',
-	'System\\Engine\\ExtensionInstallationRepositoryInterface',
-	'System\\Engine\\ExtensionOperationAuthorizerInterface',
-	'System\\Engine\\AllowAllExtensionOperationAuthorizer',
-	'System\\Engine\\InMemoryExtensionInstallationRepository',
+	'System\Engine\Manager',
+	'System\Engine\InstallationRepositoryInterface',
+	'System\Engine\ExtensionOperationAuthorizerInterface',
+	'System\Engine\AllowAllExtensionOperationAuthorizer',
+	'System\Engine\InMemoryInstallationRepository',
 ];
 foreach ($removed as $class) {
 	if (isset($classes[$class])) $failures[] = $class . ' remains in the TinyMVC package.';

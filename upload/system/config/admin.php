@@ -17,8 +17,6 @@ return [
     'pre_actions' => [
         'startup/router',
         'startup/setting',
-        'startup/session',
-        'startup/user',
         'startup/authenticate',
         'startup/csrf',
         'startup/rate_limit',

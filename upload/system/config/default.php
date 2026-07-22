@@ -65,7 +65,6 @@ return [
     'namespaces' => [
         'Admin' => 'admin/',
         'Frontend' => 'frontend/',
-        'Extension' => 'extension/',
     ],
 
     // Identity
@@ -150,5 +149,6 @@ return [
     'log_ignore_sources' => ['Assets', 'Action', 'Front', 'Events'],
 
     // Template engine
-    'template_engine' => 'template',
+    'template_engine' => 'twig',
+    'template_cache_dir' => $state_root . '/cache/twig-v3',
 ];

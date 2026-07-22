@@ -70,6 +70,7 @@ class Media extends Controller
             'config' => $this->config->all(),
             'csrf' => (string)$this->session->get('csrf_token', ''),
         ];
+		$data['image_count'] = count(array_filter($data['assets'], static fn (array $asset): bool => $asset['width'] !== null));
         $data['header'] = $this->load->controller('common/header', ['active_nav' => 'media']);
         $data['footer'] = $this->load->controller('common/footer');
 

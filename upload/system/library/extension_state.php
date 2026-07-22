@@ -5,18 +5,19 @@ declare(strict_types=1);
 namespace System\Library;
 
 use PDO;
-use System\Engine\ExtensionInstallation;
+use System\Engine\Lightdocs\Extension\Installation;
+use System\Library\Db\AbstractDb;
 
 final class ExtensionState
 {
 	private PDO $db;
 
-	public function __construct(DB $database)
+	public function __construct(AbstractDb $database)
 	{
 		$this->db = $database->connection();
 	}
 
-	public function find(string $name): ?ExtensionInstallation
+	public function find(string $name): ?Installation
 	{
 		$statement = $this->db->prepare('SELECT * FROM extensions WHERE name = :name');
 		$statement->execute(['name' => $name]);
@@ -25,7 +26,7 @@ final class ExtensionState
 		return is_array($row) ? $this->installation($row) : null;
 	}
 
-	/** @return array<string,ExtensionInstallation> */
+	/** @return array<string,Installation> */
 	public function all(): array
 	{
 		$installations = [];
@@ -37,7 +38,7 @@ final class ExtensionState
 		return $installations;
 	}
 
-	public function save(ExtensionInstallation $installation): void
+	public function save(Installation $installation): void
 	{
 		$statement = $this->db->prepare(<<<'SQL'
 INSERT INTO extensions (name, version, source, status, enabled, package_hash, discovered_at, installed_at, updated_at, error)
@@ -127,16 +128,16 @@ SQL);
 	}
 
 	/** @param array<string,mixed> $row */
-	private function installation(array $row): ExtensionInstallation
+ private function installation(array $row): Installation
 	{
 		$source = in_array(($row['source'] ?? ''), ['bundled', 'uploaded'], true) ? (string) $row['source'] : 'bundled';
 		$enabled = (bool) ($row['enabled'] ?? false);
 		$status = (string) ($row['status'] ?? '');
-		if (!in_array($status, ExtensionInstallation::statuses(), true)) {
-			$status = $enabled ? ExtensionInstallation::ENABLED : ExtensionInstallation::DISCOVERED;
+		if (!in_array($status, Installation::statuses(), true)) {
+			$status = $enabled ? Installation::ENABLED : Installation::DISCOVERED;
 		}
 
-		return new ExtensionInstallation(
+		return new Installation(
 			(string) $row['name'],
 			(string) ($row['version'] ?? ''),
 			$source,

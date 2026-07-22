@@ -75,12 +75,23 @@ final class CssBuilder
 
 			$iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($root, \FilesystemIterator::SKIP_DOTS));
 			foreach ($iterator as $file) {
-				if (!$file->isFile() || !in_array($file->getExtension(), ['php', 'js'], true)) {
+				if (!$file->isFile() || !in_array($file->getExtension(), ['php', 'twig', 'js'], true)) {
 					continue;
 				}
 
 				$content = file_get_contents($file->getPathname());
 				if ($content !== false) {
+					if ($file->getExtension() === 'twig') {
+						preg_match_all('/\bclass\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/i', $content, $matches, PREG_SET_ORDER);
+						$fragments = [];
+						foreach ($matches as $match) {
+							$classes = (string) ($match[1] !== '' ? $match[1] : ($match[2] ?? ''));
+							preg_match_all('/\'([^\']+)\'/', $classes, $dynamic);
+							$literal = preg_replace('/\{\{.*?\}\}|\{%.*?%\}/s', ' ', $classes) ?? $classes;
+							$fragments[] = trim($literal . ' ' . implode(' ', $dynamic[1] ?? []));
+						}
+						$content = implode("\n", array_map(static fn (string $classes): string => '<div class="' . $classes . '"></div>', $fragments));
+					}
 					$sources[] = $content;
 				}
 			}

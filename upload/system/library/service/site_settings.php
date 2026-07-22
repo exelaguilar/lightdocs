@@ -77,7 +77,7 @@ final class SiteSettings
 	{
 		if ($value === '') return '';
 		if (preg_match('~^[a-zA-Z0-9_./:@#-]+$~', $value)) return $value;
-		return '"' . str_replace(['\\', '"', '$'], ['\\\\', '\\"', '\\$'], $value) . '"';
+		return '"' . str_replace(['\\', '"', '$'], ['\\', '\"', '\$'], $value) . '"';
 	}
 
 	private function yaml(string $path): array

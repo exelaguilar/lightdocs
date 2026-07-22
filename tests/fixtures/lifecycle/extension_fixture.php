@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace Extension\Lifecycle;
 
 use Lightdocs\Tests\Support\TraceRecorder;
-use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionContext;
-use System\Engine\ExtensionInterface;
+use System\Engine\Lightdocs\Extension\Application;
+use System\Engine\Extension\Context;
+use System\Engine\Extension\Contract;
 
-final class Extension implements ExtensionInterface
+final class Extension implements Contract
 {
-    public function register(ExtensionContext $context): void
+    public function register(Context $context): void
     {
         $application = $context->capability('lightdocs.application');
-        if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid fixture capability.');
+        if (!$application instanceof Application) throw new \RuntimeException('Invalid fixture capability.');
         $trace = new TraceRecorder((string) getenv('LIGHTDOCS_TEST_TRACE'));
         $trace->record('extension.discovery.complete');
         $trace->record('extension.listeners.declared');

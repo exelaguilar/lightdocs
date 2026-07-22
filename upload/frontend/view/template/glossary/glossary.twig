@@ -1,0 +1,41 @@
+<article class="min-w-0 print:[&_a]:text-black" data-docs-article>
+  <header class="mb-10 border-b border-[var(--border)] pb-[30px] pt-1">
+    <p
+      class="mb-2.5 text-[11px] font-[720] uppercase tracking-[.1em] text-[var(--brand-strong)]"
+    >
+      Reference
+    </p>
+    <h1
+      class="m-0 max-w-[760px] text-[clamp(2rem,4vw,2.72rem)] font-[760] leading-[1.08] tracking-[-.045em] text-[var(--text-strong)] text-balance"
+    >
+      Glossary
+    </h1>
+    <p
+      class="mt-[15px] max-w-[660px] text-[17px] leading-[1.65] text-[var(--muted)]"
+    >
+      Definitions for shared terms used throughout this documentation.
+    </p>
+  </header>
+  {% if not terms %}
+  <p>No glossary terms have been defined yet.</p>
+  {% else %}
+  <dl class="grid gap-2">
+    {% for term in terms %}
+    <div
+      class="scroll-mt-[84px] rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface-subtle)] px-4 py-[15px] target:border-[color-mix(in_srgb,var(--brand)_55%,var(--border))] target:bg-[var(--brand-soft)]"
+      id="{{ term['slug'] }}"
+    >
+      <dt class="text-[15px] font-bold text-[var(--text-strong)]">
+        {{ term['term'] }}
+      </dt>
+      <dd class="mt-1 text-sm leading-[1.6] text-[var(--muted)]">
+        {{ term['definition'] }}{% if term['aliases'] %}<span
+          class="mt-1.5 block text-xs text-[var(--faint)]"
+          >Also known as: {{ term['aliases']|join(', ') }}.</span
+        >{% endif %}
+      </dd>
+    </div>
+    {% endfor %}
+  </dl>
+  {% endif %}
+</article>

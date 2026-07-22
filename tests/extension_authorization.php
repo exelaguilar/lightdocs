@@ -3,10 +3,10 @@
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/upload/system/startup.php';
-require_once DIR_SYSTEM . 'engine/extension_authorization.php';
+require_once DIR_SYSTEM . 'engine/lightdocs/extension/authorization.php';
 
-use System\Engine\ExtensionAuthorization;
-use System\Engine\ExtensionManifest;
+use System\Engine\Lightdocs\Extension\Authorization;
+use System\Engine\Extension\Manifest;
 use System\Engine\Registry;
 use System\Library\User;
 
@@ -15,10 +15,10 @@ $assert = static function (bool $condition, string $message) use (&$assertions):
     $assertions++;
     if (!$condition) throw new \RuntimeException($message);
 };
-$manifest = ExtensionManifest::fromFile(DIR_ROOT . 'extension/audit/extension.json');
+$manifest = Manifest::fromFile(DIR_ROOT . 'extension/audit/extension.json');
 
 $registry = new Registry();
-$authorization = new ExtensionAuthorization($registry);
+$authorization = new Authorization($registry);
 try {
     $authorization->assertAuthorized('install', $manifest);
     $assert(false, 'Missing user was authorized.');

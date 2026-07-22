@@ -1,0 +1,410 @@
+{{ header | raw }}
+<main
+  class="mx-auto grid w-[min(calc(100%-3rem),82rem)] gap-6 py-7 pb-10 text-sm max-[900px]:w-[min(calc(100%-2rem),82rem)] max-[640px]:gap-5 max-[640px]:py-5"
+>
+  <nav
+    class="flex items-center gap-2 text-xs text-muted-foreground"
+    aria-label="Breadcrumb"
+  >
+    <a class="transition-colors hover:text-foreground" href="/admin"
+      >Workspace</a
+    ><svg
+      class="h-3.5 w-3.5"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="m9 18 6-6-6-6" /></svg
+    ><span class="font-medium text-foreground">Media library</span>
+  </nav>
+  <header
+    class="flex items-end justify-between gap-4 max-[640px]:items-stretch max-[640px]:flex-col"
+  >
+    <div>
+      <p
+        class="m-0 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+      >
+        Content
+      </p>
+      <h1
+        class="m-[0.2rem_0_0.3rem] text-2xl font-semibold tracking-[-0.025em]"
+      >
+        Media library
+      </h1>
+      <p class="max-w-2xl text-sm leading-6 text-muted-foreground">
+        Browse uploaded assets, see where they are used, and keep the site tidy.
+      </p>
+    </div>
+    <form
+      method="post"
+      enctype="multipart/form-data"
+      class="flex shrink-0 items-center gap-2"
+      data-media-upload-form
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf }}" /><input
+        type="hidden"
+        name="action"
+        value="upload"
+      /><label
+        class="inline-flex min-h-9 cursor-pointer items-center justify-center gap-2 rounded-md border border-primary bg-primary px-3.5 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+        ><svg
+          aria-hidden="true"
+          class="size-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.8"
+            d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V14"
+          /></svg
+        ><span data-media-upload-label>Upload media</span
+        ><input
+          class="sr-only"
+          type="file"
+          name="asset"
+          accept="image/*,.pdf,.txt"
+          required
+          data-media-upload-file /></label
+      ><span class="sr-only" data-media-upload-status
+        >Selecting a file uploads it immediately.</span
+      >
+    </form>
+  </header>
+  {% if message %}
+  <div
+    class="rounded-lg border border-border bg-card px-4 py-3 text-sm"
+    role="status"
+  >
+    {{ message }}
+  </div>
+  {% endif %}{% if error %}
+  <div
+    class="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+    role="alert"
+  >
+    {{ error }}
+  </div>
+  {% endif %}
+  <section
+    class="grid grid-cols-3 overflow-hidden rounded-xl border border-border bg-card shadow-sm max-[640px]:grid-cols-1"
+  >
+    <div class="px-5 py-4">
+      <p class="text-xs text-muted-foreground">Total assets</p>
+      <strong class="mt-1 block text-xl font-semibold"
+        >{{ assets|length }}</strong
+      >
+    </div>
+    <div
+      class="border-l border-border px-5 py-4 max-[640px]:border-l-0 max-[640px]:border-t"
+    >
+      <p class="text-xs text-muted-foreground">Image assets</p>
+      <strong class="mt-1 block text-xl font-semibold"
+        >{{ image_count }}</strong
+      >
+    </div>
+    <div
+      class="border-l border-border px-5 py-4 max-[640px]:border-l-0 max-[640px]:border-t"
+    >
+      <p class="text-xs text-muted-foreground">Persistent storage</p>
+      <strong class="mt-1 block text-sm font-semibold"
+        >Uploads directory</strong
+      >
+    </div>
+  </section>
+  <section
+    class="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+  >
+    <header
+      class="flex items-end justify-between gap-4 border-b border-border px-5 py-4 max-[640px]:flex-col max-[640px]:items-stretch max-[640px]:px-4"
+    >
+      <div>
+        <p
+          class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          Library
+        </p>
+        <h2 class="mt-1 text-base font-semibold">Uploaded files</h2>
+        <p class="mt-1 text-xs text-muted-foreground">
+          Assets remain outside the application release.
+        </p>
+      </div>
+      <input
+        class="min-h-9 w-56 max-w-full rounded-md border border-input bg-card px-2.5 py-2 text-xs text-foreground shadow-sm outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
+        type="search"
+        placeholder="Filter media"
+        aria-label="Filter media"
+        data-table-filter="media"
+      />
+    </header>
+    {% if not assets %}
+    <div
+      class="m-5 flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground"
+    >
+      <p class="m-0 font-medium text-foreground">No media uploaded</p>
+      <p class="m-0">
+        Add an image or document to begin building your library.
+      </p>
+    </div>
+    {% else %}
+    <div class="overflow-x-auto">
+      <table
+        class="w-full min-w-[62rem] border-collapse text-sm"
+        data-table="media"
+      >
+        <thead class="bg-muted/40">
+          <tr>
+            <th
+              class="px-5 py-2.5 text-start text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              File
+            </th>
+            <th
+              class="px-3 py-2.5 text-start text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Dimensions
+            </th>
+            <th
+              class="px-3 py-2.5 text-start text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Size
+            </th>
+            <th
+              class="px-3 py-2.5 text-start text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Usage
+            </th>
+            <th
+              class="px-5 py-2.5 text-end text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for asset in assets %}
+          <tr
+            class="border-t border-border transition-colors hover:bg-muted/30"
+          >
+            <td class="px-5 py-3">
+              <div class="flex min-w-0 items-center gap-3">
+                {% if asset['width'] != null %}<span
+                  class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-muted"
+                  ><img
+                    class="h-full w-full object-cover"
+                    src="{{ asset['url'] }}"
+                    alt=""
+                    loading="lazy" /></span
+                >{% else %}<span
+                  class="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-[10px] font-bold text-muted-foreground"
+                  >{{ asset['extension_label'] }}</span
+                >{% endif %}<span class="min-w-0"
+                  ><strong
+                    class="block truncate text-sm font-medium text-foreground"
+                    >{{ asset['name'] }}</strong
+                  ><small
+                    class="block max-w-[22rem] truncate text-xs text-muted-foreground"
+                    >{{ asset['url'] }}</small
+                  ></span
+                >
+              </div>
+            </td>
+            <td class="px-3 py-3 text-xs text-muted-foreground">
+              {{ asset['dimensions_label'] }}
+            </td>
+            <td class="px-3 py-3 text-xs text-muted-foreground">
+              {{ asset['size_label'] }}
+            </td>
+            <td class="px-3 py-3 text-xs text-muted-foreground">
+              {{ asset['usage_count'] }} page{{ asset['usage_count'] == 1 ? '' :
+              's' }}
+            </td>
+            <td class="px-5 py-3">
+              <div class="flex items-center justify-end gap-1.5">
+                <button
+                  class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                  type="button"
+                  data-media-rename="{{ asset['name'] }}"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="size-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="m4 16.5-.8 3.8 3.8-.8L18.5 8a2.1 2.1 0 0 1-3-3L4 16.5Z"
+                    /></svg
+                  >Rename</button
+                ><button
+                  class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
+                  type="button"
+                  data-media-preview="{{ asset['url'] }}"
+                  data-media-preview-name="{{ asset['name'] }}"
+                  data-media-preview-image="{{ asset['width'] != null ? '1' : '0' }}"
+                >
+                  <svg
+                    aria-hidden="true"
+                    class="size-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Z"
+                    />
+                    <circle cx="12" cy="12" r="2.5" /></svg
+                  >Open
+                </button>
+                <form
+                  method="post"
+                  data-confirm="Delete this asset? Pages that reference it will show a missing asset."
+                >
+                  <input
+                    type="hidden"
+                    name="csrf_token"
+                    value="{{ csrf }}"
+                  /><input type="hidden" name="action" value="delete" /><input
+                    type="hidden"
+                    name="name"
+                    value="{{ asset['name'] }}"
+                  /><button
+                    class="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md border border-destructive bg-destructive px-2.5 py-1.5 text-xs font-medium text-white hover:bg-destructive/90"
+                    type="submit"
+                  >
+                    <svg
+                      aria-hidden="true"
+                      class="size-3.5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"
+                      /></svg
+                    >Delete
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+</main>
+<dialog
+  class="m-auto w-[min(calc(100%-2rem),34rem)] max-w-none overflow-hidden rounded-xl border border-border bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/30 backdrop:backdrop-blur-sm"
+  data-media-dialog
+  aria-labelledby="media-rename-title"
+  onclick="if (event.target === this) this.close();"
+>
+  <div class="grid gap-5 p-6 max-[640px]:p-4">
+    <header class="flex items-start justify-between gap-4">
+      <div>
+        <p
+          class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          Media library
+        </p>
+        <h2 id="media-rename-title" class="mt-1 text-base font-semibold">
+          Rename asset
+        </h2>
+      </div>
+      <button
+        class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-transparent text-xl leading-none text-muted-foreground hover:border-border hover:bg-accent hover:text-foreground"
+        type="button"
+        data-media-cancel
+        aria-label="Close rename"
+      >
+        &times;
+      </button>
+    </header>
+    <form method="post" class="grid gap-5">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}" /><input
+        type="hidden"
+        name="action"
+        value="rename"
+      /><input type="hidden" name="name" data-media-original /><label
+        class="grid gap-1.5 text-xs font-medium text-muted-foreground"
+        for="media-new-name"
+        >New filename<input
+          class="min-h-10 rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground outline-none focus:border-ring focus:ring-2 focus:ring-ring/20"
+          id="media-new-name"
+          name="new_name"
+          data-media-new
+          required
+      /></label>
+      <footer class="flex justify-end gap-2">
+        <button
+          class="inline-flex min-h-9 items-center rounded-md border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-accent"
+          type="button"
+          data-media-cancel
+        >
+          Cancel</button
+        ><button
+          class="inline-flex min-h-9 items-center rounded-md border border-primary bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+          type="submit"
+        >
+          Rename asset
+        </button>
+      </footer>
+    </form>
+  </div>
+</dialog>
+<dialog
+  class="m-auto w-[min(calc(100%-2rem),72rem)] max-w-none overflow-hidden rounded-xl border border-border bg-popover p-0 text-popover-foreground shadow-2xl backdrop:bg-black/30 backdrop:backdrop-blur-sm"
+  data-media-preview-dialog
+  aria-labelledby="media-preview-title"
+  onclick="if (event.target === this) this.close();"
+>
+  <div class="grid gap-5 p-6 max-[640px]:p-4">
+    <header class="flex items-start justify-between gap-4">
+      <div>
+        <p
+          class="m-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        >
+          Media library
+        </p>
+        <h2
+          id="media-preview-title"
+          class="mt-1 max-w-[48rem] truncate text-base font-semibold"
+          data-media-preview-title
+        >
+          Preview
+        </h2>
+      </div>
+      <button
+        class="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-transparent text-xl leading-none text-muted-foreground hover:border-border hover:bg-accent hover:text-foreground"
+        type="button"
+        data-media-preview-close
+        aria-label="Close preview"
+      >
+        &times;
+      </button>
+    </header>
+    <section
+      class="flex min-h-[24rem] max-h-[70vh] items-center justify-center overflow-auto rounded-lg border border-border bg-muted/30 p-6 max-[640px]:min-h-[16rem]"
+      data-media-preview-content
+    ></section>
+  </div>
+</dialog>
+{{ footer | raw }}

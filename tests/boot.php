@@ -52,7 +52,7 @@ $config = $registry->get('config');
 
 $check(
     class_exists(\System\Engine\Registry::class, true),
-    'System\\Engine\\Registry did not resolve through the Kernel autoloader.'
+    'System\Engine\Registry did not resolve through the Kernel autoloader.'
 );
 
 $check($config->get('app_context') === 'frontend', 'default.php + frontend.php cascade did not produce app_context=frontend.');
@@ -62,11 +62,11 @@ $check(is_array($config->get('pre_actions')), 'frontend.php did not define a pre
 
 $check(
     class_exists(\Admin\Controller\Startup\Router::class, true),
-    'Admin\\Controller\\Startup\\Router did not resolve after configured namespace registration.'
+    'Admin\Controller\Startup\Router did not resolve after configured namespace registration.'
 );
 $check(
     class_exists(\Frontend\Controller\Startup\Router::class, true),
-    'Frontend\\Controller\\Startup\\Router did not resolve after configured namespace registration.'
+    'Frontend\Controller\Startup\Router did not resolve after configured namespace registration.'
 );
 
 // --- A handful of core services that need only Registry/Config, never a

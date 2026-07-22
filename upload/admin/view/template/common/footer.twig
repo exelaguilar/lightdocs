@@ -1,0 +1,9 @@
+{% if shell %}
+</div>
+{% endif %}
+<div id="toaster" class="fixed bottom-4 right-4 z-[200] grid w-[min(24rem,calc(100vw-2rem))] gap-2" aria-live="polite" aria-atomic="true"></div>
+{% for script in scripts %}
+<script src="{{ script['href'] }}"{% for attribute, value in script['attributes']|default({}) %}{{ value == true ? ' ' ~ e(attribute) : ' ' ~ e(attribute) ~ '="' ~ e(value) ~ '"' }}{% endfor %}></script>
+{% endfor %}
+</body>
+</html>

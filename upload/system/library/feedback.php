@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace System\Library;
 
+use System\Library\Db\AbstractDb;
+
 final class Feedback
 {
-	public function __construct(private readonly DB $db)
+	public function __construct(private readonly AbstractDb $db)
 	{
 	}
 

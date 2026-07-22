@@ -26,10 +26,10 @@ foreach (['frontend' => 'common/reader.page', 'admin' => 'common/dashboard'] as 
         $data = $run($context);
         TestSuite::assertSame($context, $data['context'], 'Process context changed.');
         TestSuite::assertSame($context, $data['kernel_context'], 'Kernel context changed.');
-        TestSuite::assertSame('System\\Engine\\Registry', $data['registry_class'], 'Kernel did not return the existing Registry.');
+        TestSuite::assertSame('System\Engine\Registry', $data['registry_class'], 'Kernel did not return the existing Registry.');
         TestSuite::assertTrue($data['booted'] && $data['same_config'], 'Kernel boot state or Config registration changed.');
         TestSuite::assertSame($action, $data['action_default'], 'Configuration order changed.');
-        TestSuite::assertSame(['System', 'Admin', 'Frontend', 'Extension'], $data['namespaces'], 'Namespace registration order changed.');
+        TestSuite::assertSame(['System', 'Admin', 'Frontend'], $data['namespaces'], 'Namespace registration order changed.');
     });
 }
 
@@ -146,7 +146,7 @@ $suite->test('Kernel source has no prohibited application dependencies', static 
     $kernelFile = (new ReflectionClass(\System\Engine\Kernel::class))->getFileName();
     TestSuite::assertTrue(is_string($kernelFile), 'Package Kernel has no source file.');
     $source = (string) file_get_contents((string) $kernelFile);
-    foreach (['System\\Library\\DB', 'Schema', 'ExtensionManager', 'Front', 'Response', 'Action('] as $forbidden) {
+    foreach (['System\Library\Db\SqliteDb', 'Schema', 'Manager', 'Front', 'Response', 'Action('] as $forbidden) {
         TestSuite::assertTrue(!str_contains($source, $forbidden), "Kernel references prohibited application work: {$forbidden}");
     }
 });

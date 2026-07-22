@@ -1,0 +1,78 @@
+{{ header | raw }}
+<main
+  class="grid w-[min(26rem,100%)] overflow-hidden rounded-lg border border-border bg-card text-sm shadow-sm"
+>
+  <section
+    class="grid gap-4 rounded-lg border border-border bg-card p-5 text-card-foreground shadow-sm"
+  >
+    <div class="grid gap-1.5">
+      <span
+        class="m-0 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground"
+        >{{ text['text_reset_panel'] }}</span
+      >
+      <h1 class="m-0 text-[1.375rem] font-[650]">
+        {{ text['heading_common_reset'] }}
+      </h1>
+      {% if valid %}
+      <p>{{ text['text_reset_intro'] }}</p>
+      {% endif %}
+    </div>
+    {% if error != '' %}
+    <div
+      class="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+      role="alert"
+    >
+      {{ error }}
+    </div>
+    {% endif %} {% if not valid %}
+    <div
+      class="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+      role="alert"
+    >
+      {{ text['text_reset_invalid'] }}
+    </div>
+    <a
+      class="justify-self-start text-xs text-muted-foreground hover:text-foreground"
+      href="/admin/forgot"
+      >{{ text['text_reset_request_new'] }}</a
+    >
+    {% else %}
+    <form method="post" class="grid gap-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}" />
+      <div role="group" class="grid min-w-0 gap-1.5">
+        <label for="reset-password">{{ text['text_reset_password'] }}</label
+        ><input
+          class="min-h-9 w-full rounded-md border border-input bg-card px-2.5 py-2 text-sm text-foreground"
+          id="reset-password"
+          type="password"
+          name="password"
+          minlength="12"
+          required
+          autofocus
+          autocomplete="new-password"
+        />
+      </div>
+      <div role="group" class="grid min-w-0 gap-1.5">
+        <label for="reset-password-confirm"
+          >{{ text['text_reset_confirm'] }}</label
+        ><input
+          class="min-h-9 w-full rounded-md border border-input bg-card px-2.5 py-2 text-sm text-foreground"
+          id="reset-password-confirm"
+          type="password"
+          name="password_confirm"
+          minlength="12"
+          required
+          autocomplete="new-password"
+        />
+      </div>
+      <button
+        class="inline-flex items-center justify-center gap-2 rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-semibold leading-5 text-primary-foreground transition-colors hover:bg-primary/90"
+        type="submit"
+      >
+        {{ text['text_reset_submit'] }}
+      </button>
+    </form>
+    {% endif %}
+  </section>
+</main>
+{{ footer | raw }}
