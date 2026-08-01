@@ -6,12 +6,13 @@ namespace System\Library;
 
 use PDO;
 use System\Engine\ExtensionInstallation;
+use System\Library\Db\AbstractDb;
 
 final class ExtensionState
 {
 	private PDO $db;
 
-	public function __construct(DB $database)
+	public function __construct(AbstractDb $database)
 	{
 		$this->db = $database->connection();
 	}

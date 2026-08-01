@@ -30,6 +30,11 @@ declare(strict_types=1);
 
 define('APP_CONTEXT', 'frontend');
 
+$test_state = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lightdocs-boot-' . getmypid();
+@mkdir($test_state . '/logs', 0775, true);
+@mkdir($test_state . '/cache', 0775, true);
+putenv('LIGHTDOCS_STATE_DIR=' . $test_state);
+
 require dirname(__DIR__) . '/upload/system/startup.php';
 
 $failures = [];
@@ -41,10 +46,8 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
 
 $kernel = new \System\Engine\Kernel(
     context: APP_CONTEXT,
-    systemRoot: DIR_SYSTEM,
     applicationRoot: DIR_ROOT,
     localConfigFile: null,
-    enforceApplicationConstants: true,
 );
 $registry = $kernel->boot();
 $autoloader = $registry->get('autoloader');
@@ -79,7 +82,7 @@ $request = new \System\Library\Request();
 $response = new \System\Library\Response();
 $response->setRequest($request);
 
-$document = new \System\Library\Document($config);
+$document = new \System\Library\Document((string)$config->get('public_root'));
 $document->setTitle('Boot Test');
 $check($document->getTitle() === 'Boot Test', 'Document did not retain a title set immediately after construction.');
 

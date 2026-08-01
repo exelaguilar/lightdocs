@@ -161,10 +161,16 @@
         {
             "name": "exelaguilar/tiny-mvc-framework-private",
             "version": "0.41.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/exelaguilar/tiny-mvc-framework.git",
+                "reference": "46e8ab3105f743fa7dde7c8a2fb33459d92f4e42"
+            },
             "dist": {
-                "type": "path",
-                "url": "../tiny-mvc-framework",
-                "reference": "af3586234056ca0d1316d90c10e9d021e8b337bd"
+                "type": "zip",
+                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/46e8ab3105f743fa7dde7c8a2fb33459d92f4e42",
+                "reference": "46e8ab3105f743fa7dde7c8a2fb33459d92f4e42",
+                "shasum": ""
             },
             "require": {
                 "composer/semver": "^3.4",
@@ -209,10 +215,7 @@
                 "proprietary"
             ],
             "description": "Private OpenCart-style registry-MVC framework extracted from Lightdocs and intended for Lightdocs, Nevernote, and future applications.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "time": "2026-08-01T00:00:00+00:00"
         },
         {
             "name": "graham-campbell/result-type",

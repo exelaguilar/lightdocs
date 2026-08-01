@@ -4,63 +4,61 @@ declare(strict_types=1);
 
 namespace System\Engine;
 
+use Composer\Semver\Comparator;
 use LogicException;
 use RuntimeException;
-use System\Library\ExtensionPackageInstaller;
-use System\Library\ExtensionRecoveryReport;
+use System\Engine\Extension\DependencyResolver;
+use System\Engine\Extension\Discovery;
+use System\Engine\Extension\Manifest;
+use System\Engine\Extension\ResourceMountApplier;
+use System\Engine\Extension\RuntimeBuilder;
+use System\Engine\Extension;
+use System\Library\Extension\PackageInstaller;
+use System\Library\Extension\RecoveryReport;
 use System\Library\ExtensionState;
-use System\Library\PreparedExtension;
+use System\Library\Extension\Prepared;
 
 final class ExtensionManager
 {
-	private ExtensionDiscovery $discovery;
+	private Discovery $discovery;
 	private ExtensionState $installations;
-	private ExtensionFactory $factory;
 	private ExtensionCapabilityRegistry $capabilities;
-	private ExtensionCompatibility $compatibility;
-	private ExtensionDependencyResolver $dependencies;
 	private ?ExtensionAuthorization $authorizer;
 	private ExtensionPackageTrust $trust;
-	private ?ExtensionPackageInstaller $packages;
-	private ?Autoloader $autoloader;
+	private ?PackageInstaller $packages;
+	private ?Registry $registry;
 
 	/** @var array<string,string> */
 	private array $platformVersions;
 
 	private bool $booted = false;
-	private ?ExtensionRuntime $runtime = null;
+	private ?Extension $runtime = null;
 
-	/** @var array<string,ExtensionManifest> */
+	/** @var array<string,Manifest> */
 	private array $catalog = [];
 
 	/** @param array<string,string> $platformVersions */
 	public function __construct(
-		ExtensionDiscovery $discovery,
+		Discovery $discovery,
 		ExtensionState $installations,
-		?ExtensionFactory $factory = null,
 		?ExtensionCapabilityRegistry $capabilities = null,
 		array $platformVersions = [],
-		?Autoloader $autoloader = null,
-		?ExtensionCompatibility $compatibility = null,
-		?ExtensionPackageInstaller $packages = null,
-		?ExtensionDependencyResolver $dependencies = null,
+		?PackageInstaller $packages = null,
 		?ExtensionAuthorization $authorizer = null,
-		?ExtensionPackageTrust $trust = null
+		?ExtensionPackageTrust $trust = null,
+		?Registry $registry = null
 	) {
 		$this->discovery = $discovery;
 		$this->installations = $installations;
-		$this->factory = $factory ?? new ExtensionFactory();
 		$this->capabilities = $capabilities ?? new ExtensionCapabilityRegistry();
 		$this->platformVersions = $platformVersions;
-		$this->autoloader = $autoloader;
-		$this->compatibility = $compatibility ?? new ExtensionCompatibility();
 		$this->packages = $packages;
-		$this->dependencies = $dependencies ?? new ExtensionDependencyResolver();
 		$this->authorizer = $authorizer;
 		$this->trust = $trust ?? new ExtensionPackageTrust();
+		$this->registry = $registry;
 	}
 
-	public function boot(string $context): ExtensionRuntime
+	public function boot(string $context): Extension
 	{
 		if ($this->booted) {
 			throw new LogicException('ExtensionManager can only boot once.');
@@ -89,41 +87,22 @@ final class ExtensionManager
 
 		}
 
-		$order = $this->dependencies->resolve($discovered, $this->installations->all(), $context);
-		$extensions = [];
-		$manifests = [];
-		$contexts = [];
-		foreach ($order as $name) {
-			$manifest = $discovered[$name];
-			$this->compatibility->assertCompatible($manifest, $this->platformVersions);
-			foreach ($manifest->requiredCapabilities() as $capability) {
-				if (!$this->capabilities->has($capability)) {
-					throw new RuntimeException('Required extension capability is unavailable: ' . $capability . ' (' . $name . ')');
-				}
-			}
-
-			$this->registerNamespaces($manifest);
-			$resolvedCapabilities = [];
-			foreach (array_merge($manifest->requiredCapabilities(), $manifest->capabilities()['optional']) as $capability) {
-				if ($this->capabilities->has($capability)) {
-					$resolvedCapabilities[$capability] = $this->capabilities->resolve($capability, $manifest);
-				}
-			}
-			$extensionContext = new ExtensionContext($manifest, $resolvedCapabilities);
-			$extension = $this->factory->create($manifest);
-			$extension->register($extensionContext);
-			$this->registerDeclarativeAssets($manifest, $extensionContext);
-			$extensions[$name] = $extension;
-			$manifests[$name] = $manifest;
-			$contexts[$name] = $extensionContext;
-		}
-
-		$this->runtime = new ExtensionRuntime($extensions, $manifests, $contexts);
+		$registry = $this->registry ?? throw new LogicException('ExtensionManager requires a registry.');
+		$runtime_builder = new RuntimeBuilder($registry, new ResourceMountApplier($registry));
+		$this->runtime = $runtime_builder->build(
+			$discovered,
+			$context,
+			fn (Manifest $manifest): bool => $this->installations->find($manifest->name())?->enabled() ?? false,
+			null,
+			fn (string $capability, Manifest $manifest): ?object => $this->capabilities->has($capability) ? $this->capabilities->resolve($capability, $manifest) : null,
+			$this->platformVersions,
+			fn (Manifest $manifest): array => $this->installations->settings($manifest->name()),
+		);
 
 		return $this->runtime;
 	}
 
-	public function runtime(): ExtensionRuntime
+	public function runtime(): Extension
 	{
 		if ($this->runtime === null) {
 			throw new LogicException('ExtensionManager has not booted.');
@@ -132,7 +111,7 @@ final class ExtensionManager
 		return $this->runtime;
 	}
 
-	/** @return array<string,ExtensionManifest> */
+	/** @return array<string,Manifest> */
 	public function catalog(): array
 	{
 		return $this->catalog;
@@ -150,7 +129,7 @@ final class ExtensionManager
 		$updated = $installation->withState($status, $enabled);
 		$installations = $this->installations->all();
 		$installations[$name] = $updated;
-		$this->dependencies->assertValidState($this->manifests(), $installations);
+			$this->assertValidState($this->manifests(), $installations);
 		$this->installations->save($updated);
 	}
 
@@ -170,7 +149,7 @@ final class ExtensionManager
 				return $this->upgradeArchive($current->name(), $archivePath, $proof, $catalogEntry);
 			}
 			$this->trust->assertTrusted($prepared->archiveSha256(), $proof);
-			$this->compatibility->assertCompatible($prepared->manifest(), $this->platformVersions);
+			$this->assertCompatible($prepared->manifest());
 			foreach ($prepared->manifest()->requiredCapabilities() as $capability) {
 				if (!$this->capabilities->has($capability)) {
 					throw new RuntimeException('Required extension capability is unavailable: ' . $capability);
@@ -212,8 +191,8 @@ final class ExtensionManager
 		try {
 			$this->assertCatalogCandidate($prepared, $catalogEntry);
 			$this->trust->assertTrusted($prepared->archiveSha256(), $proof);
-			$this->compatibility->assertCompatible($prepared->manifest(), $this->platformVersions);
-			$this->compatibility->assertUpgrade($current->version(), $prepared->manifest());
+			$this->assertCompatible($prepared->manifest());
+			$this->assertUpgrade($current->version(), $prepared->manifest());
 			foreach ($prepared->manifest()->requiredCapabilities() as $capability) {
 				if (!$this->capabilities->has($capability)) {
 					throw new RuntimeException('Required extension capability is unavailable: ' . $capability);
@@ -223,7 +202,7 @@ final class ExtensionManager
 			if ($current->enabled()) {
 				$manifests = $this->manifests();
 				$manifests[$name] = $prepared->manifest();
-				$this->dependencies->assertValidState($manifests, $this->installations->all());
+				$this->assertValidState($manifests, $this->installations->all());
 			}
 			$this->installations->save($current->withState(ExtensionInstallation::UPGRADING, $current->enabled()));
 			try {
@@ -253,7 +232,7 @@ final class ExtensionManager
 		$manifests = $this->manifests();
 		$installations = $this->installations->all();
 		unset($manifests[$name], $installations[$name]);
-		$this->dependencies->assertValidState($manifests, $installations);
+		$this->assertValidState($manifests, $installations);
 		$this->installations->save($current->withState(ExtensionInstallation::REMOVING, false));
 		try {
 			$this->requirePackages()->remove($name);
@@ -264,7 +243,7 @@ final class ExtensionManager
 		}
 	}
 
-	public function recover(): ExtensionRecoveryReport
+	public function recover(): RecoveryReport
 	{
 		$packages = $this->requirePackages();
 		$report = $packages->recover();
@@ -295,30 +274,7 @@ final class ExtensionManager
 		return $this->installations->all();
 	}
 
-	private function registerNamespaces(ExtensionManifest $manifest): void
-	{
-		if ($this->autoloader === null) {
-			return;
-		}
-		$root = dirname($manifest->source()) . DIRECTORY_SEPARATOR;
-		foreach (($manifest->resources()['namespaces'] ?? []) as $namespace => $directory) {
-			$this->autoloader->register((string) $namespace, $root . rtrim((string) $directory, '/\\') . DIRECTORY_SEPARATOR);
-		}
-	}
-
-	private function registerDeclarativeAssets(ExtensionManifest $manifest, ExtensionContext $context): void
-	{
-		foreach (($manifest->resources()['assets'] ?? []) as $scope => $assets) {
-			foreach (($assets['styles'] ?? []) as $path) {
-				$context->asset((string) $scope, 'style', (string) $path);
-			}
-			foreach (($assets['scripts'] ?? []) as $path) {
-				$context->asset((string) $scope, 'script', (string) $path);
-			}
-		}
-	}
-
-	private function requirePackages(): ExtensionPackageInstaller
+	private function requirePackages(): PackageInstaller
 	{
 		if ($this->packages === null) {
 			throw new LogicException('Extension package installation is not configured.');
@@ -327,7 +283,7 @@ final class ExtensionManager
 		return $this->packages;
 	}
 
-	private function manifest(string $name): ExtensionManifest
+	private function manifest(string $name): Manifest
 	{
 		$manifests = $this->manifests();
 		if (!isset($manifests[$name])) throw new RuntimeException('Unknown extension manifest: ' . $name);
@@ -335,13 +291,13 @@ final class ExtensionManager
 		return $manifests[$name];
 	}
 
-	/** @return array<string,ExtensionManifest> */
+	/** @return array<string,Manifest> */
 	private function manifests(): array
 	{
 		return $this->catalog !== [] ? $this->catalog : $this->discovery->discover();
 	}
 
-	private function assertCatalogCandidate(PreparedExtension $prepared, ?ExtensionCatalogEntry $entry): void
+	private function assertCatalogCandidate(Prepared $prepared, ?ExtensionCatalogEntry $entry): void
 	{
 		if ($entry === null) return;
 		if ($entry->name() !== $prepared->manifest()->name() || $entry->version() !== $prepared->manifest()->version()) {
@@ -349,6 +305,42 @@ final class ExtensionManager
 		}
 		if (!hash_equals($entry->archiveSha256(), $prepared->archiveSha256())) {
 			throw new RuntimeException('Extension catalog archive hash verification failed.');
+		}
+	}
+
+	private function assertCompatible(Manifest $manifest): void
+	{
+		(new \System\Engine\Extension\Compatibility())->assertCompatible($manifest, $this->platformVersions);
+	}
+
+	private function assertUpgrade(string $currentVersion, Manifest $candidate): void
+	{
+		try {
+			$newer = Comparator::greaterThan($candidate->version(), $currentVersion);
+		} catch (\UnexpectedValueException $exception) {
+			throw new RuntimeException('Extension upgrade versions are invalid.', 0, $exception);
+		}
+		if (!$newer) {
+			throw new RuntimeException(sprintf('Extension upgrade must increase the version from %s; received %s.', $currentVersion, $candidate->version()));
+		}
+	}
+
+	/** @param array<string,Manifest> $manifests @param array<string,ExtensionInstallation> $installations */
+	private function assertValidState(array $manifests, array $installations): void
+	{
+		$contexts = ['__tinymvc_global__' => true];
+		foreach ($manifests as $manifest) {
+			foreach ($manifest->contexts() as $context) {
+				$contexts[$context] = true;
+			}
+		}
+		$resolver = new DependencyResolver();
+		foreach (array_keys($contexts) as $context) {
+			$resolver->resolve(
+				$manifests,
+				static fn (Manifest $manifest): bool => ($installations[$manifest->name()] ?? null)?->enabled() ?? false,
+				$context,
+			);
 		}
 	}
 }

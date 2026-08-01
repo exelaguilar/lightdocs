@@ -13,14 +13,14 @@ use System\Engine\Event;
 use System\Engine\ExtensionAdministration;
 use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionCapabilityRegistry;
-use System\Engine\ExtensionDiscovery;
+use System\Engine\Extension\Discovery;
 use System\Engine\ExtensionManager;
-use System\Engine\ExtensionManifest;
+use System\Engine\Extension\Manifest;
 use System\Engine\Registry;
 use System\Engine\Startup;
 use System\Library\Content\ContentRepository;
 use System\Library\Content\DirectiveRegistry;
-use System\Library\DB;
+use System\Library\Db\SqliteDb;
 use System\Model\Schema;
 
 final class OrderedMainAction extends Action
@@ -52,7 +52,7 @@ file_put_contents($extensionDirectory . '/extension.json', json_encode([
     'type' => 'test',
     'default_enabled' => true,
     'contexts' => ['public'],
-    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.11'],
+    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.40'],
     'capabilities' => ['requires' => ['lightdocs.application']],
     'resources' => ['namespaces' => ['Extension\\Lifecycle' => 'src']],
 ], JSON_THROW_ON_ERROR));
@@ -65,13 +65,15 @@ $autoloader = new \System\Engine\Autoloader();
 $autoloader->register('System', DIR_SYSTEM);
 
 $registry = new Registry();
+$registry->set('autoloader', $autoloader);
 $registry->set('trace', $trace);
-$config = new \System\Engine\Config();
+    $config = new \System\Engine\Config(DIR_SYSTEM . 'config');
 $config->load('default.php');
 $config->load('frontend.php');
 $config->set('database_path', $temporary . '/storage/lifecycle.sqlite');
-$registry->set('config', $config);
-$database = new DB($config->get('database_path'));
+    $registry->set('config', $config);
+    $registry->set('app', 'frontend');
+$database = new SqliteDb($config->get('database_path'));
 $registry->set('db', $database);
 (new Schema($registry))->migrate();
 
@@ -84,7 +86,7 @@ $trace->record('extension.discovery.begin');
 $state = new \System\Library\ExtensionState($database);
 $startups = new Startup();
 $capabilities = new ExtensionCapabilityRegistry();
-$capabilities->register('lightdocs.application', static fn (ExtensionManifest $manifest): ExtensionApplication => new ExtensionApplication(
+$capabilities->register('lightdocs.application', static fn (Manifest $manifest): ExtensionApplication => new ExtensionApplication(
     $manifest->name(),
     $config->all(),
     $repository,
@@ -94,11 +96,11 @@ $capabilities->register('lightdocs.application', static fn (ExtensionManifest $m
     $startups,
 ));
 $manager = new ExtensionManager(
-    new ExtensionDiscovery(dirname($extensionDirectory)),
+    new Discovery(dirname($extensionDirectory)),
     $state,
     capabilities: $capabilities,
-    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.11.0'],
-    autoloader: $autoloader,
+    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.40.0'],
+    registry: $registry,
 );
 $runtime = $manager->boot('public');
 $extensions = new ExtensionAdministration($manager, $runtime, $state, $startups);

@@ -8,9 +8,9 @@ require __DIR__ . '/support/test_suite.php';
 use Lightdocs\Tests\Support\TestSuite;
 use System\Engine\ExtensionCatalog;
 use System\Engine\ExtensionCatalogEntry;
-use System\Engine\ExtensionCompatibility;
+use System\Engine\Extension\Compatibility;
 use System\Engine\ExtensionInstallation;
-use System\Engine\ExtensionManifest;
+use System\Engine\Extension\Manifest;
 use System\Engine\ExtensionPackageProof;
 use System\Engine\ExtensionPackageTrust;
 
@@ -18,7 +18,7 @@ $autoloader = new System\Engine\Autoloader();
 $autoloader->register('System', DIR_SYSTEM);
 $suite = new TestSuite('Lightdocs extension policy');
 
-$manifest = static fn (string $version = '1.0.0', array $requires = []): ExtensionManifest => ExtensionManifest::fromArray([
+$manifest = static fn (string $version = '1.0.0', array $requires = []): Manifest => Manifest::fromArray([
 	'schema_version' => 3,
 	'name' => 'policy_fixture',
 	'class' => 'Fixture\\Policy\\Extension',
@@ -28,7 +28,7 @@ $manifest = static fn (string $version = '1.0.0', array $requires = []): Extensi
 ]);
 
 $suite->test('compatibility policy accepts and rejects application platform versions', static function () use ($manifest): void {
-	$policy = new ExtensionCompatibility();
+	$policy = new Compatibility();
 	TestSuite::assertSame([], $policy->evaluate($manifest('1.0.0', ['php' => '>=8.4', 'tinymvc' => '^0.10']), ['php' => PHP_VERSION, 'tinymvc' => '0.10.0']), 'Compatible manifest was rejected.');
 	TestSuite::assertTrue($policy->evaluate($manifest('1.0.0', ['tinymvc' => '^0.9']), ['tinymvc' => '0.10.0']) !== [], 'Incompatible manifest was accepted.');
 });

@@ -63,6 +63,8 @@ return [
     // Registered once, for every context, so a context can load classes from
     // another (e.g. Extension) regardless of which one is currently active.
     'namespaces' => [
+        'System' => 'system/',
+        'Lightdocs\\Bootstrap' => 'system/bootstrap/',
         'Admin' => 'admin/',
         'Frontend' => 'frontend/',
         'Extension' => 'extension/',
@@ -72,6 +74,7 @@ return [
     'name' => $env('DOCS_NAME', (string)($site['name'] ?? 'Lightdocs')),
     'tagline' => $env('DOCS_TAGLINE', (string)($site['tagline'] ?? 'Documentation without the framework tax.')),
     'language' => $language,
+    'language_code' => $language,
     'direction' => $direction,
     'base_url' => rtrim($env('DOCS_BASE_URL', (string)($site['base_url'] ?? '')), '/'),
     'github_url' => $env('DOCS_GITHUB_URL', (string)($site['github_url'] ?? '')),
@@ -97,6 +100,9 @@ return [
     'data_file' => $content_root . '/_data.yaml',
     'glossary_file' => $content_root . '/_glossary.yaml',
     'cache_dir' => $state_root . '/cache',
+    'log_dir' => $state_root . '/logs',
+    'db_engine' => 'sqlite',
+    'public_root' => dirname(__DIR__, 2) . DIRECTORY_SEPARATOR,
     'database_path' => $state_root . '/lightdocs.sqlite',
     'revision_dir' => $state_root . '/revisions',
     'export_dir' => $state_root . '/exports',
@@ -123,6 +129,8 @@ return [
     // Session
     'session_name' => 'SESSID_LIGHTDOCS',
     'session_expire' => 86400,
+    'session_timeout' => 86400,
+    'session_strict_mode' => true,
     'session_path' => '/',
     'session_samesite' => 'Lax',
     'config_session_timeout' => 86400,
@@ -139,6 +147,8 @@ return [
 
     // Response
     'response_compression' => 0,
+    'security_headers_autostart' => true,
+    'error_handler_autostart' => true,
 
     // Error / debug logs
     'error_display' => $environment === 'development',
@@ -150,5 +160,6 @@ return [
     'log_ignore_sources' => ['Assets', 'Action', 'Front', 'Events'],
 
     // Template engine
-    'template_engine' => 'template',
+    'template_engine' => 'starter',
+    'template_cache_dir' => $state_root . '/cache/template',
 ];

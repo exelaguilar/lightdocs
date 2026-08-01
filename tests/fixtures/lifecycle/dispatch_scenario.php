@@ -133,7 +133,8 @@ namespace {
 
     $registry = new Registry();
     $registry->set('trace', new TraceRecorder($tracePath));
-    $registry->set('debug_log', new Log($logPath, new Config()));
+    $registry->set('app', 'lifecycle');
+    $registry->set('debug_log', new Log($logPath, new Config(DIR_SYSTEM . 'config')));
     $event = new Event($registry);
     $registry->set('event', $event);
     $event->register('controller/*/before', new DispatchEventMarker('event.before'));

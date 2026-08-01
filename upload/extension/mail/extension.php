@@ -6,21 +6,21 @@ namespace Extension\Mail;
 
 use RuntimeException;
 use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionContext;
-use System\Engine\ExtensionInterface;
+use System\Engine\Extension\Context;
+use System\Engine\Extension\Contract;
 use System\Engine\MailProvider;
 
-final class Extension implements ExtensionInterface, MailProvider
+final class Extension implements Contract, MailProvider
 {
 	private ExtensionApplication $context;
 
-	public function register(ExtensionContext $context): void
+	public function register(Context $context): void
 	{
 		$this->context = $this->application($context);
 		$context->service('mail.provider', $this);
 	}
 
-	private function application(ExtensionContext $context): ExtensionApplication
+	private function application(Context $context): ExtensionApplication
 	{
 		$application = $context->capability('lightdocs.application');
 		if (!$application instanceof ExtensionApplication) throw new RuntimeException('Invalid Lightdocs extension capability.');

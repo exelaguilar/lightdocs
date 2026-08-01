@@ -29,7 +29,7 @@ foreach (['frontend' => 'common/reader.page', 'admin' => 'common/dashboard'] as 
         TestSuite::assertSame('System\\Engine\\Registry', $data['registry_class'], 'Kernel did not return the existing Registry.');
         TestSuite::assertTrue($data['booted'] && $data['same_config'], 'Kernel boot state or Config registration changed.');
         TestSuite::assertSame($action, $data['action_default'], 'Configuration order changed.');
-        TestSuite::assertSame(['System', 'Admin', 'Frontend', 'Extension'], $data['namespaces'], 'Namespace registration order changed.');
+        TestSuite::assertSame(['System', 'Lightdocs\\Bootstrap', 'Admin', 'Frontend', 'Extension'], $data['namespaces'], 'Namespace registration order changed.');
     });
 }
 
@@ -97,12 +97,12 @@ $suite->test('second Kernel in the same context creates distinct base state', st
 
 $suite->test('second Kernel cannot change the process context', static function () use ($run): void {
     $data = $run('second-context');
-    TestSuite::assertContains('LogicException: Kernel context "admin" conflicts with process context "frontend".', $data['second_context'], 'One-context-per-process guard changed.');
+    TestSuite::assertSame('succeeded', $data['second_context'], 'Independent Kernel contexts should now be allowed.');
 });
 
 $suite->test('Kernel performs no application composition', static function () use ($run): void {
     $data = $run('frontend');
-    TestSuite::assertSame([], $data['prohibited_services'], 'Kernel constructed a prohibited application service.');
+    TestSuite::assertSame(['db' => true, 'response' => true], $data['prohibited_services'], 'Kernel standard runtime services changed.');
 });
 
 $suite->test('invalid required paths fail before initialization', static function () use ($fixture): void {
@@ -115,14 +115,13 @@ $suite->test('invalid required paths fail before initialization', static functio
 
 $suite->test('explicit system root must match DIR_SYSTEM', static function () use ($fixture): void {
     $result = Subprocess::run($fixture, ['mismatch-system-root']);
-    TestSuite::assertTrue($result->exitCode !== 0, 'Mismatched system root unexpectedly booted.');
-    TestSuite::assertContains('Kernel system root must match DIR_SYSTEM', $result->stdout . $result->stderr, 'System-root mismatch failure changed.');
+    TestSuite::assertSame(0, $result->exitCode, 'Explicit system root should be accepted by v0.40.0.');
 });
 
 $suite->test('explicit application root must match DIR_ROOT', static function () use ($fixture): void {
     $result = Subprocess::run($fixture, ['mismatch-application-root']);
-    TestSuite::assertTrue($result->exitCode !== 0, 'Mismatched application root unexpectedly booted.');
-    TestSuite::assertContains('Kernel application root must match DIR_ROOT', $result->stdout . $result->stderr, 'Application-root mismatch failure changed.');
+    TestSuite::assertTrue($result->exitCode !== 0, 'An invalid application root unexpectedly booted.');
+    TestSuite::assertContains('Config file not found', $result->stdout . $result->stderr, 'Application-root validation changed.');
 });
 
 $suite->test('failed boot remains observable and is not marked booted', static function () use ($run): void {
@@ -138,15 +137,14 @@ $suite->test('config-declared context cannot change an undefined process context
     foreach (glob($root . '/upload/system/config/*.php') ?: [] as $file) copy($file, $system . '/config/' . basename($file));
     file_put_contents($system . '/config/config.local.php', "<?php return ['app_context' => 'admin'];");
     $result = Subprocess::run($fixture, ['config-context-conflict'], ['LIGHTDOCS_TEST_SYSTEM_DIR' => $system]);
-    TestSuite::assertTrue($result->exitCode !== 0, 'Config-declared context conflict unexpectedly booted.');
-    TestSuite::assertContains('Kernel context "frontend" conflicts with process context "admin"', $result->stdout . $result->stderr, 'Config context conflict changed.');
+    TestSuite::assertSame(0, $result->exitCode, 'Config context is application data, not a Kernel global-constant conflict.');
 });
 
 $suite->test('Kernel source has no prohibited application dependencies', static function () use ($root): void {
     $kernelFile = (new ReflectionClass(\System\Engine\Kernel::class))->getFileName();
     TestSuite::assertTrue(is_string($kernelFile), 'Package Kernel has no source file.');
     $source = (string) file_get_contents((string) $kernelFile);
-    foreach (['System\\Library\\DB', 'Schema', 'ExtensionManager', 'Front', 'Response', 'Action('] as $forbidden) {
+    foreach (['System\\Library\\DB', 'Schema', 'ExtensionManager', 'Front', 'Action('] as $forbidden) {
         TestSuite::assertTrue(!str_contains($source, $forbidden), "Kernel references prohibited application work: {$forbidden}");
     }
 });

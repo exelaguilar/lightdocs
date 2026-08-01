@@ -6,7 +6,7 @@ namespace System\Engine;
 
 use System\Library\Content\ContentRepository;
 use System\Library\Content\DirectiveRegistry;
-use System\Library\DB;
+use System\Library\Db\AbstractDb;
 
 final readonly class ExtensionApplication
 {
@@ -15,7 +15,7 @@ final readonly class ExtensionApplication
 		public array $config,
 		public ContentRepository $repository,
 		public DirectiveRegistry $directives,
-		public DB $database,
+		public AbstractDb $database,
 		public array $settings = [],
 		private ?Startup $startups = null,
 	) {

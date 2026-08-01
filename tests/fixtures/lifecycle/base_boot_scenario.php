@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
 
+$test_state = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lightdocs-lifecycle-boot-' . getmypid();
+@mkdir($test_state . '/logs', 0775, true);
+@mkdir($test_state . '/cache', 0775, true);
+putenv('LIGHTDOCS_STATE_DIR=' . $test_state);
+
 $projectRoot = dirname(__DIR__, 3);
 $mode = $argv[1] ?? 'frontend';
 $configSystem = getenv('LIGHTDOCS_TEST_SYSTEM_DIR');
@@ -16,6 +21,7 @@ define('DIR_ROOT', dirname(rtrim($systemRoot, '/\\')) . DIRECTORY_SEPARATOR);
 define('DIR_SYSTEM', $systemRoot);
 
 require $projectRoot . '/upload/vendor/autoload.php';
+require_once $projectRoot . '/upload/system/library/template/template.php';
 
 if ($mode !== 'undefined') {
     define('APP_CONTEXT', $mode === 'missing' ? 'does_not_exist' : ($mode === 'admin' ? 'admin' : 'frontend'));
@@ -26,7 +32,6 @@ $kernel = new \System\Engine\Kernel(
     context: defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend',
     systemRoot: DIR_SYSTEM,
     applicationRoot: DIR_ROOT,
-    enforceApplicationConstants: true,
 );
 $registry = $kernel->boot();
 $config = $registry->get('config');
@@ -37,7 +42,7 @@ $namespaces = array_keys((array) $config->get('namespaces', []));
 
 echo json_encode([
     'defined_before' => $definedBefore,
-    'context' => APP_CONTEXT,
+    'context' => $registry->get('app'),
     'app' => $registry->get('app'),
     'config_context' => $config->get('app_context'),
     'action_default' => $config->get('action_default'),

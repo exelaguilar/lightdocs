@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace System\Engine;
 
 use RuntimeException;
+use System\Engine\Extension;
 use System\Library\ExtensionState;
 
 final class ExtensionAdministration
@@ -25,11 +26,11 @@ final class ExtensionAdministration
 	];
 
 	private ExtensionManager $manager;
-	private ExtensionRuntime $runtime;
+	private Extension $runtime;
 	private ExtensionState $state;
 	private Startup $startups;
 
-	public function __construct(ExtensionManager $manager, ExtensionRuntime $runtime, ExtensionState $state, Startup $startups)
+	public function __construct(ExtensionManager $manager, Extension $runtime, ExtensionState $state, Startup $startups)
 	{
 		$this->manager = $manager;
 		$this->runtime = $runtime;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-/** Verifies the v0.10 boundary: runtime/mechanics are vendored; policy is local. */
+/** Verifies the v0.40 boundary: runtime/mechanics are vendored; policy is local. */
 
 require dirname(__DIR__) . '/upload/system/startup.php';
 
@@ -34,8 +34,6 @@ foreach ($classes as $class => $expectedFile) {
 
 $localClasses = [
 	System\Engine\ExtensionManager::class,
-	System\Engine\ExtensionCompatibility::class,
-	System\Engine\ExtensionDependencyResolver::class,
 	System\Engine\ExtensionPackageTrust::class,
 	System\Engine\ExtensionAuthorization::class,
 	System\Library\ExtensionState::class,

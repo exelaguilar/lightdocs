@@ -6,18 +6,18 @@ namespace Extension\Webhooks;
 
 use PDO;
 use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionContext;
-use System\Engine\ExtensionInterface;
+use System\Engine\Extension\Context;
+use System\Engine\Extension\Contract;
 use System\Engine\WebhookProvider;
 
-final class Extension implements ExtensionInterface, WebhookProvider
+final class Extension implements Contract, WebhookProvider
 {
 	private const RETENTION_DAYS = 30;
 
 	private PDO $db;
 	private ExtensionApplication $context;
 
-	public function register(ExtensionContext $context): void
+	public function register(Context $context): void
 	{
 		$this->context = $this->application($context);
 		$this->db = $this->context->database->connection();
@@ -33,7 +33,7 @@ final class Extension implements ExtensionInterface, WebhookProvider
 		}
 	}
 
-	private function application(ExtensionContext $context): ExtensionApplication
+	private function application(Context $context): ExtensionApplication
 	{
 		$application = $context->capability('lightdocs.application');
 		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');

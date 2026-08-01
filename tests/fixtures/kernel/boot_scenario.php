@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/lifecycle/bootstrap.php';
 
+$test_state = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lightdocs-kernel-' . getmypid();
+@mkdir($test_state . '/logs', 0775, true);
+@mkdir($test_state . '/cache', 0775, true);
+putenv('LIGHTDOCS_STATE_DIR=' . $test_state);
+
 $projectRoot = dirname(__DIR__, 3);
 $mode = $argv[1] ?? 'frontend';
 $configuredSystem = getenv('LIGHTDOCS_TEST_SYSTEM_DIR');
@@ -17,6 +22,7 @@ define('DIR_ROOT', $applicationRoot);
 define('DIR_SYSTEM', $systemRoot);
 
 require $projectRoot . '/upload/vendor/autoload.php';
+require_once $projectRoot . '/upload/system/library/template/template.php';
 
 $context = match ($mode) {
     'admin' => 'admin',
@@ -35,7 +41,6 @@ $kernel = new \System\Engine\Kernel(
     systemRoot: $kernelSystemRoot,
     applicationRoot: $kernelApplicationRoot,
     localConfigFile: $mode !== 'no-local' ? 'config.local.php' : null,
-    enforceApplicationConstants: true,
 );
 
 if ($mode === 'failed-state') {
@@ -59,7 +64,7 @@ $property = new ReflectionProperty($autoloader, 'path');
 $namespaces = array_keys((array) $property->getValue($autoloader));
 
 $result = [
-    'context' => APP_CONTEXT,
+    'context' => $registry->get('app'),
     'kernel_context' => $kernel->context(),
     'booted' => $kernel->isBooted(),
     'registry_class' => get_class($registry),
@@ -92,7 +97,6 @@ if ($mode === 'second-instance') {
         systemRoot: $systemRoot,
         applicationRoot: $applicationRoot,
         localConfigFile: $mode !== 'no-local' ? 'config.local.php' : null,
-        enforceApplicationConstants: true,
     );
     $secondRegistry = $second->boot();
     $result['second_instance'] = [
@@ -108,7 +112,6 @@ if ($mode === 'second-context') {
             context: 'admin',
             systemRoot: $systemRoot,
             applicationRoot: $applicationRoot,
-            enforceApplicationConstants: true,
         ))->boot();
         $result['second_context'] = 'succeeded';
     } catch (Throwable $throwable) {

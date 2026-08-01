@@ -39,5 +39,9 @@ namespace System\Console {
 }
 
 namespace {
+    $cli_state = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'lightdocs-cli-fixture-' . getmypid();
+    @mkdir($cli_state . '/logs', 0775, true);
+    @mkdir($cli_state . '/cache', 0775, true);
+    putenv('LIGHTDOCS_STATE_DIR=' . $cli_state);
     require dirname(__DIR__, 3) . '/bin/docs';
 }

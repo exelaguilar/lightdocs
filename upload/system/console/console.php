@@ -21,9 +21,7 @@ use System\Library\Service\StaticSiteBuilder;
 use System\Engine\Config;
 use System\Engine\Event;
 use System\Engine\Registry;
-use System\Library\DB;
-use System\Library\FileCache;
-use System\Library\Template;
+use System\Library\Db\AbstractDb;
 use System\Library\AssetPublisher;
 use System\Library\Job\JobHandlerInterface;
 use System\Library\JobQueue;
@@ -39,7 +37,7 @@ final class Console
 	private SearchService $search;
 	private StaticSiteBuilder $builder;
 	private Registry $registry;
-	private DB $database;
+	private AbstractDb $database;
 	private JobQueue $jobQueue;
 
 	public function __construct(Registry $registry)
@@ -51,12 +49,13 @@ final class Console
 		}
 		$this->config = $config->all();
 
-		$database = new DB($config->get('database_path'));
-		$registry->set('db', $database);
+		$database = $registry->get('db');
+		if (!$database instanceof AbstractDb) {
+			throw new LogicException('Console requires Kernel database runtime.');
+		}
 		$this->database = $database;
 
-		$events = new Event($registry);
-		$registry->set('event', $events);
+		$events = $registry->get('event');
 
 		(new Schema($registry))->migrate();
 		$this->jobQueue = new JobQueue($database);
@@ -88,7 +87,7 @@ final class Console
 		$this->search = new SqliteSearchService($registry);
 		$registry->set('search', $this->search);
 
-		$template = new Template($config->get('template_engine', 'template'), $config);
+		$template = $registry->get('template');
 		$template->addPath(dirname(__DIR__, 2) . '/frontend/view/template/');
 
 		$this->builder = new StaticSiteBuilder($this->config, $this->repository, $renderer, $this->search, $template, $events);
@@ -161,7 +160,7 @@ final class Console
 
 	private function clear(): int
 	{
-		(new FileCache($this->config['cache_dir']))->clear();
+		$this->registry->get('cache')->clear();
 		echo 'Cache cleared.' . PHP_EOL;
 		return 0;
 	}
@@ -185,7 +184,7 @@ final class Console
 			$checks['Environment configuration'] = !is_file($this->config['environment_file']) || is_readable($this->config['environment_file']);
 		}
 		try {
-			(new DB($this->config['database_path']))->connection()->query('SELECT 1')->fetchColumn();
+			$this->database->connection()->query('SELECT 1')->fetchColumn();
 			$checks['SQLite database'] = true;
 		} catch (Throwable) {
 			$checks['SQLite database'] = false;

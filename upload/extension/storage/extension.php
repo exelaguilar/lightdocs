@@ -7,20 +7,20 @@ namespace Extension\Storage;
 use RuntimeException;
 use System\Engine\AssetStorage;
 use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionContext;
-use System\Engine\ExtensionInterface;
+use System\Engine\Extension\Context;
+use System\Engine\Extension\Contract;
 
-final class Extension implements ExtensionInterface, AssetStorage
+final class Extension implements Contract, AssetStorage
 {
 	private ExtensionApplication $context;
 
-	public function register(ExtensionContext $context): void
+	public function register(Context $context): void
 	{
 		$this->context = $this->application($context);
 		$context->service('storage.assets', $this);
 	}
 
-	private function application(ExtensionContext $context): ExtensionApplication
+	private function application(Context $context): ExtensionApplication
 	{
 		$application = $context->capability('lightdocs.application');
 		if (!$application instanceof ExtensionApplication) throw new RuntimeException('Invalid Lightdocs extension capability.');

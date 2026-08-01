@@ -8,10 +8,8 @@ require dirname(__DIR__) . '/upload/system/startup.php';
 
 $kernel = new \System\Engine\Kernel(
     context: APP_CONTEXT,
-    systemRoot: DIR_SYSTEM,
     applicationRoot: DIR_ROOT,
     localConfigFile: null,
-    enforceApplicationConstants: true,
 );
 $registry = $kernel->boot();
 $config = $registry->get('config');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace System\Engine;
 
 use InvalidArgumentException;
+use System\Engine\Extension\Manifest;
 
 final class ExtensionInstallation
 {
@@ -58,7 +59,7 @@ final class ExtensionInstallation
 		$this->error = $error;
 	}
 
-	public static function bundled(ExtensionManifest $manifest, ?int $now = null): self
+	public static function bundled(Manifest $manifest, ?int $now = null): self
 	{
 		$time = $now ?? time();
 		$enabled = $manifest->defaultEnabled();

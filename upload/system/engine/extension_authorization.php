@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace System\Engine;
 
 use RuntimeException;
+use System\Engine\Extension\Manifest;
 use System\Library\User;
 
 /** Maps TinyMVC extension lifecycle operations onto Lightdocs' administrator ACL. */
@@ -19,7 +20,7 @@ final class ExtensionAuthorization
         $this->permissionRoute = $permissionRoute;
     }
 
-    public function assertAuthorized(string $operation, ExtensionManifest $manifest, ?ExtensionInstallation $installation = null): void
+    public function assertAuthorized(string $operation, Manifest $manifest, ?ExtensionInstallation $installation = null): void
     {
         $user = $this->registry->has('user') ? $this->registry->get('user') : null;
         if (!$user instanceof User || !$user->isLogged() || !$user->hasPermission('modify', $this->permissionRoute)) {

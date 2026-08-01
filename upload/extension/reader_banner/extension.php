@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace Extension\ReaderBanner;
 
 use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionContext;
-use System\Engine\ExtensionInterface;
+use System\Engine\Extension\Context;
+use System\Engine\Extension\Contract;
 use System\Library\Content\Page;
 
-final class Extension implements ExtensionInterface
+final class Extension implements Contract
 {
 	private ExtensionApplication $context;
 
-	public function register(ExtensionContext $context): void
+	public function register(Context $context): void
 	{
 		$this->context = $this->application($context);
 		$context->listen('frontend/page/content/after', function (mixed &$payload): void {
@@ -32,7 +32,7 @@ final class Extension implements ExtensionInterface
 		}, 'reader_banner.page_content');
 	}
 
-	private function application(ExtensionContext $context): ExtensionApplication
+	private function application(Context $context): ExtensionApplication
 	{
 		$application = $context->capability('lightdocs.application');
 		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');

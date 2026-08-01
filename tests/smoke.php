@@ -12,19 +12,20 @@ use System\Library\Service\SiteSettings;
 use System\Library\Service\GitHistory;
 use System\Library\Service\GitSyncPreflight;
 use System\Library\Service\SecretRedactor;
-use System\Library\DB;
+use System\Library\Db\SqliteDb;
+use System\Library\Db\AbstractDb;
 use System\Library\ExtensionState;
 use System\Engine\Event;
 use System\Engine\ExtensionAdministration;
 use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionCapabilityRegistry;
-use System\Engine\ExtensionDiscovery;
+use System\Engine\Extension\Discovery;
 use System\Engine\ExtensionManager;
-use System\Engine\ExtensionManifest;
+use System\Engine\Extension\Manifest;
 use System\Engine\Startup;
 use System\Engine\Model;
 use System\Library\Content\DirectiveRegistry;
-use System\Library\ExtensionPackageInstaller;
+use System\Library\Extension\PackageInstaller;
 use System\Library\Content\Glossary;
 use System\Library\Content\NavigationManager;
 use System\Library\User;
@@ -43,7 +44,7 @@ use System\Engine\Registry;
 use System\Engine\CallbackAction;
 
 $registry = new Registry();
-$configuration = new Config();
+$configuration = new Config(DIR_SYSTEM . 'config');
 $configuration->load('default.php');
 $configuration->load('frontend.php');
 $registry->set('config', $configuration);
@@ -54,20 +55,20 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
     if (!$condition) $failures[] = $message;
 };
 
-$buildExtensions = static function (array $config, DB $database, ContentRepository $repository, DirectiveRegistry $directives, \System\Engine\Autoloader $autoloader): ExtensionAdministration {
+$buildExtensions = static function (Registry $registry, array $config, AbstractDb $database, ContentRepository $repository, DirectiveRegistry $directives, \System\Engine\Autoloader $autoloader): ExtensionAdministration {
     $state = new ExtensionState($database);
     $startups = new Startup();
     $capabilities = new ExtensionCapabilityRegistry();
-    $capabilities->register('lightdocs.application', static fn (ExtensionManifest $manifest): ExtensionApplication => new ExtensionApplication(
+    $capabilities->register('lightdocs.application', static fn (Manifest $manifest): ExtensionApplication => new ExtensionApplication(
         $manifest->name(), $config, $repository, $directives, $database, $state->settings($manifest->name()), $startups
     ));
     $manager = new ExtensionManager(
-        new ExtensionDiscovery($config['extension_dir']),
+        new Discovery($config['extension_dir']),
         $state,
         capabilities: $capabilities,
-        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.13.0'],
-        autoloader: $autoloader,
-        packages: new ExtensionPackageInstaller($config['extension_dir']),
+        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.40.0'],
+        packages: new PackageInstaller($config['extension_dir']),
+        registry: $registry,
     );
     $runtime = $manager->boot('public');
     return new ExtensionAdministration($manager, $runtime, $state, $startups);
@@ -84,29 +85,29 @@ $events->trigger('smoke.event', $smokeArgs);
 $check(($eventPayload['ok'] ?? false) === true, 'Synchronous system events did not dispatch payloads.');
 $check(is_subclass_of(ContentIndex::class, Model::class), 'ContentIndex does not extend the system Model base.');
 $check(!is_subclass_of(SiteSettings::class, Model::class), 'SiteSettings should write canonical files without extending the SQLite Model base.');
-$mainDB = new DB($config['database_path']);
+$mainDB = new SqliteDb($config['database_path']);
 $registry->set('db', $mainDB);
 $registry->set('event', $events);
 $registry->set('repository', $repository);
 $registry->set('renderer', $renderer);
 (new Schema($registry))->migrate();
 $directives = new DirectiveRegistry($config['directives']);
-$extensions = $buildExtensions($config, $mainDB, $repository, $directives, $autoloader);
+$extensions = $buildExtensions($registry, $config, $mainDB, $repository, $directives, $autoloader);
 $check(in_array('local_git', $extensions->names(), true), 'The Local Git extension did not register with the system extension manager.');
 $check($extensions->get('local_git.history') instanceof GitHistory, 'The Local Git extension did not register its history service.');
 $extensionRows = $extensions->all();
 $check(($extensionRows['reader_banner']['type'] ?? '') === 'example', 'The Reader Banner extension type was not discovered.');
 $check(($extensions->settingsFor('reader_banner')['contexts'] ?? []) === ['public'], 'The Reader Banner public-reader context was not discovered.');
 $extensionRoot = $config['cache_dir'] . '/extension-smoke-' . bin2hex(random_bytes(3));
-$extensionDb = new DB($extensionRoot . '/lightdocs.sqlite');
+$extensionDb = new SqliteDb($extensionRoot . '/lightdocs.sqlite');
 $extensionRegistry = new Registry();
 $extensionRegistry->set('config', $configuration);
 $extensionRegistry->set('db', $extensionDb);
 (new Schema($extensionRegistry))->migrate();
-$bannerExtensions = $buildExtensions($config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), $autoloader);
+$bannerExtensions = $buildExtensions($extensionRegistry, $config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), $autoloader);
 $bannerExtensions->setExtensionEnabled('reader_banner', true);
 $bannerExtensions->setSettings('reader_banner', ['message' => 'Smoke banner', 'accent_color' => '#7c3aed', 'icon' => 'check', 'location' => 'above_content', 'page_scope' => 'all', 'dismissible' => false]);
-$bannerExtensions = $buildExtensions($config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), $autoloader);
+$bannerExtensions = $buildExtensions($extensionRegistry, $config, $extensionDb, $repository, new DirectiveRegistry($config['directives']), $autoloader);
 $bannerEvents = new Event($extensionRegistry);
 $bannerExtensions->registerEvents($bannerEvents);
 $bannerAssets = $bannerExtensions->assets();
@@ -224,8 +225,8 @@ $check(($navigation->folders()[0]['collapsed'] ?? false) === true, 'Navigation f
 @rmdir($navigationRoot);
 
 $accountsRoot = $config['cache_dir'] . '/accounts-smoke-' . bin2hex(random_bytes(3));
-$accountsDb = new DB($accountsRoot . '/lightdocs.sqlite');
-$accountsConfig = new Config();
+$accountsDb = new SqliteDb($accountsRoot . '/lightdocs.sqlite');
+$accountsConfig = new Config(DIR_SYSTEM . 'config');
 $accountsConfig->load('default.php');
 $accountsConfig->set('admin_password', 'SmokePassword-123');
 $accountsRegistry = new Registry();

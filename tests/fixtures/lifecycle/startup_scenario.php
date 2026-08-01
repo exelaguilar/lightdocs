@@ -123,10 +123,11 @@ namespace {
     $trace = new TraceRecorder($tracePath);
     $registry->set('trace', $trace);
 
-    $config = new \System\Engine\Config();
+    $config = new \System\Engine\Config(DIR_SYSTEM . 'config');
     $config->load('default.php');
     $config->load($context . '.php');
     $registry->set('config', $config);
+    $registry->set('app', 'lifecycle');
 
     $event = new Event($registry);
     $registry->set('event', $event);

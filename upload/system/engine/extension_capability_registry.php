@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace System\Engine;
 
+use System\Engine\Extension\Manifest;
+
 use RuntimeException;
 
 final class ExtensionCapabilityRegistry
@@ -29,7 +31,7 @@ final class ExtensionCapabilityRegistry
 		return isset($this->providers[$name]);
 	}
 
-	public function resolve(string $name, ExtensionManifest $manifest): object
+	public function resolve(string $name, Manifest $manifest): object
 	{
 		if (!isset($this->providers[$name])) {
 			throw new RuntimeException('Required extension capability is unavailable: ' . $name);
