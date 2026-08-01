@@ -25,6 +25,8 @@ Lightdocs turns ordinary Markdown files into a polished, searchable documentatio
 
 Your Markdown remains the source of truth. Lightdocs adds navigation, full-text search, page relationships, reusable snippets, runbook tools, local revision history, private content controls, and static exports without locking the content into a proprietary database.
 
+Lightdocs is an application built on the private [TinyMVC framework](https://github.com/exelaguilar/tiny-mvc-framework), currently pinned to the `0.41` framework line. TinyMVC supplies the reusable runtime—request handling, persistence primitives, extension lifecycle, rendering, security boundaries, and error handling—while Lightdocs owns the documentation domain: Markdown content, indexing, Content Studio, exports, runbooks, and deployment workflows. This boundary keeps the framework useful to other applications without turning Lightdocs' content model into framework policy.
+
 The current release is [v0.2.0](https://github.com/exelaguilar/lightdocs/releases/tag/v0.2.0). The recommended production install is the checksum-verified Proxmox LXC helper or native Debian installer; pin `LIGHTDOCS_VERSION=0.2.0` when you want a repeatable deployment.
 
 ## Why Lightdocs?
@@ -37,6 +39,15 @@ The current release is [v0.2.0](https://github.com/exelaguilar/lightdocs/release
 | **Made for operational knowledge** | Runbooks, checklists, service metadata, infrastructure inventories, command blocks, and review state are first-class features. |
 | **Safe to publish selectively** | Public, private, draft, and sanitized export workflows help keep internal details out of public builds. |
 | **Simple to recover** | Application releases are replaceable; canonical content, uploads, configuration, and optional Git history are stored separately. |
+
+## Built on a reusable core
+
+Lightdocs deliberately keeps its application rules above the framework boundary.
+The `system/` runtime is framework-owned and is consumed through Composer; the
+Lightdocs application owns its controllers, content repositories, templates,
+extensions, and operational workflows. Releases therefore remain replaceable,
+while Markdown, uploads, configuration, and runtime data remain the site's
+portable state.
 
 ## Features
 
