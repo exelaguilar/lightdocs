@@ -20,8 +20,11 @@ class NotFound extends Controller
                 : 'The documentation could not be rendered.';
 
             $this->response->setStatusCode(500);
-            $this->response->addHeader('Content-Type: text/plain; charset=utf-8');
-            $this->response->setOutput($message);
+            $this->response->setOutput($this->load->view('common/error', [
+                'status' => 500,
+                'title' => 'Something went wrong',
+                'message' => $message,
+            ]));
             return;
         }
 
