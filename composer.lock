@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b3893574cdf2dd6a14e1d175181a5689",
+    "content-hash": "af86829de74500e199b10dccf0d9d59f",
     "packages": [
         {
             "name": "composer/semver",
@@ -160,23 +160,23 @@
         },
         {
             "name": "exelaguilar/tiny-mvc-framework-private",
-            "version": "0.41.0",
+            "version": "v0.41.0",
             "source": {
                 "type": "git",
-                "url": "https://github.com/exelaguilar/tiny-mvc-framework.git",
-                "reference": "46e8ab3105f743fa7dde7c8a2fb33459d92f4e42"
+                "url": "git@github.com:exelaguilar/tiny-mvc-framework.git",
+                "reference": "8045b0ffff1cbbbb8d32382280a5ded37c8203f8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/46e8ab3105f743fa7dde7c8a2fb33459d92f4e42",
-                "reference": "46e8ab3105f743fa7dde7c8a2fb33459d92f4e42",
+                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/8045b0ffff1cbbbb8d32382280a5ded37c8203f8",
+                "reference": "8045b0ffff1cbbbb8d32382280a5ded37c8203f8",
                 "shasum": ""
             },
             "require": {
                 "composer/semver": "^3.4",
                 "ext-openssl": "*",
                 "ext-zip": "*",
-                "php": ">=8.0",
+                "php": ">=8.1",
                 "scssphp/scssphp": "^1.13",
                 "twbs/bootstrap": "^5.3.8",
                 "twig/twig": "^3.4"
@@ -215,7 +215,7 @@
                 "proprietary"
             ],
             "description": "Private OpenCart-style registry-MVC framework extracted from Lightdocs and intended for Lightdocs, Nevernote, and future applications.",
-            "time": "2026-08-01T00:00:00+00:00"
+            "time": "2026-08-01T14:25:37+00:00"
         },
         {
             "name": "graham-campbell/result-type",
