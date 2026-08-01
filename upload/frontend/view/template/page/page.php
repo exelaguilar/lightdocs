@@ -15,24 +15,24 @@ $task_count = preg_match_all('/type="checkbox"/', $rendered->html);
     <?php if ($page->type() === 'runbook' && $task_count > 0): ?><div class="mt-5 grid grid-cols-[1fr_auto] gap-x-3.5 gap-y-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-subtle)] p-[13px_14px] max-[700px]:grid-cols-1" data-runbook-progress><div class="flex justify-between gap-5 text-[11px] text-[var(--muted)]"><span>Runbook progress</span><strong class="font-semibold text-[var(--text)]" data-progress-label>0 of <?= (int) $task_count ?> complete</strong></div><div class="col-start-1 h-1 overflow-hidden rounded-full bg-[var(--border)]"><span class="block h-full w-0 rounded-full bg-[var(--brand)] transition-[width] duration-200" data-progress-bar></span></div><div class="col-start-2 row-span-2 row-start-1 flex items-stretch gap-1.5 max-[700px]:col-start-1 max-[700px]:row-auto"><a class="inline-flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand-strong)]" href="#runbook-checklist">Open checklist</a><button class="inline-flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 text-xs text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand-strong)]" type="button" data-reset-runbook>Reset</button></div></div><?php endif; ?>
   </header>
   <div
-    class="text-base leading-[1.78] text-[var(--text)] max-[540px]:text-[15px] print:text-[11pt]
+    class="text-[15px] leading-[1.68] text-[var(--text)] max-[540px]:text-[15px] print:text-[11pt]
       [[data-reading-text-size=small]_&]:text-[14.5px] [[data-reading-text-size=small]_&]:leading-[1.7]
-      [[data-reading-text-size=large]_&]:text-lg [[data-reading-text-size=large]_&]:leading-[1.78]
-      [[data-density=compact]_&]:text-[15px] [[data-density=compact]_&]:leading-[1.68]
-      [&_h1]:mb-[.7em] [&_h1]:mt-[1.8em] [&_h1]:text-[1.75rem] [&_h1:first-child]:mt-0
-      [&_h2]:mb-[.65em] [&_h2]:mt-[2em] [&_h2]:pt-[.2em] [&_h2]:text-[1.45rem] [&_h2:first-child]:mt-0
-      [&_h3]:mb-[.55em] [&_h3]:mt-[1.75em] [&_h3]:text-[1.2rem] [&_h3:first-child]:mt-0
+      [[data-reading-text-size=large]_&]:text-base [[data-reading-text-size=large]_&]:leading-[1.72]
+      [[data-density=compact]_&]:text-[14.5px] [[data-density=compact]_&]:leading-[1.62]
+      [&_h1]:mb-[.65em] [&_h1]:mt-[1.6em] [&_h1]:text-[1.6rem] [&_h1:first-child]:mt-0
+      [&_h2]:mb-[.6em] [&_h2]:mt-[1.75em] [&_h2]:pt-[.15em] [&_h2]:text-[1.3rem] [&_h2:first-child]:mt-0
+      [&_h3]:mb-[.5em] [&_h3]:mt-[1.5em] [&_h3]:text-[1.1rem] [&_h3:first-child]:mt-0
       [&_h4]:mb-[.45em] [&_h4]:mt-[1.5em] [&_h4]:text-base [&_h4:first-child]:mt-0
       [&_p]:mb-[1em] [&_ol]:mb-[1em] [&_ol]:pl-[1.45em] [&_ul]:mb-[1em] [&_ul]:pl-[1.45em]
       [&_li+li]:mt-[.32em] [&_li::marker]:text-[var(--faint)]
       [&_strong]:font-[680] [&_strong]:text-[var(--text-strong)]
-      [&_a]:font-[520] [&_a]:text-[var(--brand-strong)] [&_a]:underline [&_a]:decoration-[color-mix(in_srgb,var(--brand)_35%,transparent)] [&_a]:underline-offset-[3px] [&_a:hover]:decoration-[var(--brand)]
+      [&_a]:font-[520] [&_a]:text-[var(--brand-strong)] [&_a]:underline [&_a]:decoration-[color-mix(in_srgb,var(--brand)_35%,transparent)] [&_a]:underline-offset-[3px] [&_a:hover]:decoration-[var(--brand)] [&_a.no-underline]:no-underline [&_a.no-underline]:decoration-transparent
       [&_blockquote]:my-[1.6em] [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--border-strong)] [&_blockquote]:py-0.5 [&_blockquote]:pl-[18px] [&_blockquote]:text-[var(--muted)]
       [&_hr]:my-[2.8em] [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-[var(--border)]
       [&_img]:h-auto [&_img]:max-w-full [&_img]:rounded-[calc(var(--radius)+2px)] [&_img]:border [&_img]:border-[var(--border)] [&_img]:shadow-[var(--shadow-sm)]
-      [&_table]:my-[1.7em] [&_table]:w-full [&_table]:max-w-full [&_table]:border-separate [&_table]:border-spacing-0 [&_table]:rounded-[var(--radius-md)] [&_table]:border [&_table]:border-[var(--border)]
-      [&_th]:border-b [&_th]:border-r [&_th]:border-[var(--border)] [&_th]:bg-[var(--surface-subtle)] [&_th]:px-[13px] [&_th]:py-2.5 [&_th]:text-left [&_th]:text-[13px] [&_th]:font-[680] [&_th]:whitespace-normal [&_th]:text-[var(--text-strong)]
-      [&_td]:border-b [&_td]:border-r [&_td]:border-[var(--border)] [&_td]:px-[13px] [&_td]:py-2.5 [&_td]:text-left [&_td]:whitespace-normal
+      [&_table]:border-separate [&_table]:border-spacing-0
+      [&_th]:border-b [&_th]:border-r [&_th]:border-[var(--border)] [&_th]:bg-[var(--surface-subtle)] [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-[680] [&_th]:whitespace-normal [&_th]:leading-[1.35] [&_th]:text-[var(--text-strong)]
+      [&_td]:border-b [&_td]:border-r [&_td]:border-[var(--border)] [&_td]:px-3 [&_td]:py-2 [&_td]:text-left [&_td]:text-[13.5px] [&_td]:whitespace-normal [&_td]:leading-[1.45]
       [&_tr:last-child_td]:border-b-0 [&_th:last-child]:border-r-0 [&_td:last-child]:border-r-0
       [&_:not(pre)>code]:rounded-[5px] [&_:not(pre)>code]:border [&_:not(pre)>code]:border-[var(--border)] [&_:not(pre)>code]:bg-[var(--surface-subtle)] [&_:not(pre)>code]:px-[.4em] [&_:not(pre)>code]:py-[.16em] [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-[84%] [&_:not(pre)>code]:text-[color-mix(in_srgb,var(--text)_90%,var(--brand))]
       [&_input[type=checkbox]]:ml-[-20px] [&_input[type=checkbox]]:mr-[7px] [&_input[type=checkbox]]:h-3.5 [&_input[type=checkbox]]:w-3.5 [&_input[type=checkbox]]:accent-[var(--brand)]"

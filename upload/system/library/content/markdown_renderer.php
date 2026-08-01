@@ -233,8 +233,8 @@ final class MarkdownRenderer
 				continue;
 			}
 			$wrapper = $document->createElement('div');
-			$wrapper->setAttribute('class', 'my-7 max-w-full overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)]');
-			$table->setAttribute('class', trim($table->getAttribute('class') . ' m-0 border-0 rounded-none'));
+			$wrapper->setAttribute('class', 'my-[1.45em] max-w-full overflow-x-auto rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]');
+			$table->setAttribute('class', trim($table->getAttribute('class') . ' m-0 w-full max-w-full border-0 rounded-none'));
 			$table->parentNode->replaceChild($wrapper, $table);
 			$wrapper->appendChild($table);
 		}

@@ -46,8 +46,8 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
 
 $kernel = new \System\Engine\Kernel(
     context: APP_CONTEXT,
-    applicationRoot: DIR_ROOT,
-    localConfigFile: null,
+    application_root: DIR_ROOT,
+    local_config_file: null,
 );
 $registry = $kernel->boot();
 $autoloader = $registry->get('autoloader');

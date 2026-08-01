@@ -16,7 +16,7 @@ use System\Library\ErrorHandler;
 try {
 	$kernel = new Kernel(
 		context: defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend',
-		applicationRoot: dirname(__DIR__) . DIRECTORY_SEPARATOR,
+		application_root: dirname(__DIR__) . DIRECTORY_SEPARATOR,
 		providers: [
 			CoreSetup::class,
 			ContentSetup::class,

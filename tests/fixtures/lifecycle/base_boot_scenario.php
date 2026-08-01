@@ -21,7 +21,6 @@ define('DIR_ROOT', dirname(rtrim($systemRoot, '/\\')) . DIRECTORY_SEPARATOR);
 define('DIR_SYSTEM', $systemRoot);
 
 require $projectRoot . '/upload/vendor/autoload.php';
-require_once $projectRoot . '/upload/system/library/template/template.php';
 
 if ($mode !== 'undefined') {
     define('APP_CONTEXT', $mode === 'missing' ? 'does_not_exist' : ($mode === 'admin' ? 'admin' : 'frontend'));
@@ -30,8 +29,8 @@ $definedBefore = defined('APP_CONTEXT');
 
 $kernel = new \System\Engine\Kernel(
     context: defined('APP_CONTEXT') ? APP_CONTEXT : 'frontend',
-    systemRoot: DIR_SYSTEM,
-    applicationRoot: DIR_ROOT,
+    system_root: DIR_SYSTEM,
+    application_root: DIR_ROOT,
 );
 $registry = $kernel->boot();
 $config = $registry->get('config');

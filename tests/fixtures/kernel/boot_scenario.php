@@ -22,7 +22,6 @@ define('DIR_ROOT', $applicationRoot);
 define('DIR_SYSTEM', $systemRoot);
 
 require $projectRoot . '/upload/vendor/autoload.php';
-require_once $projectRoot . '/upload/system/library/template/template.php';
 
 $context = match ($mode) {
     'admin' => 'admin',
@@ -38,9 +37,9 @@ $kernelSystemRoot = $mode === 'mismatch-system-root' ? $applicationRoot : $syste
 $kernelApplicationRoot = $mode === 'mismatch-application-root' ? $projectRoot . DIRECTORY_SEPARATOR : $applicationRoot;
 $kernel = new \System\Engine\Kernel(
     context: $context,
-    systemRoot: $kernelSystemRoot,
-    applicationRoot: $kernelApplicationRoot,
-    localConfigFile: $mode !== 'no-local' ? 'config.local.php' : null,
+    system_root: $kernelSystemRoot,
+    application_root: $kernelApplicationRoot,
+    local_config_file: $mode !== 'no-local' ? 'config.local.php' : null,
 );
 
 if ($mode === 'failed-state') {
@@ -94,9 +93,9 @@ if ($mode === 'duplicate-instance') {
 if ($mode === 'second-instance') {
     $second = new \System\Engine\Kernel(
         context: $context,
-        systemRoot: $systemRoot,
-        applicationRoot: $applicationRoot,
-        localConfigFile: $mode !== 'no-local' ? 'config.local.php' : null,
+        system_root: $systemRoot,
+        application_root: $applicationRoot,
+        local_config_file: $mode !== 'no-local' ? 'config.local.php' : null,
     );
     $secondRegistry = $second->boot();
     $result['second_instance'] = [
@@ -110,8 +109,8 @@ if ($mode === 'second-context') {
     try {
         (new \System\Engine\Kernel(
             context: 'admin',
-            systemRoot: $systemRoot,
-            applicationRoot: $applicationRoot,
+            system_root: $systemRoot,
+            application_root: $applicationRoot,
         ))->boot();
         $result['second_context'] = 'succeeded';
     } catch (Throwable $throwable) {
