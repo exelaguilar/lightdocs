@@ -161,7 +161,7 @@ class Login extends Controller
     private function sendResetEmail(string $email, string $token): void
     {
         $provider = $this->extensions->get('mail.provider');
-        if (!$provider instanceof \System\Engine\MailProvider) {
+        if (!$provider instanceof \System\Library\Mail\ProviderInterface) {
             $this->debug_log?->warning('Password reset requested but no mail provider is enabled.', ['source' => 'Login']);
             return;
         }

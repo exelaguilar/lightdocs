@@ -8,9 +8,9 @@ use RuntimeException;
 use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
-use System\Engine\MailProvider;
+use System\Library\Mail\ProviderInterface;
 
-final class Extension implements Contract, MailProvider
+final class Extension implements Contract, ProviderInterface
 {
 	private ExtensionApplication $context;
 

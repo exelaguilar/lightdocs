@@ -9,6 +9,7 @@ use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
 use System\Engine\WebhookProvider;
+use System\Library\Http;
 
 final class Extension implements Contract, WebhookProvider
 {
@@ -64,16 +65,17 @@ final class Extension implements Contract, WebhookProvider
 	private function deliver(string $url, string $secret, string $event, array $payload): void
 	{
 		$body = json_encode(['event' => $event, 'payload' => !empty($this->context->settings['include_payload']) ? $payload : [], 'sent_at' => gmdate(DATE_ATOM)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-		$headers = 'Content-Type: application/json' . "\r\n" . 'X-Lightdocs-Event: ' . $event . "\r\n" . 'X-Lightdocs-Signature: sha256=' . hash_hmac('sha256', $body, $secret) . "\r\n";
-		$options = ['http' => ['method' => 'POST', 'header' => $headers, 'content' => $body, 'timeout' => max(1, min(30, (int) ($this->context->settings['timeout'] ?? 5))), 'ignore_errors' => true]];
+		$headers = ['Content-Type: application/json', 'X-Lightdocs-Event: ' . $event, 'X-Lightdocs-Signature: sha256=' . hash_hmac('sha256', $body, $secret)];
+		$timeout = max(1, min(30, (int) ($this->context->settings['timeout'] ?? 5)));
 		$started = microtime(true);
-		// An unreachable endpoint is an expected, already-logged outcome here (see record() below),
-		// not an application error — suppressed so it doesn't spam the PHP error log per delivery.
-		$response = @file_get_contents($url, false, stream_context_create($options));
-		$status_code = 0;
-		if (preg_match('/\s(\d{3})\s/', $http_response_header[0] ?? '', $matches)) $status_code = (int) $matches[1];
+		$result = (new Http())->post($url, $body, $headers, $timeout);
+		$status_code = $result['status'];
 		$success = $status_code >= 200 && $status_code < 300;
-		$error = $response === false ? 'The endpoint could not be reached.' : ($success ? '' : 'The endpoint returned status ' . $status_code . '.');
+		// A transport-level failure (status 0 — connection refused, DNS
+		// failure, timeout, ...) keeps this fixed, friendly message rather
+		// than surfacing Http's raw error text, matching the message this
+		// extension has always recorded for an unreachable endpoint.
+		$error = $status_code === 0 ? 'The endpoint could not be reached.' : ($success ? '' : 'The endpoint returned status ' . $status_code . '.');
 		$this->record($url, $event, $status_code, $success, $error, (int) round((microtime(true) - $started) * 1000));
 	}
 

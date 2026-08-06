@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace System\Library\Content;
 
 use RuntimeException;
-use System\Engine\AssetStorage;
 use System\Engine\MediaProcessor;
+use System\Library\Storage\ProviderInterface as AssetStorage;
 
 final class ContentEditor
 {

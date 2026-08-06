@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Extension\Storage;
 
 use RuntimeException;
-use System\Engine\AssetStorage;
 use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
+use System\Library\Http;
+use System\Library\Storage\ProviderInterface;
 
-final class Extension implements Contract, AssetStorage
+final class Extension implements Contract, ProviderInterface
 {
 	private ExtensionApplication $context;
 
@@ -63,18 +64,15 @@ final class Extension implements Contract, AssetStorage
 		$signature = hash_hmac('sha256', $string_to_sign, $signing_key);
 		$authorization = 'AWS4-HMAC-SHA256 Credential=' . $access_key . '/' . $credential_scope . ', SignedHeaders=' . $signed_headers . ', Signature=' . $signature;
 		$url = $scheme . '://' . $host . $port . $uri;
-		$options = [
-			'http' => [
-				'method' => 'PUT',
-				'header' => "Host: " . $host . $port . "\r\nContent-Type: " . $mime . "\r\nx-amz-content-sha256: " . $payload_hash . "\r\nx-amz-date: " . $amz_date . "\r\nAuthorization: " . $authorization . "\r\n",
-				'content' => $contents,
-				'timeout' => max(1, min(120, (int) ($settings['timeout'] ?? 15))),
-				'ignore_errors' => true,
-			],
-		];
-		$response = file_get_contents($url, false, stream_context_create($options));
-		$status = $http_response_header[0] ?? '';
-		if ($response === false || !preg_match('/\s2\d\d\s/', $status)) throw new RuntimeException('The external asset provider rejected the upload.');
+		$timeout = max(1, min(120, (int) ($settings['timeout'] ?? 15)));
+		$result = (new Http())->request('PUT', $url, $contents, [
+			'Host: ' . $host . $port,
+			'Content-Type: ' . $mime,
+			'x-amz-content-sha256: ' . $payload_hash,
+			'x-amz-date: ' . $amz_date,
+			'Authorization: ' . $authorization,
+		], $timeout);
+		if ($result['status'] < 200 || $result['status'] >= 300) throw new RuntimeException('The external asset provider rejected the upload.');
 		$public_base_url = rtrim((string) ($settings['public_base_url'] ?? ''), '/');
 		return ($public_base_url !== '' ? $public_base_url : $scheme . '://' . $host . $port . '/' . $bucket) . '/' . $this->encodePath($object);
 	}
