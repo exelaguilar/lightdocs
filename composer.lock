@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "af86829de74500e199b10dccf0d9d59f",
+    "content-hash": "a1ba6905e031db8e7c0c689994945e2a",
     "packages": [
         {
             "name": "composer/semver",
@@ -160,34 +160,41 @@
         },
         {
             "name": "exelaguilar/tiny-mvc-framework-private",
-            "version": "v0.41.0",
+            "version": "v0.61.0",
             "source": {
                 "type": "git",
                 "url": "git@github.com:exelaguilar/tiny-mvc-framework.git",
-                "reference": "8045b0ffff1cbbbb8d32382280a5ded37c8203f8"
+                "reference": "6af75dc264025c1a9f80f274669bb21197adf46f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/8045b0ffff1cbbbb8d32382280a5ded37c8203f8",
-                "reference": "8045b0ffff1cbbbb8d32382280a5ded37c8203f8",
+                "url": "https://api.github.com/repos/exelaguilar/tiny-mvc-framework/zipball/6af75dc264025c1a9f80f274669bb21197adf46f",
+                "reference": "6af75dc264025c1a9f80f274669bb21197adf46f",
                 "shasum": ""
             },
             "require": {
                 "composer/semver": "^3.4",
                 "ext-openssl": "*",
                 "ext-zip": "*",
-                "php": ">=8.1",
+                "php": ">=8.2",
                 "scssphp/scssphp": "^1.13",
                 "twbs/bootstrap": "^5.3.8",
                 "twig/twig": "^3.4"
             },
             "require-dev": {
+                "bacon/bacon-qr-code": "^3.1",
+                "doctrine/instantiator": "^1.5",
+                "friendsofphp/php-cs-fixer": "^3.95",
+                "phpstan/phpstan": "^2.2",
                 "phpunit/phpunit": "^9.6",
+                "robthree/twofactorauth": "^3.0",
                 "vlucas/phpdotenv": "^5.6"
             },
             "bin": [
                 "bin/create-project",
-                "bin/update-project"
+                "bin/update-project",
+                "bin/create-extension",
+                "bin/validate-extension"
             ],
             "type": "library",
             "autoload": {
@@ -206,8 +213,18 @@
                 "test": [
                     "phpunit"
                 ],
+                "stan": [
+                    "phpstan analyze --no-progress --memory-limit=512M"
+                ],
+                "cs": [
+                    "php-cs-fixer fix --dry-run --diff"
+                ],
+                "cs:fix": [
+                    "php-cs-fixer fix"
+                ],
                 "check": [
                     "composer validate --strict",
+                    "@stan",
                     "@test"
                 ]
             },
@@ -215,7 +232,7 @@
                 "proprietary"
             ],
             "description": "Private OpenCart-style registry-MVC framework extracted from Lightdocs and intended for Lightdocs, Nevernote, and future applications.",
-            "time": "2026-08-01T14:25:37+00:00"
+            "time": "2026-08-15T04:52:05+00:00"
         },
         {
             "name": "graham-campbell/result-type",
