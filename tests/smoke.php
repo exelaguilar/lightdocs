@@ -66,7 +66,6 @@ $buildExtensions = static function (Registry $registry, array $config, AbstractD
         new Discovery($config['extension_dir']),
         $state,
         capabilities: $capabilities,
-        platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.40.0'],
         packages: new PackageInstaller($config['extension_dir']),
         registry: $registry,
     );

@@ -99,7 +99,6 @@ $manager = new ExtensionManager(
     new Discovery(dirname($extensionDirectory)),
     $state,
     capabilities: $capabilities,
-    platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.40.0'],
     registry: $registry,
 );
 $runtime = $manager->boot('public');

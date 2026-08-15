@@ -42,13 +42,11 @@ final class ExtensionSetup implements Contract
 			new Discovery((string)$config->get('extension_dir')),
 			$state,
 			capabilities: $capabilities,
-			platformVersions: ['php' => PHP_VERSION, 'tinymvc' => '0.40.0'],
-				packages: new PackageInstaller((string)$config->get('extension_dir')),
+			packages: new PackageInstaller((string)$config->get('extension_dir')),
 			authorizer: new ExtensionAuthorization($registry),
 			trust: new ExtensionPackageTrust((string)$config->get('extension_trust_mode'), (array)$config->get('extension_trusted_signers')),
 			registry: $registry,
 		);
-		$manager->recover();
 		$context = (string)$registry->get('app') === 'frontend' ? 'public' : (string)$registry->get('app');
 		$runtime = $manager->boot($context);
 		$extensions = new ExtensionAdministration($manager, $runtime, $state, $startups);
