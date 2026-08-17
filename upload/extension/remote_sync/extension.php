@@ -13,24 +13,20 @@ use System\Engine\RemoteRepositoryProvider;
 final class Extension implements Contract, RemoteRepositoryProvider
 {
 	private ExtensionApplication $context;
+	/** @var array<string,mixed> */
+	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = $this->application($context);
+		$this->context = ExtensionApplication::current();
+		$this->settings = $context->settings();
 		$context->service('remote.repository', $this);
-	}
-
-	private function application(Context $context): ExtensionApplication
-	{
-		$application = $context->capability('lightdocs.application');
-		if (!$application instanceof ExtensionApplication) throw new RuntimeException('Invalid Lightdocs extension capability.');
-		return $application;
 	}
 
 	public function status(): array
 	{
 		$root = (string) $this->context->config['site_root'];
-		$settings = $this->context->settings;
+		$settings = $this->settings;
 		$result = $this->run(['git', '--version']);
 		return [
 			'available' => $result['code'] === 0,
@@ -42,7 +38,7 @@ final class Extension implements Contract, RemoteRepositoryProvider
 
 	public function push(): void
 	{
-		if (empty($this->context->settings['allow_push'])) throw new RuntimeException('Push is disabled in Remote sync settings.');
+		if (empty($this->settings['allow_push'])) throw new RuntimeException('Push is disabled in Remote sync settings.');
 		$this->assertReady();
 		$this->configureRemote();
 		$this->mustRun($this->networkCommand(['push', $this->remoteName(), 'HEAD:' . $this->branch()]));
@@ -81,7 +77,7 @@ final class Extension implements Contract, RemoteRepositoryProvider
 
 	private function configureRemote(): void
 	{
-		$url = trim((string) ($this->context->settings['remote_url'] ?? ''));
+		$url = trim((string) ($this->settings['remote_url'] ?? ''));
 		if (!preg_match('~^(https://|ssh://|git@)[^\\s]+$~i', $url)) throw new RuntimeException('Remote repository URL must use HTTPS, SSH, or git@ syntax.');
 		$name = $this->remoteName();
 		$remote = $this->run(['git', 'remote', 'get-url', $name]);
@@ -91,27 +87,27 @@ final class Extension implements Contract, RemoteRepositoryProvider
 
 	private function validateRemoteUrl(): void
 	{
-		$url = trim((string) ($this->context->settings['remote_url'] ?? ''));
+		$url = trim((string) ($this->settings['remote_url'] ?? ''));
 		if (!preg_match('~^(https://|ssh://|git@)[^\\s]+$~i', $url)) throw new RuntimeException('Remote repository URL must use HTTPS, SSH, or git@ syntax.');
 	}
 
 	private function branch(): string
 	{
-		$branch = trim((string) ($this->context->settings['branch'] ?? 'main'));
+		$branch = trim((string) ($this->settings['branch'] ?? 'main'));
 		if (!preg_match('/^[A-Za-z0-9._\/-]{1,100}$/', $branch)) throw new RuntimeException('The remote branch name is invalid.');
 		return $branch;
 	}
 
 	private function remoteName(): string
 	{
-		$name = trim((string) ($this->context->settings['remote_name'] ?? 'origin'));
+		$name = trim((string) ($this->settings['remote_name'] ?? 'origin'));
 		if (!preg_match('/^[A-Za-z0-9._-]{1,80}$/', $name)) throw new RuntimeException('The remote name is invalid.');
 		return $name;
 	}
 
 	private function networkCommand(array $command): array
 	{
-		$token = trim((string) ($this->context->settings['access_token'] ?? ''));
+		$token = trim((string) ($this->settings['access_token'] ?? ''));
 		return $token === '' ? array_merge(['git'], $command) : array_merge(['git', '-c', 'http.extraHeader=Authorization: Bearer ' . $token], $command);
 	}
 

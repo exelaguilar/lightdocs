@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  * Invocation: php tests/boot.php
  *
- * Verifies that the package Kernel performs the DB-free base
+ * Verifies that the package Bootstrap performs the base
  * boot (System autoloading -> Registry -> Config cascade -> configured
  * namespace registration) before a handful of DB-free core services reach a
  * valid checkpoint, independent of:
@@ -18,7 +18,7 @@ declare(strict_types=1);
  *
  * This deliberately covers only the DB-free prefix shared with web boot. It
  * does not execute extension discovery/startups, configured pre-actions,
- * database-backed events, Front dispatch, global error/shutdown handlers, or
+ * database-backed events, route dispatch, global error/shutdown handlers, or
  * response emission. Those process-global and terminating stages are covered
  * in isolated subprocesses by tests/lifecycle.php.
  *
@@ -44,18 +44,18 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
     }
 };
 
-$kernel = new \System\Engine\Kernel(
+$bootstrap = new \System\Engine\Bootstrap(
     context: APP_CONTEXT,
     application_root: DIR_ROOT,
     local_config_file: null,
 );
-$registry = $kernel->boot();
+$registry = $bootstrap->boot();
 $autoloader = $registry->get('autoloader');
 $config = $registry->get('config');
 
 $check(
     class_exists(\System\Engine\Registry::class, true),
-    'System\\Engine\\Registry did not resolve through the Kernel autoloader.'
+    'System\\Engine\\Registry did not resolve through the Bootstrap autoloader.'
 );
 
 $check($config->get('app_context') === 'frontend', 'default.php + frontend.php cascade did not produce app_context=frontend.');

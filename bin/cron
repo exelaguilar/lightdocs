@@ -3,16 +3,17 @@
 
 declare(strict_types=1);
 
+/** Runs the scheduled Lightdocs job queue without dispatching an HTTP route. */
 define('APP_CONTEXT', 'frontend');
 
 require dirname(__DIR__) . '/upload/system/startup.php';
 
-$kernel = new \System\Engine\Kernel(
+$bootstrap = new \System\Engine\Bootstrap(
     context: APP_CONTEXT,
     application_root: DIR_ROOT,
     local_config_file: null,
 );
-$registry = $kernel->boot();
+$registry = $bootstrap->boot();
 $arguments = [$argv[0], 'jobs:run'];
 
 if (isset($argv[1])) {

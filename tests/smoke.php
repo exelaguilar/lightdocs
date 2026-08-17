@@ -18,10 +18,8 @@ use System\Library\ExtensionState;
 use System\Engine\Event;
 use System\Engine\ExtensionAdministration;
 use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionCapabilityRegistry;
 use System\Engine\Extension\Discovery;
 use System\Engine\ExtensionManager;
-use System\Engine\Extension\Manifest;
 use System\Engine\Startup;
 use System\Engine\Model;
 use System\Library\Content\DirectiveRegistry;
@@ -56,20 +54,25 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
 };
 
 $buildExtensions = static function (Registry $registry, array $config, AbstractDb $database, ContentRepository $repository, DirectiveRegistry $directives, \System\Engine\Autoloader $autoloader): ExtensionAdministration {
+    $registry->set('autoloader', $autoloader);
     $state = new ExtensionState($database);
     $startups = new Startup();
-    $capabilities = new ExtensionCapabilityRegistry();
-    $capabilities->register('lightdocs.application', static fn (Manifest $manifest): ExtensionApplication => new ExtensionApplication(
-        $manifest->name(), $config, $repository, $directives, $database, $state->settings($manifest->name()), $startups
+    ExtensionApplication::setCurrent(new ExtensionApplication(
+        'lightdocs',
+        $config,
+        $repository,
+        $directives,
+        $database,
+        [],
+        $startups,
     ));
     $manager = new ExtensionManager(
         new Discovery($config['extension_dir']),
         $state,
-        capabilities: $capabilities,
         packages: new PackageInstaller($config['extension_dir']),
         registry: $registry,
     );
-    $runtime = $manager->boot('public');
+    $runtime = $manager->boot('frontend');
     return new ExtensionAdministration($manager, $runtime, $state, $startups);
 };
 
@@ -84,7 +87,10 @@ $events->trigger('smoke.event', $smokeArgs);
 $check(($eventPayload['ok'] ?? false) === true, 'Synchronous system events did not dispatch payloads.');
 $check(is_subclass_of(ContentIndex::class, Model::class), 'ContentIndex does not extend the system Model base.');
 $check(!is_subclass_of(SiteSettings::class, Model::class), 'SiteSettings should write canonical files without extending the SQLite Model base.');
-$mainDB = new SqliteDb($config['database_path']);
+$smokeDatabasePath = rtrim((string) $config['cache_dir'], '/\\') . '/smoke-' . bin2hex(random_bytes(4)) . '.sqlite';
+$databaseDirectory = dirname($smokeDatabasePath);
+if (!is_dir($databaseDirectory)) mkdir($databaseDirectory, 0775, true);
+$mainDB = new SqliteDb($smokeDatabasePath);
 $registry->set('db', $mainDB);
 $registry->set('event', $events);
 $registry->set('repository', $repository);
@@ -96,7 +102,7 @@ $check(in_array('local_git', $extensions->names(), true), 'The Local Git extensi
 $check($extensions->get('local_git.history') instanceof GitHistory, 'The Local Git extension did not register its history service.');
 $extensionRows = $extensions->all();
 $check(($extensionRows['reader_banner']['type'] ?? '') === 'example', 'The Reader Banner extension type was not discovered.');
-$check(($extensions->settingsFor('reader_banner')['contexts'] ?? []) === ['public'], 'The Reader Banner public-reader context was not discovered.');
+$check(($extensions->settingsFor('reader_banner')['contexts'] ?? []) === ['frontend'], 'The Reader Banner frontend-reader context was not discovered.');
 $extensionRoot = $config['cache_dir'] . '/extension-smoke-' . bin2hex(random_bytes(3));
 $extensionDb = new SqliteDb($extensionRoot . '/lightdocs.sqlite');
 $extensionRegistry = new Registry();
@@ -139,6 +145,11 @@ $check($stats['headings'] > 0, 'SQLite heading index is empty.');
 $check(array_key_exists('keywords', $stats), 'SQLite keyword taxonomy is unavailable.');
 $check(($stats['settings'] ?? 0) >= 4, 'SQLite site settings mirror is incomplete.');
 $check($index->search('deployment') !== [], 'SQLite search returned no results for a known term.');
+$index = null;
+$mainDB = null;
+@unlink($smokeDatabasePath);
+@unlink($smokeDatabasePath . '-shm');
+@unlink($smokeDatabasePath . '-wal');
 $runbook = new Page('', 'runbook.md', '/runbook', 'Runbook', '', "- [ ] Verify the deployment.\n", ['type' => 'runbook'], time());
 $check(str_contains($renderer->render($runbook)->html, 'type="checkbox"'), 'Runbook task lists did not render interactive progress inputs.');
 $glossaryPage = new Page('', 'glossary.md', '/glossary', 'Glossary', '', "Use [Proxmox VE](/glossary#proxmox-ve).\n\n[[proxmox-ve]]", [], time());

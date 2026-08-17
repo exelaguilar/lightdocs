@@ -51,7 +51,7 @@ final class Console
 
 		$database = $registry->get('db');
 		if (!$database instanceof AbstractDb) {
-			throw new LogicException('Console requires Kernel database runtime.');
+			throw new LogicException('Console requires the framework database runtime.');
 		}
 		$this->database = $database;
 

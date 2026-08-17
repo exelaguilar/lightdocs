@@ -157,9 +157,9 @@ return [
     'error_page' => '',
     'debug_file' => 'debug.log',
     'log_levels' => $environment === 'development' ? ['error', 'warning', 'info', 'debug'] : ['error', 'warning'],
-    'log_ignore_sources' => ['Assets', 'Action', 'Front', 'Events'],
+    'log_ignore_sources' => ['Assets', 'Action', 'Bootstrap', 'Events'],
 
     // Template engine
-    'template_engine' => 'starter',
+    'template_engine' => 'php',
     'template_cache_dir' => $state_root . '/cache/template',
 ];

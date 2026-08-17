@@ -62,12 +62,23 @@ final class ExtensionAdministration
 			}
 		}
 
-		foreach ($runtime->assetContributions() as $asset) {
-			if (!isset($this->assets[$asset['context']])) continue;
-			$bucket = $asset['type'] === 'style' ? 'styles' : 'scripts';
-			$path = '/extension/' . $asset['extension'] . '/' . ltrim($asset['path'], '/');
-			$this->assets[$asset['context']][$bucket][] = $path;
-			$this->assets[$asset['context']][$bucket] = array_values(array_unique($this->assets[$asset['context']][$bucket]));
+		foreach ($runtime->manifests() as $name => $manifest) {
+			$assets = $manifest->all()['assets'] ?? [];
+			if (!is_array($assets)) continue;
+			foreach ($assets as $context => $types) {
+				if (!isset($this->assets[$context]) || !is_array($types)) continue;
+				foreach (['styles' => 'styles', 'scripts' => 'scripts'] as $type => $bucket) {
+					foreach ((array)($types[$type] ?? []) as $asset) {
+						if (!is_string($asset) || trim($asset) === '') continue;
+						$this->assets[$context][$bucket][] = '/extension/' . $name . '/' . ltrim($asset, '/');
+					}
+				}
+			}
+		}
+		foreach ($this->assets as $context => $types) {
+			foreach ($types as $bucket => $assets) {
+				$this->assets[$context][$bucket] = array_values(array_unique($assets));
+			}
 		}
 	}
 
@@ -169,7 +180,7 @@ final class ExtensionAdministration
 				'version' => (string) ($manifest['version'] ?? ''),
 				'description' => (string) ($manifest['description'] ?? ''),
 				'type' => $this->type($manifest),
-				'contexts' => array_values(array_intersect($contexts, ['admin', 'public'])),
+				'contexts' => array_values(array_intersect($contexts, ['admin', 'frontend'])),
 				'class' => (string) ($manifest['class'] ?? ''),
 				'enabled' => $installation?->enabled() ?? false,
 				'loaded' => isset($loaded[$name]),
@@ -211,7 +222,7 @@ final class ExtensionAdministration
 				'version' => (string) ($manifest['version'] ?? ''),
 				'description' => (string) ($manifest['description'] ?? ''),
 				'type' => $this->type($manifest),
-				'contexts' => array_values(array_intersect(is_array($manifest['contexts'] ?? null) ? $manifest['contexts'] : [], ['admin', 'public'])),
+				'contexts' => array_values(array_intersect(is_array($manifest['contexts'] ?? null) ? $manifest['contexts'] : [], ['admin', 'frontend'])),
 				'enabled' => $installation?->enabled() ?? false,
 				'definitions' => $definitions,
 				'values' => $this->state->settings($name),

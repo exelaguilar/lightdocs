@@ -13,32 +13,28 @@ use System\Library\Mail\ProviderInterface;
 final class Extension implements Contract, ProviderInterface
 {
 	private ExtensionApplication $context;
+	/** @var array<string,mixed> */
+	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = $this->application($context);
+		$this->context = ExtensionApplication::current();
+		$this->settings = $context->settings();
 		$context->service('mail.provider', $this);
-	}
-
-	private function application(Context $context): ExtensionApplication
-	{
-		$application = $context->capability('lightdocs.application');
-		if (!$application instanceof ExtensionApplication) throw new RuntimeException('Invalid Lightdocs extension capability.');
-		return $application;
 	}
 
 	/** @throws RuntimeException if the connection, authentication, or delivery fails. */
 	public function send(string $recipient, string $subject, string $body): void
 	{
-		$host = trim((string) ($this->context->settings['host'] ?? ''));
-		$from = trim((string) ($this->context->settings['from_email'] ?? ''));
+		$host = trim((string) ($this->settings['host'] ?? ''));
+		$from = trim((string) ($this->settings['from_email'] ?? ''));
 		if ($host === '' || $from === '' || !filter_var($recipient, FILTER_VALIDATE_EMAIL) || !filter_var($from, FILTER_VALIDATE_EMAIL)) {
 			throw new RuntimeException('Mail is not configured with a host and a valid From address.');
 		}
 
-		$port = max(1, min(65535, (int) ($this->context->settings['port'] ?? 587)));
-		$encryption = (string) ($this->context->settings['encryption'] ?? 'tls');
-		$timeout = max(1, min(60, (int) ($this->context->settings['timeout'] ?? 10)));
+		$port = max(1, min(65535, (int) ($this->settings['port'] ?? 587)));
+		$encryption = (string) ($this->settings['encryption'] ?? 'tls');
+		$timeout = max(1, min(60, (int) ($this->settings['timeout'] ?? 10)));
 
 		$transport = $encryption === 'ssl' ? 'ssl://' . $host : $host;
 		$socket = @stream_socket_client($transport . ':' . $port, $error_code, $error_message, $timeout);
@@ -59,8 +55,8 @@ final class Extension implements Contract, ProviderInterface
 				$this->command($socket, 'EHLO ' . (parse_url($from, PHP_URL_HOST) ?: 'localhost'), 250);
 			}
 
-			$username = trim((string) ($this->context->settings['username'] ?? ''));
-			$password = (string) ($this->context->settings['password'] ?? '');
+			$username = trim((string) ($this->settings['username'] ?? ''));
+			$password = (string) ($this->settings['password'] ?? '');
 			if ($username !== '') {
 				$this->command($socket, 'AUTH LOGIN', 334);
 				$this->command($socket, base64_encode($username), 334);
@@ -71,7 +67,7 @@ final class Extension implements Contract, ProviderInterface
 			$this->command($socket, 'RCPT TO:<' . $recipient . '>', [250, 251]);
 			$this->command($socket, 'DATA', 354);
 
-			$from_name = trim((string) ($this->context->settings['from_name'] ?? ''));
+			$from_name = trim((string) ($this->settings['from_name'] ?? ''));
 			$headers = [
 				'From: ' . ($from_name !== '' ? '"' . str_replace(['"', "\r", "\n"], '', $from_name) . '" ' : '') . '<' . $from . '>',
 				'To: <' . $recipient . '>',

@@ -13,10 +13,13 @@ final class Extension implements Contract
 {
 	private PDO $db;
 	private ExtensionApplication $context;
+	/** @var array<string,mixed> */
+	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = $this->application($context);
+		$this->context = ExtensionApplication::current();
+		$this->settings = $context->settings();
 		$this->db = $this->context->database->connection();
 		$context->service('audit.log', $this);
 		foreach ($this->eventNames() as $event) {
@@ -24,13 +27,6 @@ final class Extension implements Contract
 				$this->record($name, $payload);
 			}, 'audit.' . str_replace('.', '_', $event));
 		}
-	}
-
-	private function application(Context $context): ExtensionApplication
-	{
-		$application = $context->capability('lightdocs.application');
-		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
-		return $application;
 	}
 
 	public function recent(int $limit = 50, int $offset = 0, string $event = '', string $source = '', string $search = '', string $sort = 'desc'): array
@@ -91,9 +87,9 @@ final class Extension implements Contract
 	private function record(string $event, mixed $payload): void
 	{
 		$statement = $this->db->prepare('INSERT INTO audit_logs (event, source, payload_json, created_at) VALUES (:event, :source, :payload, :created_at)');
-		$payload = !empty($this->context->settings['record_payloads']) ? (is_array($payload) ? $payload : ['value' => $payload]) : ['recorded' => false];
+		$payload = !empty($this->settings['record_payloads']) ? (is_array($payload) ? $payload : ['value' => $payload]) : ['recorded' => false];
 		$statement->execute(['event' => $event, 'source' => 'audit', 'payload' => json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?: '{}', 'created_at' => time()]);
-		$retention_days = max(1, (int) ($this->context->settings['retention_days'] ?? 90));
+		$retention_days = max(1, (int) ($this->settings['retention_days'] ?? 90));
 		$cleanup = $this->db->prepare('DELETE FROM audit_logs WHERE created_at < :cutoff');
 		$cleanup->execute(['cutoff' => time() - ($retention_days * 86400)]);
 	}
@@ -101,7 +97,7 @@ final class Extension implements Contract
 	/** @return list<string> */
 	private function eventNames(): array
 	{
-		$names = array_map('trim', explode(',', (string) ($this->context->settings['events'] ?? 'content.changed,index.rebuilt,settings.saved')));
+		$names = array_map('trim', explode(',', (string) ($this->settings['events'] ?? 'content.changed,index.rebuilt,settings.saved')));
 		return array_values(array_unique(array_filter($names, static fn (string $event): bool => preg_match('#^[a-z][a-z0-9_./-]{2,80}$#', $event) === 1)));
 	}
 }

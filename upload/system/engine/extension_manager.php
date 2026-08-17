@@ -20,7 +20,6 @@ final class ExtensionManager
 {
 	private Discovery $discovery;
 	private ExtensionState $installations;
-	private ExtensionCapabilityRegistry $capabilities;
 	private ?ExtensionAuthorization $authorizer;
 	private ExtensionPackageTrust $trust;
 	private ?PackageInstaller $packages;
@@ -35,7 +34,6 @@ final class ExtensionManager
 	public function __construct(
 		Discovery $discovery,
 		ExtensionState $installations,
-		?ExtensionCapabilityRegistry $capabilities = null,
 		?PackageInstaller $packages = null,
 		?ExtensionAuthorization $authorizer = null,
 		?ExtensionPackageTrust $trust = null,
@@ -43,7 +41,6 @@ final class ExtensionManager
 	) {
 		$this->discovery = $discovery;
 		$this->installations = $installations;
-		$this->capabilities = $capabilities ?? new ExtensionCapabilityRegistry();
 		$this->packages = $packages;
 		$this->authorizer = $authorizer;
 		$this->trust = $trust ?? new ExtensionPackageTrust();
@@ -84,10 +81,14 @@ final class ExtensionManager
 		$this->runtime = $runtime_builder->build(
 			$discovered,
 			$context,
-			fn (Manifest $manifest): bool => $this->installations->find($manifest->name())?->enabled() ?? false,
-			null,
-			fn (string $capability, Manifest $manifest): ?object => $this->capabilities->has($capability) ? $this->capabilities->resolve($capability, $manifest) : null,
-			fn (Manifest $manifest): array => $this->installations->settings($manifest->name()),
+			array_map(
+				fn (Manifest $manifest): bool => $this->installations->find($manifest->name())?->enabled() ?? false,
+				$discovered,
+			),
+			array_map(
+				fn (Manifest $manifest): array => $this->installations->settings($manifest->name()),
+				$discovered,
+			),
 		);
 
 		return $this->runtime;
@@ -137,11 +138,6 @@ final class ExtensionManager
 				return $this->upgradeArchive($current->name(), $archivePath, $proof, $catalogEntry);
 			}
 			$this->trust->assertTrusted($prepared->archiveSha256(), $proof);
-			foreach ($prepared->manifest()->requiredCapabilities() as $capability) {
-				if (!$this->capabilities->has($capability)) {
-					throw new RuntimeException('Required extension capability is unavailable: ' . $capability);
-				}
-			}
 			$this->authorizer?->assertAuthorized('install', $prepared->manifest());
 			$receipt = $packages->install($prepared);
 			$installation = new ExtensionInstallation(
@@ -179,11 +175,6 @@ final class ExtensionManager
 			$this->assertCatalogCandidate($prepared, $catalogEntry);
 			$this->trust->assertTrusted($prepared->archiveSha256(), $proof);
 			$this->assertUpgrade($current->version(), $prepared->manifest());
-			foreach ($prepared->manifest()->requiredCapabilities() as $capability) {
-				if (!$this->capabilities->has($capability)) {
-					throw new RuntimeException('Required extension capability is unavailable: ' . $capability);
-				}
-			}
 			$this->authorizer?->assertAuthorized('upgrade', $prepared->manifest(), $current);
 			$this->installations->save($current->withState(ExtensionInstallation::UPGRADING, $current->enabled()));
 			try {

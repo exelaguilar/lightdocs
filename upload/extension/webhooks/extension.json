@@ -4,11 +4,9 @@
   "class": "Extension\\Webhooks\\Extension",
   "version": "1.1.0",
   "description": "Optional signed HTTP notifications for framework events, delivered to one or more endpoints with a recent-delivery log.",
-  "requires": {"php": ">=8.4", "tinymvc": ">=0.11 <1.0"},
-  "capabilities": {"requires": ["lightdocs.application"]},
   "type": "integration",
   "default_enabled": false,
-  "contexts": ["admin", "public"],
+  "contexts": ["admin", "frontend"],
   "settings": [
     {"key": "endpoints", "label": "Endpoints", "type": "textarea", "default": "", "description": "One HTTPS endpoint per line: URL and signing secret separated by a space, e.g. https://example.com/hook s3cr3t. Every endpoint receives every selected event, each with its own HMAC signature."},
     {"key": "events", "label": "Events", "type": "text", "default": "content.changed,settings.saved,index.rebuilt,security/login_failed", "description": "Comma-separated event names to send to every endpoint."},
