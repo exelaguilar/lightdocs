@@ -15,18 +15,14 @@ use ZipArchive;
 final class Extension implements Contract, BackupProvider
 {
 	private ExtensionApplication $context;
+	/** @var array<string,mixed> */
+	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = $this->application($context);
+		$this->context = ExtensionApplication::current();
+		$this->settings = $context->settings();
 		$context->service('backup.provider', $this);
-	}
-
-	private function application(Context $context): ExtensionApplication
-	{
-		$application = $context->capability('lightdocs.application');
-		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
-		return $application;
 	}
 
 	public function create(string $label = 'manual'): array
@@ -39,7 +35,7 @@ final class Extension implements Contract, BackupProvider
 		$path = $directory . '/' . $name;
 		$zip = new ZipArchive();
 		if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new \RuntimeException('Could not create backup archive.');
-		$includes = ['content' => true, 'uploads' => !empty($this->context->settings['include_uploads']), 'revisions' => !empty($this->context->settings['include_revisions']), 'database' => !empty($this->context->settings['include_database']), 'environment' => !empty($this->context->settings['include_environment'])];
+		$includes = ['content' => true, 'uploads' => !empty($this->settings['include_uploads']), 'revisions' => !empty($this->settings['include_revisions']), 'database' => !empty($this->settings['include_database']), 'environment' => !empty($this->settings['include_environment'])];
 		$sources = [$this->context->config['content_dir'] => 'content'];
 		if ($includes['revisions']) $sources[$this->context->config['state_root'] . '/revisions'] = 'revisions';
 		if ($includes['uploads']) $sources[$this->context->config['upload_dir']] = 'uploads';
@@ -136,14 +132,14 @@ final class Extension implements Contract, BackupProvider
 
 	private function cleanup(string $directory): void
 	{
-		$retention_days = max(1, (int) ($this->context->settings['retention_days'] ?? 30));
+		$retention_days = max(1, (int) ($this->settings['retention_days'] ?? 30));
 		$archives = glob(rtrim($directory, '/\\') . '/lightdocs-backup-*.zip') ?: [];
 		foreach ($archives as $path) {
 			if (is_file($path) && filemtime($path) < time() - ($retention_days * 86400)) @unlink($path);
 		}
 		$archives = array_values(array_filter(glob(rtrim($directory, '/\\') . '/lightdocs-backup-*.zip') ?: [], 'is_file'));
 		usort($archives, static fn (string $left, string $right): int => filemtime($right) <=> filemtime($left));
-		foreach (array_slice($archives, max(1, (int) ($this->context->settings['max_archives'] ?? 20))) as $path) @unlink($path);
+		foreach (array_slice($archives, max(1, (int) ($this->settings['max_archives'] ?? 20))) as $path) @unlink($path);
 	}
 
 	private function manifest(string $path): array

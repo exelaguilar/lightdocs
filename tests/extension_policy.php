@@ -8,7 +8,6 @@ require __DIR__ . '/support/test_suite.php';
 use Lightdocs\Tests\Support\TestSuite;
 use System\Engine\ExtensionCatalog;
 use System\Engine\ExtensionCatalogEntry;
-use System\Engine\Extension\Compatibility;
 use System\Engine\ExtensionInstallation;
 use System\Engine\Extension\Manifest;
 use System\Engine\ExtensionPackageProof;
@@ -26,12 +25,6 @@ $manifest = static fn (string $version = '1.0.0', array $requires = []): Manifes
 	'description' => 'Policy fixture.',
 	'requires' => $requires,
 ]);
-
-$suite->test('compatibility policy accepts and rejects application platform versions', static function () use ($manifest): void {
-	$policy = new Compatibility();
-	TestSuite::assertSame([], $policy->evaluate($manifest('1.0.0', ['php' => '>=8.4', 'tinymvc' => '^0.10']), ['php' => PHP_VERSION, 'tinymvc' => '0.10.0']), 'Compatible manifest was rejected.');
-	TestSuite::assertTrue($policy->evaluate($manifest('1.0.0', ['tinymvc' => '^0.9']), ['tinymvc' => '0.10.0']) !== [], 'Incompatible manifest was accepted.');
-});
 
 $suite->test('catalog update selection remains application-owned and deterministic', static function (): void {
 	$catalog = new ExtensionCatalog([

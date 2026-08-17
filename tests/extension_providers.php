@@ -121,7 +121,7 @@ function providers_config(): \System\Engine\Config
 
 function providers_application(string $slug, array $settings, ?AbstractDb $database = null): ExtensionApplication
 {
-    return new ExtensionApplication(
+    $application = new ExtensionApplication(
         $slug,
         [],
         new ContentRepository(sys_get_temp_dir()),
@@ -129,12 +129,15 @@ function providers_application(string $slug, array $settings, ?AbstractDb $datab
         $database ?? new SqliteDb(':memory:'),
         $settings,
     );
+    ExtensionApplication::setCurrent($application);
+    return $application;
 }
 
 function providers_context(string $slug, array $settings, ?AbstractDb $database = null): Context
 {
     $manifest = Manifest::fromFile(DIR_ROOT . "extension/{$slug}/extension.json");
-    return new Context($manifest, ['lightdocs.application' => providers_application($slug, $settings, $database)], $settings);
+    providers_application($slug, $settings, $database);
+    return new Context($manifest, $settings);
 }
 
 function providers_invoke_private(object $object, string $method, array $arguments): mixed

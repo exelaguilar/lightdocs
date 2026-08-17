@@ -8,16 +8,18 @@ use System\Library\Content\ContentRepository;
 use System\Library\Content\DirectiveRegistry;
 use System\Library\Db\AbstractDb;
 
-final readonly class ExtensionApplication
+final class ExtensionApplication
 {
+	private static ?self $current = null;
+
 	public function __construct(
-		public string $name,
-		public array $config,
-		public ContentRepository $repository,
-		public DirectiveRegistry $directives,
-		public AbstractDb $database,
-		public array $settings = [],
-		private ?Startup $startups = null,
+		public readonly string $name,
+		public readonly array $config,
+		public readonly ContentRepository $repository,
+		public readonly DirectiveRegistry $directives,
+		public readonly AbstractDb $database,
+		public readonly array $settings = [],
+		private readonly ?Startup $startups = null,
 	) {
 	}
 
@@ -32,5 +34,15 @@ final readonly class ExtensionApplication
 	public function directive(string $name, callable $handler): void
 	{
 		$this->directives->register($name, $handler);
+	}
+
+	public static function setCurrent(self $application): void
+	{
+		self::$current = $application;
+	}
+
+	public static function current(): self
+	{
+		return self::$current ?? throw new \RuntimeException('The Lightdocs application context has not been initialized.');
 	}
 }

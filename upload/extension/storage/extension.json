@@ -4,11 +4,9 @@
   "class": "Extension\\Storage\\Extension",
   "version": "1.0.0",
   "description": "Optional S3-compatible publication for uploaded assets while keeping a local mirror.",
-  "requires": {"php": ">=8.4", "tinymvc": ">=0.11 <1.0"},
-  "capabilities": {"requires": ["lightdocs.application"]},
   "type": "storage",
   "default_enabled": false,
-  "contexts": ["admin", "public"],
+  "contexts": ["admin", "frontend"],
   "settings": [
     {"key": "driver", "label": "Storage driver", "type": "text", "default": "s3", "description": "Use s3 for an S3-compatible endpoint. Leave the extension disabled to use local-only assets."},
     {"key": "endpoint", "label": "Endpoint URL", "type": "url", "default": "", "description": "S3 or S3-compatible endpoint, such as an internal MinIO URL."},

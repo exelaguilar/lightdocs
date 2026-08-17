@@ -17,10 +17,13 @@ final class Extension implements Contract, WebhookProvider
 
 	private PDO $db;
 	private ExtensionApplication $context;
+	/** @var array<string,mixed> */
+	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = $this->application($context);
+		$this->context = ExtensionApplication::current();
+		$this->settings = $context->settings();
 		$this->db = $this->context->database->connection();
 		$context->service('webhook.provider', $this);
 		foreach ($this->eventNames() as $event) {
@@ -32,13 +35,6 @@ final class Extension implements Contract, WebhookProvider
 				}
 			}, 'webhooks.' . str_replace('.', '_', $event));
 		}
-	}
-
-	private function application(Context $context): ExtensionApplication
-	{
-		$application = $context->capability('lightdocs.application');
-		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
-		return $application;
 	}
 
 	/** Delivers an event to every configured endpoint. One endpoint failing never blocks the others. */
@@ -64,9 +60,9 @@ final class Extension implements Contract, WebhookProvider
 
 	private function deliver(string $url, string $secret, string $event, array $payload): void
 	{
-		$body = json_encode(['event' => $event, 'payload' => !empty($this->context->settings['include_payload']) ? $payload : [], 'sent_at' => gmdate(DATE_ATOM)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+		$body = json_encode(['event' => $event, 'payload' => !empty($this->settings['include_payload']) ? $payload : [], 'sent_at' => gmdate(DATE_ATOM)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 		$headers = ['Content-Type: application/json', 'X-Lightdocs-Event: ' . $event, 'X-Lightdocs-Signature: sha256=' . hash_hmac('sha256', $body, $secret)];
-		$timeout = max(1, min(30, (int) ($this->context->settings['timeout'] ?? 5)));
+		$timeout = max(1, min(30, (int) ($this->settings['timeout'] ?? 5)));
 		$started = microtime(true);
 		$result = (new Http())->post($url, $body, $headers, $timeout);
 		$status_code = $result['status'];
@@ -98,7 +94,7 @@ final class Extension implements Contract, WebhookProvider
 	/** @return list<array{0:string,1:string}> Validated [url, secret] pairs, one per non-empty line. */
 	private function endpoints(): array
 	{
-		$lines = preg_split('/\r?\n/', (string) ($this->context->settings['endpoints'] ?? '')) ?: [];
+		$lines = preg_split('/\r?\n/', (string) ($this->settings['endpoints'] ?? '')) ?: [];
 		$endpoints = [];
 		foreach ($lines as $line) {
 			$line = trim($line);
@@ -113,6 +109,6 @@ final class Extension implements Contract, WebhookProvider
 	/** @return list<string> */
 	private function eventNames(): array
 	{
-		return array_values(array_filter(array_map('trim', explode(',', (string) ($this->context->settings['events'] ?? 'content.changed')))));
+		return array_values(array_filter(array_map('trim', explode(',', (string) ($this->settings['events'] ?? 'content.changed')))));
 	}
 }

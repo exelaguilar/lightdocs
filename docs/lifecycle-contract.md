@@ -1,20 +1,20 @@
 # Lightdocs lifecycle contract
 
-This document records behavior exercised by `php tests/lifecycle.php`. It is a
-characterization of the current application, including behavior that might not
-be desirable long term. It is not a specification for new lifecycle features.
+This document records the current application boot boundary. TinyMVC owns the
+reusable runtime; Lightdocs owns its application services, extensions, and
+route dispatch.
 
 ## Web boot phases
 
 1. `startup.php` defines version and directory constants, normalizes HTTPS,
    loads Composer and the `System` autoloader class, then loads the environment.
-2. `framework.php` asks the application-local `System\Engine\Kernel` to
-   construct an autoloader, register `System`, create the Registry, and load
+2. `framework.php` asks `System\Engine\Bootstrap` to construct the reusable
+   runtime, create the Registry, and load
    `default.php`, the `APP_CONTEXT` config, then optional `config.local.php` in
    that order.
 3. The configured `Admin`, `Frontend`, and `Extension` namespaces are registered.
-4. Core request, response, logging, database, schema, content, rendering, cache,
-   session, event, factory, loader, and Front services are constructed.
+4. TinyMVC constructs the standard request, response, logging, database, cache,
+   session, event, factory, loader, language, URL, and template services.
 5. Extensions are discovered. Their event listeners are registered and their
    startup callbacks run before configured controller pre-actions.
 6. Each configured pre-action receives `controller.pre_action.before` and
@@ -22,8 +22,8 @@ be desirable long term. It is not a specification for new lifecycle features.
    route and stops remaining pre-actions. A returned `Throwable` selects the
    configured error action and stops remaining pre-actions.
 7. The final `startup/event` pre-action registers database-backed route events.
-8. Front dispatch fires the initial route's before event, executes the action
-   chain, and fires the initial route's after event.
+8. The context entry point dispatches the initial route's action chain and
+   fires the configured route events.
 9. The final value is placed in the Response and `Response::output()` emits it.
 
 Frontend pre-actions are `router`, `setting`, `session`, `event`. Admin
@@ -40,11 +40,10 @@ configuration. Its absence is nonfatal.
 ## CLI phases
 
 1. `bin/docs` fixes `APP_CONTEXT` to `frontend` and runs `startup.php`.
-2. It asks the application-local Kernel to create the Registry, load
+2. It asks `System\Engine\Bootstrap` to create the Registry, load
    `default.php` followed by `frontend.php`, and register the configured
    `System`, `Admin`, `Frontend`, and `Extension` namespace map.
-3. CLI boot explicitly disables optional `config.local.php`, preserving the
-   pre-Kernel CLI configuration contract.
+3. CLI boot explicitly disables optional `config.local.php`.
 4. `Console` constructs the Registry and database and runs schema migration
    before command selection, then constructs content/search/render/build services.
 5. `Console::run()` dispatches the command inside its command-level `try/catch`.
@@ -70,8 +69,9 @@ The executable trace fixes this order:
 
 Listeners registered during the last pre-action cannot observe earlier startup
 stages. Before-route listeners may supply controller arguments. If an action
-returns a secondary `Action`, Front executes it inside the same chain; the
-before/after event names and log identity remain those of the initial route.
+returns a secondary `Action`, the application dispatch loop executes it inside
+the same chain; the before/after event names and log identity remain those of
+the initial route.
 
 ## Exception matrix
 
@@ -79,10 +79,10 @@ before/after event names and log identity remain those of the initial route.
 | ------ | ------------------ | --------------- | ------------ | -------------------- |
 | Startup pre-action | returned `Action` | startup loop | no | replaces main route; remaining pre-actions stop |
 | Startup pre-action | returned `Throwable` | startup loop | yes | configured error action becomes main action |
-| Startup pre-action before Front | thrown | global exception handler | no | development error output; handler completes with exit 0 |
-| Controller in Front | returned `Throwable` | Front loop | yes | Throwable is passed to error action; initial after event fires |
-| Controller in Front | thrown | Front catch | yes | exception is logged and passed to error action |
-| Error action | thrown | none inside Front | already failing | uncaught fatal; nonzero exit |
+| Startup pre-action before dispatch | thrown | global exception handler | no | development error output; handler completes with exit 0 |
+| Controller dispatch | returned `Throwable` | application dispatch loop | yes | Throwable is passed to error action; initial after event fires |
+| Controller dispatch | thrown | application dispatch catch | yes | exception is logged and passed to error action |
+| Error action | thrown | none inside dispatch | already failing | uncaught fatal; nonzero exit |
 | After global handler installation | thrown | global exception handler | no | formatted error output; current handler completes with exit 0 |
 | Before global handler installation | thrown | PHP | no | fatal diagnostic; exit 255 |
 | Runtime warning | thrown by installed error handler | global exception handler | no | warning detail is emitted in development; exit 0 |
@@ -116,13 +116,13 @@ fresh registries and services, and adds another autoload callback (the tested
 callback count grows from one to two to three). Handler installation is repeated
 by replacement; no process-wide full-application duplicate-boot guard exists.
 
-Each Kernel instance permits one boot attempt. A second `boot()` call on that
+Each Bootstrap instance permits one boot attempt. A second `boot()` call on that
 instance throws `LogicException`; it never silently reuses partially initialized
-state. A second Kernel instance in the same process and context still constructs
+state. A second Bootstrap instance in the same process and context still constructs
 a distinct Registry and adds an SPL callback, preserving the characterized
 global-state limitation. A conflicting context is rejected.
 
-Kernel context names must be lowercase configuration identifiers containing
+Bootstrap context names must be lowercase configuration identifiers containing
 letters, digits, underscores, or hyphens; path-like context values are rejected
 before `Config::load()`.
 
@@ -132,8 +132,8 @@ application boot coverage.
 
 ## CSS build
 
-`bin/build-css.php` fixes frontend context, runs `startup.php`, and uses the
-Kernel to load `default.php` then `frontend.php` and register the configured
+`bin/build-css.php` fixes frontend context, runs `startup.php`, and uses
+`Bootstrap` to load `default.php` then `frontend.php` and register the configured
 namespace map. It explicitly disables optional `config.local.php` and builds
 admin and frontend styles without constructing the database. Both bundles are
 compiled into private staging and published together through TinyMVC's
@@ -142,19 +142,15 @@ atomic manifest swap. Rebuilding identical inputs reuses the same version.
 The Studio enqueues `assets.rebuild` rather than compiling in the request;
 `bin/cron` claims and executes that job.
 
-## Constraints for a future boot-only Kernel
+## Current boundary
 
-The first application-local prototype must preserve configuration order,
-context constants, namespace mappings, registry keys, extension registration
-and startup order, exact pre-action order and short-circuit rules, late DB-event
-registration, Front action/error semantics, global-handler timing, response
-emission, direct redirect/file termination, CLI construction-before-dispatch,
-and CSS-build database independence. It must not combine this work with a
-namespace migration or package promotion.
+`Bootstrap` owns only reusable runtime construction. Lightdocs' composition root
+owns content services, schema migration, extension startup, and its application
+dispatch sequence. CLI tools reuse `Bootstrap` without entering that dispatch
+sequence.
 
 ## Future considerations (non-binding)
 
-Later work may evaluate duplicate-boot protection, consistent exception exit
-codes, a database-independent CLI prefix, injectable termination, and more
-observable header testing under a real HTTP SAPI. These are explicitly outside
-the current contract and this characterization pass.
+The framework package owns generic Bootstrap, request, response, and extension
+runtime tests. Lightdocs keeps only application-specific smoke and extension
+characterization tests here.

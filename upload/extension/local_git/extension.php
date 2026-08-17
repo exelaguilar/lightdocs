@@ -13,19 +13,16 @@ use System\Engine\Extension\Context;
 final class Extension implements Contract
 {
 	private ExtensionApplication $context;
+	/** @var array<string,mixed> */
+	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = $this->application($context);
-		$history = new GitHistory($this->context->config['site_root'], (bool) ($this->context->settings['history_enabled'] ?? true), (int) ($this->context->settings['history_limit'] ?? 30));
+		$this->context = ExtensionApplication::current();
+		$this->settings = $context->settings();
+		$history = new GitHistory($this->context->config['site_root'], (bool) ($this->settings['history_enabled'] ?? true), (int) ($this->settings['history_limit'] ?? 30));
 		$context->service('local_git.history', $history);
 		$context->service('local_git.preflight', new GitSyncPreflight($this->context->config['content_dir'], $this->context->repository));
 	}
 
-	private function application(Context $context): ExtensionApplication
-	{
-		$application = $context->capability('lightdocs.application');
-		if (!$application instanceof ExtensionApplication) throw new \RuntimeException('Invalid Lightdocs extension capability.');
-		return $application;
-	}
 }

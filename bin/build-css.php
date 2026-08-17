@@ -2,16 +2,22 @@
 
 declare(strict_types=1);
 
+/**
+ * Builds the published admin and frontend CSS assets.
+ *
+ * This tool needs configuration and asset services, but does not dispatch an
+ * HTTP request or compose the full Lightdocs application.
+ */
 define('APP_CONTEXT', 'frontend');
 
 require dirname(__DIR__) . '/upload/system/startup.php';
 
-$kernel = new \System\Engine\Kernel(
+$bootstrap = new \System\Engine\Bootstrap(
     context: APP_CONTEXT,
     application_root: DIR_ROOT,
     local_config_file: null,
 );
-$registry = $kernel->boot();
+$registry = $bootstrap->boot();
 $config = $registry->get('config');
 
 $publisher = new System\Library\AssetPublisher(

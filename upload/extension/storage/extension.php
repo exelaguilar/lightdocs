@@ -14,23 +14,19 @@ use System\Library\Storage\ProviderInterface;
 final class Extension implements Contract, ProviderInterface
 {
 	private ExtensionApplication $context;
+	/** @var array<string,mixed> */
+	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = $this->application($context);
+		$this->context = ExtensionApplication::current();
+		$this->settings = $context->settings();
 		$context->service('storage.assets', $this);
-	}
-
-	private function application(Context $context): ExtensionApplication
-	{
-		$application = $context->capability('lightdocs.application');
-		if (!$application instanceof ExtensionApplication) throw new RuntimeException('Invalid Lightdocs extension capability.');
-		return $application;
 	}
 
 	public function publish(string $path, string $name, string $mime): ?string
 	{
-		$settings = $this->context->settings;
+		$settings = $this->settings;
 		if (strtolower((string) ($settings['driver'] ?? 's3')) !== 's3') return null;
 		$endpoint = rtrim((string) ($settings['endpoint'] ?? ''), '/');
 		$bucket = trim((string) ($settings['bucket'] ?? ''));
