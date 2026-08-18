@@ -14,11 +14,8 @@ use System\Library\Service\GitSyncPreflight;
 use System\Library\Service\SecretRedactor;
 use System\Library\Db\SqliteDb;
 use System\Library\Db\AbstractDb;
-use System\Library\ExtensionState;
 use System\Engine\Event;
 use System\Engine\ExtensionAdministration;
-use System\Engine\ExtensionApplication;
-use System\Engine\Extension\Discovery;
 use System\Engine\ExtensionManager;
 use System\Engine\Startup;
 use System\Engine\Model;
@@ -55,25 +52,16 @@ $check = static function (bool $condition, string $message) use (&$failures): vo
 
 $buildExtensions = static function (Registry $registry, array $config, AbstractDb $database, ContentRepository $repository, DirectiveRegistry $directives, \System\Engine\Autoloader $autoloader): ExtensionAdministration {
     $registry->set('autoloader', $autoloader);
-    $state = new ExtensionState($database);
+    $registry->set('repository', $repository);
+    $registry->set('directives', $directives);
     $startups = new Startup();
-    ExtensionApplication::setCurrent(new ExtensionApplication(
-        'lightdocs',
-        $config,
-        $repository,
-        $directives,
-        $database,
-        [],
-        $startups,
-    ));
     $manager = new ExtensionManager(
-        new Discovery($config['extension_dir']),
-        $state,
-        packages: new PackageInstaller($config['extension_dir']),
         registry: $registry,
+        extension_root: $config['extension_dir'],
+        packages: new PackageInstaller($config['extension_dir']),
     );
     $runtime = $manager->boot('frontend');
-    return new ExtensionAdministration($manager, $runtime, $state, $startups);
+    return new ExtensionAdministration($manager, $runtime, $startups);
 };
 
 $repository = new ContentRepository($config['content_dir']);
@@ -104,6 +92,7 @@ $extensionRows = $extensions->all();
 $check(($extensionRows['reader_banner']['type'] ?? '') === 'example', 'The Reader Banner extension type was not discovered.');
 $check(($extensions->settingsFor('reader_banner')['contexts'] ?? []) === ['frontend'], 'The Reader Banner frontend-reader context was not discovered.');
 $extensionRoot = $config['cache_dir'] . '/extension-smoke-' . bin2hex(random_bytes(3));
+if (!is_dir($extensionRoot)) mkdir($extensionRoot, 0775, true);
 $extensionDb = new SqliteDb($extensionRoot . '/lightdocs.sqlite');
 $extensionRegistry = new Registry();
 $extensionRegistry->set('config', $configuration);

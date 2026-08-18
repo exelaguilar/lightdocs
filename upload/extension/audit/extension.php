@@ -5,22 +5,21 @@ declare(strict_types=1);
 namespace Extension\Audit;
 
 use PDO;
-use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
 
 final class Extension implements Contract
 {
 	private PDO $db;
-	private ExtensionApplication $context;
+	private Context $context;
 	/** @var array<string,mixed> */
 	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = ExtensionApplication::current();
+		$this->context = $context;
 		$this->settings = $context->settings();
-		$this->db = $this->context->database->connection();
+		$this->db = $this->context->get('db')->connection();
 		$context->service('audit.log', $this);
 		foreach ($this->eventNames() as $event) {
 			$context->listen($event, function (mixed $payload, string $name): void {

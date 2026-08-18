@@ -6,12 +6,11 @@ require dirname(__DIR__) . '/upload/system/startup.php';
 require __DIR__ . '/support/test_suite.php';
 
 use Lightdocs\Tests\Support\TestSuite;
-use System\Engine\ExtensionCatalog;
-use System\Engine\ExtensionCatalogEntry;
 use System\Engine\ExtensionInstallation;
 use System\Engine\Extension\Manifest;
-use System\Engine\ExtensionPackageProof;
-use System\Engine\ExtensionPackageTrust;
+use System\Engine\ExtensionManager;
+use System\Engine\Registry;
+use System\Library\Extension\PackageInstaller;
 
 $autoloader = new System\Engine\Autoloader();
 $autoloader->register('System', DIR_SYSTEM);
@@ -26,23 +25,39 @@ $manifest = static fn (string $version = '1.0.0', array $requires = []): Manifes
 	'requires' => $requires,
 ]);
 
-$suite->test('catalog update selection remains application-owned and deterministic', static function (): void {
-	$catalog = new ExtensionCatalog([
-		new ExtensionCatalogEntry('demo', '1.1.0', 'stable', 'https://extensions.example/demo-1.1.0.zip', str_repeat('a', 64)),
-		new ExtensionCatalogEntry('demo', '2.0.0', 'beta', 'https://extensions.example/demo-2.0.0.zip', str_repeat('b', 64)),
-	]);
-	$installed = new ExtensionInstallation('demo', '1.0.0', 'uploaded', ExtensionInstallation::ENABLED, true);
-	TestSuite::assertSame('1.1.0', $catalog->updateFor($installed)?->version(), 'Stable catalog selection changed.');
+$suite->test('framework manager owns generic extension discovery', static function (): void {
+	$directory = sys_get_temp_dir() . '/lightdocs-policy-' . bin2hex(random_bytes(4));
+	mkdir($directory, 0700, true);
+	$registry = new Registry();
+	$registry->set('app', 'frontend');
+	$manager = new ExtensionManager($registry, $directory);
+	$runtime = $manager->boot('frontend');
+	TestSuite::assertSame([], $manager->catalog(), 'An empty extension directory should have an empty catalog.');
+	TestSuite::assertSame([], $runtime->names(), 'An empty extension directory should build an empty runtime.');
+	rmdir($directory);
 });
 
-$suite->test('signature trust delegates verification without a framework interface', static function (): void {
-	$called = false;
-	$trust = new ExtensionPackageTrust(ExtensionPackageTrust::REQUIRE_SIGNATURE, ['release' => 'public-key'], static function (string $hash, string $signature, string $key, string $algorithm) use (&$called): bool {
-		$called = $hash === str_repeat('c', 64) && $signature === base64_encode('signature') && $key === 'public-key' && $algorithm === 'openssl-sha256';
-		return $called;
-	});
-	$trust->assertTrusted(str_repeat('c', 64), new ExtensionPackageProof('release', 'openssl-sha256', base64_encode('signature')));
-	TestSuite::assertTrue($called, 'Application trust verifier was not called with the proof data.');
+$suite->test('package installer still rejects unsigned packages when trust is configured', static function (): void {
+	$root = sys_get_temp_dir() . '/lightdocs-policy-' . bin2hex(random_bytes(4));
+	mkdir($root, 0700, true);
+	$archive = $root . '/package.zip';
+	$zip = new ZipArchive();
+	$zip->open($archive, ZipArchive::CREATE);
+	$zip->addFromString('extension.json', json_encode(['schema_version' => 3, 'name' => 'policy_fixture', 'class' => 'Fixture\\Policy\\Extension', 'version' => '1.0.0', 'description' => 'Policy fixture.'], JSON_THROW_ON_ERROR));
+	$zip->close();
+	$installer = new PackageInstaller($root . '/extensions', trusted_keys: ['configured-public-key']);
+	$prepared = $installer->prepare($archive);
+	try {
+		try {
+			$installer->install($prepared);
+			TestSuite::assertTrue(false, 'Unsigned package was accepted despite configured trust.');
+		} catch (RuntimeException $exception) {
+			TestSuite::assertTrue(str_contains($exception->getMessage(), 'signature'), 'Trust failure did not mention the missing signature.');
+		}
+	} finally {
+		$prepared->cleanup();
+		if (is_dir($root)) \System\Helper\Filesystem::removeTree($root);
+	}
 });
 
 $suite->test('concrete installation state retains lifecycle transitions', static function () use ($manifest): void {

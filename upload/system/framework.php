@@ -6,7 +6,6 @@ use System\Engine\Action;
 use System\Engine\Bootstrap;
 use System\Engine\CallbackAction;
 use System\Engine\ExtensionAdministration;
-use System\Engine\ExtensionApplication;
 use System\Engine\ExtensionManager;
 use System\Engine\Startup;
 use System\Library\AssetPublisher;
@@ -21,7 +20,6 @@ use System\Library\Content\SearchIndexer;
 use System\Library\Content\SiteData;
 use System\Library\Content\SnippetRepository;
 use System\Library\Extension\PackageInstaller;
-use System\Library\ExtensionState;
 use System\Library\Feedback;
 use System\Library\Service\ExportService;
 use System\Library\Service\SiteSettings;
@@ -92,19 +90,20 @@ try {
 	}, 'core.content_changed'));
 	(new Schema($registry))->migrate();
 
-	$state = new ExtensionState($db);
 	$startups = new Startup();
-	ExtensionApplication::setCurrent(new ExtensionApplication('lightdocs', $config->all(), $repository, $directives, $db, [], $startups));
 	$manager = new ExtensionManager(
-		new System\Engine\Extension\Discovery((string)$config->get('extension_dir')),
-		$state,
-		packages: new PackageInstaller((string)$config->get('extension_dir')),
-		authorizer: new System\Engine\ExtensionAuthorization($registry),
-		trust: new System\Engine\ExtensionPackageTrust((string)$config->get('extension_trust_mode'), (array)$config->get('extension_trusted_signers')),
 		registry: $registry,
+		extension_root: (string)$config->get('extension_dir'),
+		packages: new PackageInstaller((string)$config->get('extension_dir'), trusted_keys: array_values(array_filter((array)$config->get('extension_trusted_keys', []), 'is_string'))),
+		authorizer: static function (string $operation) use ($registry): void {
+			$user = $registry->has('user') ? $registry->get('user') : null;
+			if (!$user instanceof \System\Library\User || !$user->isLogged() || !$user->hasPermission('modify', 'tools/extensions')) {
+				throw new \RuntimeException('Extension lifecycle operation is not authorized: ' . $operation);
+			}
+		},
 	);
 	$runtime = $manager->boot((string)$registry->get('app'));
-	$extensions = new ExtensionAdministration($manager, $runtime, $state, $startups);
+	$extensions = new ExtensionAdministration($manager, $runtime, $startups);
 	$extensions->registerEvents($event);
 	$extensions->runStartups($event);
 	$registry->set('extensions', $extensions);

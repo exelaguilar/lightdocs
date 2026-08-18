@@ -25,9 +25,6 @@ use Lightdocs\Tests\Support\TemporaryDirectory;
 use Lightdocs\Tests\Support\TestSuite;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Manifest;
-use System\Engine\ExtensionApplication;
-use System\Library\Content\ContentRepository;
-use System\Library\Content\DirectiveRegistry;
 use System\Library\Db\AbstractDb;
 use System\Library\Db\SqliteDb;
 use System\Model\Schema;
@@ -119,25 +116,13 @@ function providers_config(): \System\Engine\Config
     return $config;
 }
 
-function providers_application(string $slug, array $settings, ?AbstractDb $database = null): ExtensionApplication
-{
-    $application = new ExtensionApplication(
-        $slug,
-        [],
-        new ContentRepository(sys_get_temp_dir()),
-        new DirectiveRegistry(),
-        $database ?? new SqliteDb(':memory:'),
-        $settings,
-    );
-    ExtensionApplication::setCurrent($application);
-    return $application;
-}
-
 function providers_context(string $slug, array $settings, ?AbstractDb $database = null): Context
 {
     $manifest = Manifest::fromFile(DIR_ROOT . "extension/{$slug}/extension.json");
-    providers_application($slug, $settings, $database);
-    return new Context($manifest, $settings);
+    $registry = new \System\Engine\Registry();
+    $registry->set('config', providers_config());
+    $registry->set('db', $database ?? new SqliteDb(':memory:'));
+    return new Context($manifest, $settings, $registry);
 }
 
 function providers_invoke_private(object $object, string $method, array $arguments): mixed

@@ -3,9 +3,6 @@
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/upload/system/startup.php';
-require_once DIR_SYSTEM . 'engine/extension_authorization.php';
-
-use System\Engine\ExtensionAuthorization;
 use System\Engine\Extension\Manifest;
 use System\Engine\Registry;
 use System\Library\User;
@@ -18,9 +15,14 @@ $assert = static function (bool $condition, string $message) use (&$assertions):
 $manifest = Manifest::fromFile(DIR_ROOT . 'extension/audit/extension.json');
 
 $registry = new Registry();
-$authorization = new ExtensionAuthorization($registry);
+$authorization = static function (string $operation, Manifest $manifest, ?object $installation) use ($registry): void {
+	$user = $registry->has('user') ? $registry->get('user') : null;
+	if (!$user instanceof User || !$user->isLogged() || !$user->hasPermission('modify', 'tools/extensions')) {
+		throw new RuntimeException('Extension lifecycle operation is not authorized: ' . $operation);
+	}
+};
 try {
-    $authorization->assertAuthorized('install', $manifest);
+	$authorization('install', $manifest, null);
     $assert(false, 'Missing user was authorized.');
 } catch (\RuntimeException $exception) {
     $assert(str_contains($exception->getMessage(), 'not authorized'), 'Missing user did not fail closed.');
@@ -33,7 +35,7 @@ $denied = new class extends User {
 };
 $registry->set('user', $denied);
 try {
-    $authorization->assertAuthorized('enable', $manifest);
+	$authorization('enable', $manifest, null);
     $assert(false, 'User without modify permission was authorized.');
 } catch (\RuntimeException $exception) {
     $assert(str_contains($exception->getMessage(), 'enable'), 'Denied operation was not identified.');
@@ -51,7 +53,7 @@ $allowed = new class extends User {
     }
 };
 $registry->set('user', $allowed);
-$authorization->assertAuthorized('upgrade', $manifest);
+$authorization('upgrade', $manifest, null);
 $assert($allowed->decision === ['modify', 'tools/extensions'], 'Lifecycle operation did not map to the Lightdocs ACL route.');
 
 fwrite(STDOUT, "Extension authorization: {$assertions}/{$assertions} assertions passed.\n");

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-/** Verifies the v0.40 boundary: runtime/mechanics are vendored; policy is local. */
+/** Verifies that generic extension mechanics resolve from the TinyMVC package. */
 
 require dirname(__DIR__) . '/upload/system/startup.php';
 
@@ -32,23 +32,27 @@ foreach ($classes as $class => $expectedFile) {
 	if ($actual === false || realpath($actual) !== realpath($expectedFile)) $failures[] = $class . ' did not resolve from the installed package.';
 }
 
-$localClasses = [
+$frameworkClasses = [
 	System\Engine\ExtensionManager::class,
-	System\Engine\ExtensionPackageTrust::class,
-	System\Engine\ExtensionAuthorization::class,
+	System\Engine\ExtensionInstallation::class,
 	System\Library\ExtensionState::class,
 ];
-foreach ($localClasses as $class) {
+
+foreach ($frameworkClasses as $class) {
 	if (!class_exists($class, true)) {
-		$failures[] = $class . ' did not autoload from Lightdocs.';
+		$failures[] = $class . ' did not autoload from TinyMVC.';
 		continue;
 	}
 	$file = (new ReflectionClass($class))->getFileName();
-	if ($file === false || !str_starts_with(str_replace('\\', '/', $file), str_replace('\\', '/', DIR_SYSTEM))) $failures[] = $class . ' did not resolve from Lightdocs.';
+	if ($file === false || !str_starts_with(str_replace('\\', '/', $file), str_replace('\\', '/', $systemRoot))) $failures[] = $class . ' did not resolve from TinyMVC.';
 }
 
 $removed = [
-	'System\\Engine\\ExtensionManager',
+	'System\\Engine\\ExtensionAuthorization',
+	'System\\Engine\\ExtensionPackageTrust',
+	'System\\Engine\\ExtensionCatalog',
+	'System\\Engine\\ExtensionCatalogEntry',
+	'System\\Engine\\ExtensionPackageProof',
 	'System\\Engine\\ExtensionInstallationRepositoryInterface',
 	'System\\Engine\\ExtensionOperationAuthorizerInterface',
 	'System\\Engine\\AllowAllExtensionOperationAuthorizer',
@@ -63,4 +67,4 @@ if ($failures !== []) {
 	exit(1);
 }
 
-printf("Package boundary: %d framework classes resolve from TinyMVC; %d policy classes resolve from Lightdocs.\n", count($classes), count($localClasses));
+printf("Package boundary: %d framework classes resolve from TinyMVC.\n", count($classes));

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Extension\Webhooks;
 
 use PDO;
-use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
 use System\Engine\WebhookProvider;
@@ -16,15 +15,15 @@ final class Extension implements Contract, WebhookProvider
 	private const RETENTION_DAYS = 30;
 
 	private PDO $db;
-	private ExtensionApplication $context;
+	private Context $context;
 	/** @var array<string,mixed> */
 	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = ExtensionApplication::current();
+		$this->context = $context;
 		$this->settings = $context->settings();
-		$this->db = $this->context->database->connection();
+		$this->db = $this->context->get('db')->connection();
 		$context->service('webhook.provider', $this);
 		foreach ($this->eventNames() as $event) {
 			$context->listen($event, function (mixed $payload, string $name): void {

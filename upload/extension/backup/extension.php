@@ -7,20 +7,19 @@ namespace Extension\Backup;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use System\Engine\BackupProvider;
-use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
 use ZipArchive;
 
 final class Extension implements Contract, BackupProvider
 {
-	private ExtensionApplication $context;
+	private Context $context;
 	/** @var array<string,mixed> */
 	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = ExtensionApplication::current();
+		$this->context = $context;
 		$this->settings = $context->settings();
 		$context->service('backup.provider', $this);
 	}
@@ -28,7 +27,7 @@ final class Extension implements Contract, BackupProvider
 	public function create(string $label = 'manual'): array
 	{
 		if (!class_exists(ZipArchive::class)) throw new \RuntimeException('ZIP support is unavailable.');
-		$directory = $this->context->config['export_dir'];
+		$directory = $this->context->config('export_dir');
 		if (!is_dir($directory)) mkdir($directory, 0700, true);
 		$this->cleanup($directory);
 		$name = 'lightdocs-backup-' . preg_replace('/[^a-z0-9-]+/i', '-', strtolower($label)) . '-' . date('Ymd-His') . '.zip';
@@ -36,23 +35,23 @@ final class Extension implements Contract, BackupProvider
 		$zip = new ZipArchive();
 		if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new \RuntimeException('Could not create backup archive.');
 		$includes = ['content' => true, 'uploads' => !empty($this->settings['include_uploads']), 'revisions' => !empty($this->settings['include_revisions']), 'database' => !empty($this->settings['include_database']), 'environment' => !empty($this->settings['include_environment'])];
-		$sources = [$this->context->config['content_dir'] => 'content'];
-		if ($includes['revisions']) $sources[$this->context->config['state_root'] . '/revisions'] = 'revisions';
-		if ($includes['uploads']) $sources[$this->context->config['upload_dir']] = 'uploads';
+		$sources = [$this->context->config('content_dir') => 'content'];
+		if ($includes['revisions']) $sources[$this->context->config('state_root') . '/revisions'] = 'revisions';
+		if ($includes['uploads']) $sources[$this->context->config('upload_dir')] = 'uploads';
 		foreach ($sources as $source => $prefix) {
 			if (!is_dir($source)) continue;
 			$iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($source, RecursiveDirectoryIterator::SKIP_DOTS));
 			foreach ($iterator as $file) if ($file->isFile()) $zip->addFile($file->getPathname(), $prefix . '/' . substr($file->getPathname(), strlen($source) + 1));
 		}
-		if ($includes['database'] && is_file($this->context->config['database_path'])) {
+		if ($includes['database'] && is_file($this->context->config('database_path'))) {
 			try {
-				$this->context->database->connection()->exec('PRAGMA wal_checkpoint(FULL)');
+				$this->context->get('db')->connection()->exec('PRAGMA wal_checkpoint(FULL)');
 			} catch (\Throwable) {
 				// SQLite still produces a usable database file when WAL checkpointing is unavailable.
 			}
-			$zip->addFile($this->context->config['database_path'], 'storage/lightdocs.sqlite');
+			$zip->addFile($this->context->config('database_path'), 'storage/lightdocs.sqlite');
 		}
-		if ($includes['environment'] && is_file($this->context->config['environment_file'])) $zip->addFile($this->context->config['environment_file'], 'config/lightdocs.env');
+		if ($includes['environment'] && is_file($this->context->config('environment_file'))) $zip->addFile($this->context->config('environment_file'), 'config/lightdocs.env');
 		$zip->addFromString('manifest.json', json_encode(['format' => 2, 'version' => SYSTEM_VERSION ?? 'development', 'created_at' => time(), 'includes' => $includes], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
 		$zip->close();
 		$this->cleanup($directory);
@@ -62,7 +61,7 @@ final class Extension implements Contract, BackupProvider
 	public function archives(): array
 	{
 		$archives = [];
-		$directory = rtrim((string) $this->context->config['export_dir'], '/\\');
+		$directory = rtrim((string) $this->context->config('export_dir'), '/\\');
 		$this->cleanup($directory);
 		foreach (glob($directory . '/lightdocs-backup-*.zip') ?: [] as $path) {
 			if (!is_file($path)) continue;
@@ -75,7 +74,7 @@ final class Extension implements Contract, BackupProvider
 	public function restore(string $file): array
 	{
 		if (!preg_match('/^lightdocs-backup-[a-z0-9-]+-\d{8}-\d{6}\.zip$/i', $file)) throw new \RuntimeException('Backup not found.', 404);
-		$root = realpath((string) $this->context->config['export_dir']);
+		$root = realpath((string) $this->context->config('export_dir'));
 		$path = $root !== false ? realpath($root . DIRECTORY_SEPARATOR . $file) : false;
 		if ($path === false || !str_starts_with(strtolower($path), strtolower($root . DIRECTORY_SEPARATOR)) || !is_file($path)) throw new \RuntimeException('Backup not found.', 404);
 		$this->create('before-restore');
@@ -83,7 +82,7 @@ final class Extension implements Contract, BackupProvider
 		if ($zip->open($path) !== true) throw new \RuntimeException('The backup archive could not be opened.');
 		$manifest = $this->manifest($path);
 		if (($manifest['format'] ?? 0) < 2) throw new \RuntimeException('This backup was created by an older format and cannot be restored automatically.');
-		$temporary = rtrim((string) $this->context->config['state_root'], '/\\') . '/restore-' . bin2hex(random_bytes(8));
+		$temporary = rtrim((string) $this->context->config('state_root'), '/\\') . '/restore-' . bin2hex(random_bytes(8));
 		if (!mkdir($temporary, 0700, true) && !is_dir($temporary)) throw new \RuntimeException('Could not prepare the restore workspace.');
 		try {
 			for ($index = 0; $index < $zip->numFiles; $index++) {
@@ -95,18 +94,18 @@ final class Extension implements Contract, BackupProvider
 			$zip->close();
 		}
 		try {
-			$counts = ['content' => $this->replaceDirectory($temporary . '/content', $this->context->config['content_dir']), 'uploads' => 0, 'revisions' => 0, 'database' => false, 'environment' => false];
-			if (!empty($manifest['includes']['uploads'])) $counts['uploads'] = $this->replaceDirectory($temporary . '/uploads', $this->context->config['upload_dir']);
-			if (!empty($manifest['includes']['revisions'])) $counts['revisions'] = $this->replaceDirectory($temporary . '/revisions', $this->context->config['state_root'] . '/revisions');
+			$counts = ['content' => $this->replaceDirectory($temporary . '/content', $this->context->config('content_dir')), 'uploads' => 0, 'revisions' => 0, 'database' => false, 'environment' => false];
+			if (!empty($manifest['includes']['uploads'])) $counts['uploads'] = $this->replaceDirectory($temporary . '/uploads', $this->context->config('upload_dir'));
+			if (!empty($manifest['includes']['revisions'])) $counts['revisions'] = $this->replaceDirectory($temporary . '/revisions', $this->context->config('state_root') . '/revisions');
 			if (!empty($manifest['includes']['database']) && is_file($temporary . '/storage/lightdocs.sqlite')) {
-				$target = (string) $this->context->config['database_path'];
+				$target = (string) $this->context->config('database_path');
 				$backup = $target . '.before-restore-' . date('Ymd-His');
 				if (is_file($target) && !copy($target, $backup)) throw new \RuntimeException('Could not preserve the current database before restore.');
 				if (!copy($temporary . '/storage/lightdocs.sqlite', $target)) throw new \RuntimeException('Could not restore the application database.');
 				$counts['database'] = true;
 			}
 			if (!empty($manifest['includes']['environment']) && is_file($temporary . '/config/lightdocs.env')) {
-				if (!copy($temporary . '/config/lightdocs.env', (string) $this->context->config['environment_file'])) throw new \RuntimeException('Could not restore the environment file.');
+				if (!copy($temporary . '/config/lightdocs.env', (string) $this->context->config('environment_file'))) throw new \RuntimeException('Could not restore the environment file.');
 				$counts['environment'] = true;
 			}
 			return $counts;
@@ -118,7 +117,7 @@ final class Extension implements Contract, BackupProvider
 	public function download(string $file): never
 	{
 		if (!preg_match('/^lightdocs-backup-[a-z0-9-]+-\d{8}-\d{6}\.zip$/i', $file)) throw new \RuntimeException('Backup not found.', 404);
-		$root = realpath((string) $this->context->config['export_dir']);
+		$root = realpath((string) $this->context->config('export_dir'));
 		$path = $root !== false ? realpath($root . DIRECTORY_SEPARATOR . $file) : false;
 		if ($path === false || !str_starts_with(strtolower($path), strtolower($root . DIRECTORY_SEPARATOR)) || !is_file($path)) throw new \RuntimeException('Backup not found.', 404);
 		header('Content-Type: application/zip');

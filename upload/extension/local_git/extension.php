@@ -6,23 +6,22 @@ namespace Extension\LocalGit;
 
 use System\Library\Service\GitHistory;
 use System\Library\Service\GitSyncPreflight;
-use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Contract;
 use System\Engine\Extension\Context;
 
 final class Extension implements Contract
 {
-	private ExtensionApplication $context;
+	private Context $context;
 	/** @var array<string,mixed> */
 	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = ExtensionApplication::current();
+		$this->context = $context;
 		$this->settings = $context->settings();
-		$history = new GitHistory($this->context->config['site_root'], (bool) ($this->settings['history_enabled'] ?? true), (int) ($this->settings['history_limit'] ?? 30));
+		$history = new GitHistory($this->context->config('site_root'), (bool) ($this->settings['history_enabled'] ?? true), (int) ($this->settings['history_limit'] ?? 30));
 		$context->service('local_git.history', $history);
-		$context->service('local_git.preflight', new GitSyncPreflight($this->context->config['content_dir'], $this->context->repository));
+		$context->service('local_git.preflight', new GitSyncPreflight((string)$this->context->config('content_dir'), $this->context->get('repository')));
 	}
 
 }

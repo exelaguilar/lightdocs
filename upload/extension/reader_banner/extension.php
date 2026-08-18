@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 namespace Extension\ReaderBanner;
 
-use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
 use System\Library\Content\Page;
 
 final class Extension implements Contract
 {
-	private ExtensionApplication $context;
+	private Context $context;
 	/** @var array<string,mixed> */
 	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = ExtensionApplication::current();
+		$this->context = $context;
 		$this->settings = $context->settings();
 		$context->listen('frontend/page/content/after', function (mixed &$payload): void {
 			if (!is_array($payload) || !($payload['page'] ?? null) instanceof Page || !isset($payload['content']) || !is_string($payload['content'])) return;

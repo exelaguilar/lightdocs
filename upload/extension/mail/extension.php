@@ -5,20 +5,19 @@ declare(strict_types=1);
 namespace Extension\Mail;
 
 use RuntimeException;
-use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
 use System\Library\Mail\ProviderInterface;
 
 final class Extension implements Contract, ProviderInterface
 {
-	private ExtensionApplication $context;
+	private Context $context;
 	/** @var array<string,mixed> */
 	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = ExtensionApplication::current();
+		$this->context = $context;
 		$this->settings = $context->settings();
 		$context->service('mail.provider', $this);
 	}

@@ -5,27 +5,26 @@ declare(strict_types=1);
 namespace Extension\RemoteSync;
 
 use RuntimeException;
-use System\Engine\ExtensionApplication;
 use System\Engine\Extension\Context;
 use System\Engine\Extension\Contract;
 use System\Engine\RemoteRepositoryProvider;
 
 final class Extension implements Contract, RemoteRepositoryProvider
 {
-	private ExtensionApplication $context;
+	private Context $context;
 	/** @var array<string,mixed> */
 	private array $settings = [];
 
 	public function register(Context $context): void
 	{
-		$this->context = ExtensionApplication::current();
+		$this->context = $context;
 		$this->settings = $context->settings();
 		$context->service('remote.repository', $this);
 	}
 
 	public function status(): array
 	{
-		$root = (string) $this->context->config['site_root'];
+		$root = (string) $this->context->config('site_root');
 		$settings = $this->settings;
 		$result = $this->run(['git', '--version']);
 		return [
@@ -118,7 +117,7 @@ final class Extension implements Contract, RemoteRepositoryProvider
 		if ($stdout === false || $stderr === false) return ['code' => 1, 'output' => 'Could not create temporary command output files.'];
 		try {
 			$pipes = [];
-			$process = @proc_open($command, [0 => ['pipe', 'r'], 1 => ['file', $stdout, 'w'], 2 => ['file', $stderr, 'w']], $pipes, (string) $this->context->config['site_root'], null, ['bypass_shell' => true]);
+			$process = @proc_open($command, [0 => ['pipe', 'r'], 1 => ['file', $stdout, 'w'], 2 => ['file', $stderr, 'w']], $pipes, (string) $this->context->config('site_root'), null, ['bypass_shell' => true]);
 			if (!is_resource($process)) return ['code' => 1, 'output' => 'Could not start Git.'];
 			fclose($pipes[0]);
 			$code = proc_close($process);

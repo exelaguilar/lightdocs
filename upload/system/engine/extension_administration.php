@@ -6,7 +6,6 @@ namespace System\Engine;
 
 use RuntimeException;
 use System\Engine\Extension;
-use System\Library\ExtensionState;
 
 final class ExtensionAdministration
 {
@@ -27,30 +26,20 @@ final class ExtensionAdministration
 
 	private ExtensionManager $manager;
 	private Extension $runtime;
-	private ExtensionState $state;
 	private Startup $startups;
 
-	public function __construct(ExtensionManager $manager, Extension $runtime, ExtensionState $state, Startup $startups)
+	public function __construct(ExtensionManager $manager, Extension $runtime, Startup $startups)
 	{
 		$this->manager = $manager;
 		$this->runtime = $runtime;
-		$this->state = $state;
 		$this->startups = $startups;
 
 		foreach ($manager->catalog() as $name => $manifest) {
 			$data = $manifest->all();
 			$this->manifests[$name] = $data;
-			foreach (($data['events'] ?? []) as $event) {
-				if (!is_array($event) || empty($event['code']) || empty($event['event'])) continue;
-				$this->state->syncEvent((string) $event['code'], $name, (string) $event['event'], (int) ($event['sort_order'] ?? 0), (string) ($event['description'] ?? ''));
-			}
-			foreach (($data['settings'] ?? []) as $setting) {
-				if (is_array($setting) && !empty($setting['key'])) $this->state->syncSetting($name, (string) $setting['key'], $setting['default'] ?? '');
-			}
 		}
 
 		foreach ($runtime->listeners() as $listener) {
-			$this->state->syncEvent($listener['code'], $listener['extension'], $listener['event']);
 			$this->extensionEvents[$listener['extension']][] = $listener['code'];
 		}
 
@@ -112,7 +101,7 @@ final class ExtensionAdministration
 	public function registerEvents(Event $events): void
 	{
 		foreach ($this->runtime->listeners() as $listener) {
-			if (!$this->state->isEventEnabled($listener['code'])) continue;
+			if (!$this->manager->isEventEnabled($listener['code'])) continue;
 			$callback = $listener['listener'];
 			$eventName = $listener['event'];
 			$events->register($eventName, new CallbackAction(static function (&$payload) use ($callback, $eventName): mixed {
@@ -129,36 +118,20 @@ final class ExtensionAdministration
 
 	public function setEventEnabled(string $code, bool $enabled): void
 	{
-		$this->state->setEventEnabled($code, $enabled);
+		$this->manager->setEventEnabled($code, $enabled);
 	}
 
 	public function setSettings(string $name, array $input): void
 	{
 		if (!isset($this->manifests[$name])) throw new RuntimeException('Unknown extension: ' . $name);
-		$current = $this->state->settings($name);
-		foreach (($this->manifests[$name]['settings'] ?? []) as $definition) {
-			if (!is_array($definition) || empty($definition['key'])) continue;
-			$key = (string) $definition['key'];
-			$type = (string) ($definition['type'] ?? 'text');
-			$value = $input[$key] ?? $current[$key] ?? ($definition['default'] ?? '');
-			if ($type === 'password' && trim((string) $value) === '') $value = $current[$key] ?? ($definition['default'] ?? '');
-			if ($type === 'number') $value = max((int) ($definition['min'] ?? 0), min((int) ($definition['max'] ?? PHP_INT_MAX), (int) $value));
-			if ($type === 'boolean') $value = (bool) $value;
-			if ($type === 'color' && !preg_match('/^#[a-f0-9]{6}$/i', (string) $value)) $value = $definition['default'] ?? '#000000';
-			if ($type === 'select') {
-				$options = is_array($definition['options'] ?? null) ? $definition['options'] : [];
-				$values = array_values(array_filter(array_map(static fn (mixed $option): string => is_array($option) ? (string) ($option['value'] ?? '') : (string) $option, $options)));
-				if (!in_array((string) $value, $values, true)) $value = $definition['default'] ?? ($values[0] ?? '');
-			}
-			$this->state->setSetting($name, $key, $value);
-		}
+		$this->manager->saveSettings($name, $input);
 	}
 
 	public function defineEvent(string $name, string $description): void
 	{
 		$name = trim($name);
 		if (!preg_match('/^[a-z][a-z0-9_.-]{2,80}$/', $name)) throw new RuntimeException('Event names must use lowercase letters, numbers, dots, dashes, or underscores.');
-		$this->state->defineEvent('custom.' . $name, $name, trim($description));
+		$this->manager->defineEvent($name, $description);
 	}
 
 	/** @return list<string> */
@@ -196,7 +169,7 @@ final class ExtensionAdministration
 
 	public function events(): array
 	{
-		$events = $this->state->events();
+		$events = $this->manager->events();
 		$loadedCodes = array_flip(array_column($this->runtime->listeners(), 'code'));
 		$installations = $this->manager->installations();
 		foreach ($events as &$event) {
@@ -225,7 +198,7 @@ final class ExtensionAdministration
 				'contexts' => array_values(array_intersect(is_array($manifest['contexts'] ?? null) ? $manifest['contexts'] : [], ['admin', 'frontend'])),
 				'enabled' => $installation?->enabled() ?? false,
 				'definitions' => $definitions,
-				'values' => $this->state->settings($name),
+				'values' => $this->manager->settingsFor($name)['values'] ?? [],
 				'settings_summary' => (string) ($manifest['settings_summary'] ?? ''),
 				'settings_notes' => array_values(array_filter($notes, 'is_string')),
 			];

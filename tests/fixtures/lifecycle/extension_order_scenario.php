@@ -11,11 +11,7 @@ use System\Engine\Action;
 use System\Engine\CallbackAction;
 use System\Engine\Event;
 use System\Engine\ExtensionAdministration;
-use System\Engine\ExtensionApplication;
-use System\Engine\ExtensionCapabilityRegistry;
-use System\Engine\Extension\Discovery;
 use System\Engine\ExtensionManager;
-use System\Engine\Extension\Manifest;
 use System\Engine\Registry;
 use System\Engine\Startup;
 use System\Library\Content\ContentRepository;
@@ -51,9 +47,7 @@ file_put_contents($extensionDirectory . '/extension.json', json_encode([
     'description' => 'Lifecycle ordering fixture.',
     'type' => 'test',
     'default_enabled' => true,
-    'contexts' => ['public'],
-    'requires' => ['php' => '>=8.4', 'tinymvc' => '^0.40'],
-    'capabilities' => ['requires' => ['lightdocs.application']],
+    'contexts' => ['frontend'],
     'resources' => ['namespaces' => ['Extension\\Lifecycle' => 'src']],
 ], JSON_THROW_ON_ERROR));
 @mkdir($temporary . '/content', 0700, true);
@@ -83,26 +77,16 @@ $repository = new ContentRepository($temporary . '/content');
 $directives = new DirectiveRegistry([]);
 
 $trace->record('extension.discovery.begin');
-$state = new \System\Library\ExtensionState($database);
 $startups = new Startup();
-$capabilities = new ExtensionCapabilityRegistry();
-$capabilities->register('lightdocs.application', static fn (Manifest $manifest): ExtensionApplication => new ExtensionApplication(
-    $manifest->name(),
-    $config->all(),
-    $repository,
-    $directives,
-    $database,
-    [],
-    $startups,
-));
 $manager = new ExtensionManager(
-    new Discovery(dirname($extensionDirectory)),
-    $state,
-    capabilities: $capabilities,
     registry: $registry,
+    extension_root: dirname($extensionDirectory),
 );
-$runtime = $manager->boot('public');
-$extensions = new ExtensionAdministration($manager, $runtime, $state, $startups);
+$runtime = $manager->boot('frontend');
+$startups->register('trace', static function () use ($trace): void {
+    $trace->record('extension.startup');
+});
+$extensions = new ExtensionAdministration($manager, $runtime, $startups);
 $extensions->registerEvents($event);
 $trace->record('extension.listeners.registered');
 $extensions->runStartups($event);
@@ -116,8 +100,13 @@ $event->register('controller/*/before', new CallbackAction(static function () us
     $trace->record('database.listener.observed');
 }, 'database.fixture'));
 
-$front = new \System\Engine\Front($registry);
-$result = $front->dispatch(new OrderedMainAction());
+$trigger = 'fixture/main';
+$args = [];
+$before_args = [&$trigger, &$args];
+$event->trigger('controller/fixture/main/before', $before_args);
+$result = (new OrderedMainAction())->execute($registry, $args);
+$after_args = [&$trigger, &$args, &$result];
+$event->trigger('controller/fixture/main/after', $after_args);
 $trace->record('response.output');
 
 echo json_encode(['trace' => $trace->lines(), 'result' => $result], JSON_THROW_ON_ERROR) . PHP_EOL;
